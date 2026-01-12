@@ -1,0 +1,9 @@
+{
+  "name": "helpem-agent-core-api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
