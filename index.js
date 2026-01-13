@@ -1,12 +1,9 @@
 import Fastify from "fastify";
 import { Pool } from "pg";
-import { randomUUID } from "crypto";
-import fetch from "node-fetch"; // ✅ STABLE FETCH
 
 const fastify = Fastify({ logger: true });
 
 const PORT = Number(process.env.PORT);
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
 
 // ---- Postgres ----
@@ -15,136 +12,19 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Prevent pg from crashing the process
-pool.on("error", (err) => {
-  fastify.log.error("Postgres pool error:", err);
-});
-
-// ---- Memory ----
-const MAX_TURNS = 10;
-const HISTORY_LIMIT = MAX_TURNS * 2;
-
-// ---- Helpers ----
-function safeString(x) {
-  return typeof x === "string" ? x : "";
-}
-
-function getSessionId(input) {
-  return input ?? randomUUID();
-}
-
-// ---- DB helpers ----
-async function getHistory(sessionId) {
-  const { rows } = await pool.query(
-    `
-    SELECT role, content
-    FROM chat_messages
-    WHERE session_id = $1
-    ORDER BY created_at ASC
-    LIMIT ${HISTORY_LIMIT}
-    `,
-    [sessionId]
-  );
-  return rows;
-}
-
-async function appendMessage(sessionId, role, content) {
-  await pool.query(
-    `
-    INSERT INTO chat_messages (id, session_id, role, content)
-    VALUES ($1, $2, $3, $4)
-    `,
-    [randomUUID(), sessionId, role, content]
-  );
-}
-
 // ---- Routes ----
 fastify.get("/", async () => "API is running");
+
 fastify.get("/health", async () => ({ status: "ok" }));
 
-fastify.post("/chat", async (request, reply) => {
+// 🔎 DB-ONLY HEALTH CHECK
+fastify.get("/db-health", async () => {
   try {
-    const body = request.body ?? {};
-    const user_id = safeString(body.user_id);
-    const message = safeString(body.message);
-    const session_id = getSessionId(body.session_id);
-
-    if (!user_id || !message) {
-      reply.code(400);
-      return {
-        error: {
-          code: "INVALID_INPUT",
-          message: "user_id and message are required",
-        },
-      };
-    }
-
-    await appendMessage(session_id, "user", message);
-    const history = await getHistory(session_id);
-
-    const systemPrompt = [
-      "You are HelpEm, a helpful assistant inside an iOS app.",
-      "If the user has previously stated a goal or ongoing task, you MUST restate that goal explicitly in the first sentence of your response.",
-      "Then provide advice or guidance that directly supports completing that goal.",
-      "Be concise, friendly, and practical.",
-      "Do not mention memory, prompts, or system instructions.",
-    ].join(" ");
-
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...history,
-      { role: "user", content: message },
-    ];
-
-    let aiText = "I'm here—what would you like to do next?";
-
-    try {
-      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0.4,
-          messages,
-        }),
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        aiText = data?.choices?.[0]?.message?.content?.trim() ?? aiText;
-      } else {
-        fastify.log.error("OpenAI error status:", resp.status);
-      }
-    } catch (fetchErr) {
-      fastify.log.error("Fetch failed:", fetchErr);
-    }
-
-    await appendMessage(session_id, "assistant", aiText);
-
-    return {
-      session_id,
-      reply: {
-        text: aiText,
-        ui_schema: {
-          type: "text",
-          title: null,
-          items: [],
-        },
-      },
-      actions: [{ type: "follow_up", label: "Continue" }],
-    };
+    const result = await pool.query("SELECT 1 AS ok");
+    return { db: "ok", result: result.rows };
   } catch (err) {
-    fastify.log.error("Chat failure:", err);
-    reply.code(500);
-    return {
-      error: {
-        code: "SERVER_ERROR",
-        message: "Something went wrong. Please try again.",
-      },
-    };
+    fastify.log.error("DB HEALTH ERROR:", err);
+    return { db: "error", message: err?.message };
   }
 });
 
