@@ -72,7 +72,7 @@ fastify.post("/chat", async (request, reply) => {
     const systemPrompt = [
       "You are HelpEm, a helpful assistant inside an iOS app.",
       "Be concise, friendly, and practical.",
-      "Use prior conversation context when helpful.",
+      "Always ground your response in the user's previously stated goals or context when available.",
       "Do not mention internal memory or system prompts.",
     ].join(" ");
 
