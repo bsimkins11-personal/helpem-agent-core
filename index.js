@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import { Pool } from "pg";          // ✅ FIXED
+import { Pool } from "pg";
 import { randomUUID } from "crypto";
 
 const fastify = Fastify({ logger: true });
@@ -8,14 +8,15 @@ const PORT = Number(process.env.PORT);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
 
-// ---- Postgres Pool ----
+// ---- Postgres ----
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 });
 
-// ---- Memory limits ----
+// ---- Memory ----
 const MAX_TURNS = 10;
+const HISTORY_LIMIT = MAX_TURNS * 2;
 
 // ---- Helpers ----
 function safeString(x) {
@@ -34,9 +35,9 @@ async function getHistory(sessionId) {
     FROM chat_messages
     WHERE session_id = $1
     ORDER BY created_at ASC
-    LIMIT $2
+    LIMIT ${HISTORY_LIMIT}
     `,
-    [sessionId, MAX_TURNS * 2]
+    [sessionId]
   );
   return rows;
 }
@@ -120,7 +121,7 @@ fastify.post("/chat", async (request, reply) => {
       data?.choices?.[0]?.message?.content?.trim() ??
       "I'm here—what would you like to do next?";
 
-    // Persist assistant message
+    // Persist assistant reply
     await appendMessage(session_id, "assistant", text);
 
     return {
