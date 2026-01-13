@@ -67,11 +67,14 @@ async function enforceSessionRateLimit(pool, sessionId) {
   );
 }
 
-// ---- Daily App Limit ----
-const DAILY_APP_LIMIT = 15000;
+// ---- Monthly App Limit ----
+const MONTHLY_APP_LIMIT = 450000;
 
-async function enforceDailyAppLimit(pool) {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+async function enforceMonthlyAppLimit(pool) {
+  const now = new Date();
+  const monthStart = `${now.getUTCFullYear()}-${String(
+    now.getUTCMonth() + 1
+  ).padStart(2, "0")}-01`;
 
   const { rows } = await pool.query(
     `
@@ -79,21 +82,24 @@ async function enforceDailyAppLimit(pool) {
     FROM app_usage_limits
     WHERE window_start = $1
     `,
-    [today]
+    [monthStart]
   );
 
   if (rows.length === 0) {
-    return; // no usage yet today
+    return;
   }
 
-  if (rows[0].request_count >= DAILY_APP_LIMIT) {
-    throw new Error("DAILY_APP_LIMIT_EXCEEDED");
+  if (rows[0].request_count >= MONTHLY_APP_LIMIT) {
+    throw new Error("MONTHLY_APP_LIMIT_EXCEEDED");
   }
 }
 
 // ---- App Usage Tracking ----
 async function trackAppUsage(pool) {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const now = new Date();
+  const monthStart = `${now.getUTCFullYear()}-${String(
+    now.getUTCMonth() + 1
+  ).padStart(2, "0")}-01`; // YYYY-MM-01
 
   await pool.query(
     `
@@ -102,7 +108,7 @@ async function trackAppUsage(pool) {
     ON CONFLICT (window_start)
     DO UPDATE SET request_count = app_usage_limits.request_count + 1
     `,
-    [today]
+    [monthStart]
   );
 }
 
@@ -169,12 +175,12 @@ fastify.post("/chat", async (request, reply) => {
     // Track app-wide usage
     await trackAppUsage(db);
 
-    // Daily app limit check
+    // Monthly app limit check
     try {
-      await enforceDailyAppLimit(db);
+      await enforceMonthlyAppLimit(db);
     } catch {
       return reply.code(429).send({
-        error: "Daily app usage limit reached. Please try again tomorrow."
+        error: "Monthly app usage limit reached. Please try again next month."
       });
     }
 
