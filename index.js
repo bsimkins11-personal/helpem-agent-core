@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import { Pool } from "pg";
 import { randomUUID } from "crypto";
+import fetch from "node-fetch"; // ✅ STABLE FETCH
 
 const fastify = Fastify({ logger: true });
 
@@ -12,6 +13,11 @@ const DATABASE_URL = process.env.DATABASE_URL;
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
+});
+
+// Prevent pg from crashing the process
+pool.on("error", (err) => {
+  fastify.log.error("Postgres pool error:", err);
 });
 
 // ---- Memory ----
@@ -73,10 +79,7 @@ fastify.post("/chat", async (request, reply) => {
       };
     }
 
-    // Persist user message
     await appendMessage(session_id, "user", message);
-
-    // Load history
     const history = await getHistory(session_id);
 
     const systemPrompt = [
@@ -93,41 +96,38 @@ fastify.post("/chat", async (request, reply) => {
       { role: "user", content: message },
     ];
 
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0.4,
-        messages,
-      }),
-    });
+    let aiText = "I'm here—what would you like to do next?";
 
-    if (!resp.ok) {
-      reply.code(502);
-      return {
-        error: {
-          code: "UPSTREAM_ERROR",
-          message: "AI service error. Please try again.",
+    try {
+      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
         },
-      };
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          temperature: 0.4,
+          messages,
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        aiText = data?.choices?.[0]?.message?.content?.trim() ?? aiText;
+      } else {
+        fastify.log.error("OpenAI error status:", resp.status);
+      }
+    } catch (fetchErr) {
+      fastify.log.error("Fetch failed:", fetchErr);
     }
 
-    const data = await resp.json();
-    const text =
-      data?.choices?.[0]?.message?.content?.trim() ??
-      "I'm here—what would you like to do next?";
-
-    // Persist assistant reply
-    await appendMessage(session_id, "assistant", text);
+    await appendMessage(session_id, "assistant", aiText);
 
     return {
       session_id,
       reply: {
-        text,
+        text: aiText,
         ui_schema: {
           type: "text",
           title: null,
