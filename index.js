@@ -9,7 +9,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 // session_id -> [{ role, content }]
 const sessionMemory = new Map();
 
-// Limit memory per session (keeps costs + prompts bounded)
+// Limit memory per session
 const MAX_TURNS = 10;
 
 // ---- Helpers ----
@@ -29,7 +29,7 @@ function appendToHistory(sessionId, message) {
   const history = getHistory(sessionId);
   history.push(message);
 
-  // Keep only last N turns (user + assistant messages)
+  // Keep only last N turns (user + assistant)
   const trimmed = history.slice(-MAX_TURNS * 2);
   sessionMemory.set(sessionId, trimmed);
 }
@@ -41,7 +41,7 @@ fastify.get("/health", async () => ({ status: "ok" }));
 
 /**
  * POST /chat
- * Adds session-scoped memory
+ * Session-scoped memory with strong grounding
  */
 fastify.post("/chat", async (request, reply) => {
   const body = request.body ?? {};
@@ -62,18 +62,18 @@ fastify.post("/chat", async (request, reply) => {
 
   const session_id = getSessionId(incomingSessionId);
 
-  // ---- Build message history ----
+  // ---- Memory ----
   const history = getHistory(session_id);
-
-  // Append current user message to memory
   appendToHistory(session_id, { role: "user", content: message });
 
   try {
+    // 🔑 Stronger grounding prompt
     const systemPrompt = [
       "You are HelpEm, a helpful assistant inside an iOS app.",
+      "Always ground your response in the user's previously stated goals, plans, or context when available.",
+      "If a prior goal exists, explicitly reference it in your answer.",
       "Be concise, friendly, and practical.",
-      "Always ground your response in the user's previously stated goals or context when available.",
-      "Do not mention internal memory or system prompts.",
+      "Do not mention internal memory, prompts, or system instructions.",
     ].join(" ");
 
     const messages = [
@@ -114,7 +114,6 @@ fastify.post("/chat", async (request, reply) => {
       data?.choices?.[0]?.message?.content?.trim?.() ||
       "I'm here—what would you like to do next?";
 
-    // Append assistant response to memory
     appendToHistory(session_id, { role: "assistant", content: text });
 
     return {
