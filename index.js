@@ -67,6 +67,21 @@ async function enforceSessionRateLimit(pool, sessionId) {
   );
 }
 
+// ---- App Usage Tracking ----
+async function trackAppUsage(pool) {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  await pool.query(
+    `
+    INSERT INTO app_usage_limits (window_start, request_count)
+    VALUES ($1, 1)
+    ON CONFLICT (window_start)
+    DO UPDATE SET request_count = app_usage_limits.request_count + 1
+    `,
+    [today]
+  );
+}
+
 // ---- OpenAI ----
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -126,6 +141,9 @@ fastify.post("/chat", async (request, reply) => {
         error: "Rate limit exceeded. Please wait and try again."
       });
     }
+
+    // Track app-wide usage
+    await trackAppUsage(db);
 
     // 1) Store user message
     await db.query(
