@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import pg from "pg";
+import { Pool } from "pg";          // ✅ FIXED
 import { randomUUID } from "crypto";
 
 const fastify = Fastify({ logger: true });
@@ -8,9 +8,11 @@ const PORT = Number(process.env.PORT);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
 
-// ---- Postgres ----
-const { Pool } = pg;
-const pool = new Pool({ connectionString: DATABASE_URL });
+// ---- Postgres Pool ----
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 // ---- Memory limits ----
 const MAX_TURNS = 10;
@@ -53,37 +55,29 @@ async function appendMessage(sessionId, role, content) {
 fastify.get("/", async () => "API is running");
 fastify.get("/health", async () => ({ status: "ok" }));
 
-/**
- * POST /chat
- * Durable session memory with hard grounding
- */
 fastify.post("/chat", async (request, reply) => {
-  const body = request.body ?? {};
-  const user_id = safeString(body.user_id);
-  const incomingSessionId =
-    body.session_id == null ? null : safeString(body.session_id);
-  const message = safeString(body.message);
-
-  if (!user_id || !message) {
-    reply.code(400);
-    return {
-      error: {
-        code: "INVALID_INPUT",
-        message: "user_id and message are required",
-      },
-    };
-  }
-
-  const session_id = getSessionId(incomingSessionId);
-
   try {
+    const body = request.body ?? {};
+    const user_id = safeString(body.user_id);
+    const message = safeString(body.message);
+    const session_id = getSessionId(body.session_id);
+
+    if (!user_id || !message) {
+      reply.code(400);
+      return {
+        error: {
+          code: "INVALID_INPUT",
+          message: "user_id and message are required",
+        },
+      };
+    }
+
     // Persist user message
     await appendMessage(session_id, "user", message);
 
     // Load history
     const history = await getHistory(session_id);
 
-    // 🔒 HARD GROUNDING PROMPT
     const systemPrompt = [
       "You are HelpEm, a helpful assistant inside an iOS app.",
       "If the user has previously stated a goal or ongoing task, you MUST restate that goal explicitly in the first sentence of your response.",
@@ -98,19 +92,17 @@ fastify.post("/chat", async (request, reply) => {
       { role: "user", content: message },
     ];
 
-    const payload = {
-      model: "gpt-4o-mini",
-      temperature: 0.4,
-      messages,
-    };
-
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0.4,
+        messages,
+      }),
     });
 
     if (!resp.ok) {
@@ -125,10 +117,10 @@ fastify.post("/chat", async (request, reply) => {
 
     const data = await resp.json();
     const text =
-      data?.choices?.[0]?.message?.content?.trim?.() ||
+      data?.choices?.[0]?.message?.content?.trim() ??
       "I'm here—what would you like to do next?";
 
-    // Persist assistant reply
+    // Persist assistant message
     await appendMessage(session_id, "assistant", text);
 
     return {
@@ -144,10 +136,7 @@ fastify.post("/chat", async (request, reply) => {
       actions: [{ type: "follow_up", label: "Continue" }],
     };
   } catch (err) {
-    fastify.log.error("Chat failure ERROR MESSAGE:", err?.message);
-    fastify.log.error("Chat failure ERROR STACK:", err?.stack);
-    fastify.log.error("Chat failure FULL ERROR:", err);
-
+    fastify.log.error("Chat failure:", err);
     reply.code(500);
     return {
       error: {
