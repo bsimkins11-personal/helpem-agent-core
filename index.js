@@ -1,12 +1,18 @@
 import Fastify from "fastify";
+import pg from "pg";
+import crypto from "crypto";
 
 const fastify = Fastify({ logger: true });
 
 const PORT = Number(process.env.PORT);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DATABASE_URL = process.env.DATABASE_URL;
 
-// ---- In-memory session store ----
-const sessionMemory = new Map();
+// ---- Postgres ----
+const { Pool } = pg;
+const pool = new Pool({ connectionString: DATABASE_URL });
+
+// ---- Memory limits ----
 const MAX_TURNS = 10;
 
 // ---- Helpers ----
@@ -18,20 +24,39 @@ function getSessionId(input) {
   return input ?? crypto.randomUUID();
 }
 
-function getHistory(sessionId) {
-  return sessionMemory.get(sessionId) ?? [];
+// ---- DB helpers ----
+async function getHistory(sessionId) {
+  const { rows } = await pool.query(
+    `
+    SELECT role, content
+    FROM chat_messages
+    WHERE session_id = $1
+    ORDER BY created_at ASC
+    LIMIT $2
+    `,
+    [sessionId, MAX_TURNS * 2]
+  );
+  return rows;
 }
 
-function appendToHistory(sessionId, message) {
-  const history = getHistory(sessionId);
-  history.push(message);
-  sessionMemory.set(sessionId, history.slice(-MAX_TURNS * 2));
+async function appendMessage(sessionId, role, content) {
+  await pool.query(
+    `
+    INSERT INTO chat_messages (id, session_id, role, content)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [crypto.randomUUID(), sessionId, role, content]
+  );
 }
 
 // ---- Routes ----
 fastify.get("/", async () => "API is running");
 fastify.get("/health", async () => ({ status: "ok" }));
 
+/**
+ * POST /chat
+ * Durable session memory with hard grounding
+ */
 fastify.post("/chat", async (request, reply) => {
   const body = request.body ?? {};
   const user_id = safeString(body.user_id);
@@ -51,10 +76,13 @@ fastify.post("/chat", async (request, reply) => {
 
   const session_id = getSessionId(incomingSessionId);
 
-  const history = getHistory(session_id);
-  appendToHistory(session_id, { role: "user", content: message });
-
   try {
+    // Persist user message
+    await appendMessage(session_id, "user", message);
+
+    // Load history
+    const history = await getHistory(session_id);
+
     // 🔒 HARD GROUNDING PROMPT
     const systemPrompt = [
       "You are HelpEm, a helpful assistant inside an iOS app.",
@@ -100,7 +128,8 @@ fastify.post("/chat", async (request, reply) => {
       data?.choices?.[0]?.message?.content?.trim?.() ||
       "I'm here—what would you like to do next?";
 
-    appendToHistory(session_id, { role: "assistant", content: text });
+    // Persist assistant reply
+    await appendMessage(session_id, "assistant", text);
 
     return {
       session_id,
@@ -114,7 +143,8 @@ fastify.post("/chat", async (request, reply) => {
       },
       actions: [{ type: "follow_up", label: "Continue" }],
     };
-  } catch {
+  } catch (err) {
+    fastify.log.error({ err }, "Chat failure");
     reply.code(500);
     return {
       error: {
