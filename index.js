@@ -144,7 +144,10 @@ fastify.post("/chat", async (request, reply) => {
       actions: [{ type: "follow_up", label: "Continue" }],
     };
   } catch (err) {
-    fastify.log.error({ err }, "Chat failure");
+    fastify.log.error("Chat failure ERROR MESSAGE:", err?.message);
+    fastify.log.error("Chat failure ERROR STACK:", err?.stack);
+    fastify.log.error("Chat failure FULL ERROR:", err);
+
     reply.code(500);
     return {
       error: {
