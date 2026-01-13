@@ -5,11 +5,8 @@ const fastify = Fastify({ logger: true });
 const PORT = Number(process.env.PORT);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// ---- In-memory session store (Phase 2) ----
-// session_id -> [{ role, content }]
+// ---- In-memory session store ----
 const sessionMemory = new Map();
-
-// Limit memory per session
 const MAX_TURNS = 10;
 
 // ---- Helpers ----
@@ -28,21 +25,13 @@ function getHistory(sessionId) {
 function appendToHistory(sessionId, message) {
   const history = getHistory(sessionId);
   history.push(message);
-
-  // Keep only last N turns (user + assistant)
-  const trimmed = history.slice(-MAX_TURNS * 2);
-  sessionMemory.set(sessionId, trimmed);
+  sessionMemory.set(sessionId, history.slice(-MAX_TURNS * 2));
 }
 
 // ---- Routes ----
 fastify.get("/", async () => "API is running");
-
 fastify.get("/health", async () => ({ status: "ok" }));
 
-/**
- * POST /chat
- * Session-scoped memory with strong grounding
- */
 fastify.post("/chat", async (request, reply) => {
   const body = request.body ?? {};
   const user_id = safeString(body.user_id);
@@ -62,18 +51,17 @@ fastify.post("/chat", async (request, reply) => {
 
   const session_id = getSessionId(incomingSessionId);
 
-  // ---- Memory ----
   const history = getHistory(session_id);
   appendToHistory(session_id, { role: "user", content: message });
 
   try {
-    // 🔑 Stronger grounding prompt
+    // 🔒 HARD GROUNDING PROMPT
     const systemPrompt = [
       "You are HelpEm, a helpful assistant inside an iOS app.",
-      "Always ground your response in the user's previously stated goals, plans, or context when available.",
-      "If a prior goal exists, explicitly reference it in your answer.",
+      "If the user has previously stated a goal or ongoing task, you MUST restate that goal explicitly in the first sentence of your response.",
+      "Then provide advice or guidance that directly supports completing that goal.",
       "Be concise, friendly, and practical.",
-      "Do not mention internal memory, prompts, or system instructions.",
+      "Do not mention memory, prompts, or system instructions.",
     ].join(" ");
 
     const messages = [
@@ -98,8 +86,6 @@ fastify.post("/chat", async (request, reply) => {
     });
 
     if (!resp.ok) {
-      const errText = await resp.text().catch(() => "");
-      fastify.log.error({ status: resp.status, errText }, "OpenAI error");
       reply.code(502);
       return {
         error: {
@@ -128,8 +114,7 @@ fastify.post("/chat", async (request, reply) => {
       },
       actions: [{ type: "follow_up", label: "Continue" }],
     };
-  } catch (err) {
-    fastify.log.error({ err }, "Server /chat failure");
+  } catch {
     reply.code(500);
     return {
       error: {
