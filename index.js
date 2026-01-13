@@ -4,33 +4,17 @@ import { Pool } from "pg";
 const fastify = Fastify({ logger: true });
 const PORT = Number(process.env.PORT || 8080);
 
-// Build DATABASE_URL explicitly from PG vars
-function buildDatabaseUrl() {
-  const {
-    PGHOST,
-    PGPORT,
-    PGDATABASE,
-    PGUSER,
-    PGPASSWORD,
-  } = process.env;
-
-  if (!PGHOST || !PGPORT || !PGDATABASE || !PGUSER || !PGPASSWORD) {
-    throw new Error("Missing Postgres environment variables");
-  }
-
-  return `postgresql://${encodeURIComponent(PGUSER)}:${encodeURIComponent(
-    PGPASSWORD
-  )}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
-}
-
 let pool;
 
 function getPool() {
   if (!pool) {
-    const connectionString = buildDatabaseUrl();
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL not set");
+    }
+
     pool = new Pool({
-      connectionString,
-      ssl: { rejectUnauthorized: false }, // required for Railway
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }, // REQUIRED for Railway public proxy
     });
   }
   return pool;
