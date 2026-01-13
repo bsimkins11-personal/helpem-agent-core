@@ -6,10 +6,9 @@ const fastify = Fastify({ logger: true });
 const PORT = Number(process.env.PORT);
 const DATABASE_URL = process.env.DATABASE_URL;
 
-// ---- Postgres ----
+// ✅ Let pg auto-configure SSL for Railway
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
 });
 
 // ---- Routes ----
@@ -17,14 +16,13 @@ fastify.get("/", async () => "API is running");
 
 fastify.get("/health", async () => ({ status: "ok" }));
 
-// 🔎 DB-ONLY HEALTH CHECK
 fastify.get("/db-health", async () => {
   try {
     const result = await pool.query("SELECT 1 AS ok");
     return { db: "ok", result: result.rows };
   } catch (err) {
-    fastify.log.error("DB HEALTH ERROR:", err);
-    return { db: "error", message: err?.message };
+    fastify.log.error("DB HEALTH ERROR FULL:", err);
+    return { db: "error", message: err?.message ?? "unknown" };
   }
 });
 
