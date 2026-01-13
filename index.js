@@ -4,11 +4,15 @@ import { Pool } from "pg";
 const fastify = Fastify({ logger: true });
 
 const PORT = Number(process.env.PORT);
-const DATABASE_URL = process.env.DATABASE_URL;
+const RAW_DATABASE_URL = process.env.DATABASE_URL;
 
-// 🔑 Force SSL mode for Railway public proxy
+// ✅ Safely normalize DATABASE_URL
+const dbUrl = new URL(RAW_DATABASE_URL);
+dbUrl.searchParams.set("sslmode", "require");
+
+// ---- Postgres ----
 const pool = new Pool({
-  connectionString: DATABASE_URL + "?sslmode=require",
+  connectionString: dbUrl.toString(),
 });
 
 // ---- Routes ----
