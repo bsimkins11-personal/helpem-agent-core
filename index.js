@@ -32,16 +32,18 @@ fastify.get("/", async () => "API is running");
 
 fastify.get("/health", async () => ({ status: "ok" }));
 
-fastify.get("/db-health", async () => {
-  try {
-    const db = getPool();
-    const result = await db.query("SELECT 1 AS ok");
-    return { db: "ok", result: result.rows };
-  } catch (err) {
-    fastify.log.error("DB HEALTH ERROR:", err);
-    return { db: "error", message: err.message };
-  }
-});
+if (process.env.ENABLE_DB_HEALTH === "true") {
+  fastify.get("/db-health", async () => {
+    try {
+      const db = getPool();
+      const result = await db.query("SELECT 1 AS ok");
+      return { db: "ok", result: result.rows };
+    } catch (err) {
+      fastify.log.error("DB HEALTH ERROR:", err);
+      return { db: "error", message: err.message };
+    }
+  });
+}
 
 // ---- Chat Endpoint ----
 fastify.post("/chat", async (request, reply) => {
