@@ -2,7 +2,11 @@ import Fastify from "fastify";
 import { Pool } from "pg";
 import OpenAI from "openai";
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+  logger: {
+    level: "warn",
+  },
+});
 const PORT = Number(process.env.PORT || 8080);
 
 // ---- OpenAI ----
