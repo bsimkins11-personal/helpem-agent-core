@@ -10,7 +10,7 @@ const fastify = Fastify({
 const PORT = Number(process.env.PORT || 8080);
 
 // ---- Rate Limiting ----
-const RATE_LIMIT_COUNT = 30;
+const RATE_LIMIT_COUNT = 50;
 const RATE_LIMIT_WINDOW_MINUTES = 15;
 
 async function enforceSessionRateLimit(pool, sessionId) {
