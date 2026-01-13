@@ -67,6 +67,30 @@ async function enforceSessionRateLimit(pool, sessionId) {
   );
 }
 
+// ---- Daily App Limit ----
+const DAILY_APP_LIMIT = 15000;
+
+async function enforceDailyAppLimit(pool) {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  const { rows } = await pool.query(
+    `
+    SELECT request_count
+    FROM app_usage_limits
+    WHERE window_start = $1
+    `,
+    [today]
+  );
+
+  if (rows.length === 0) {
+    return; // no usage yet today
+  }
+
+  if (rows[0].request_count >= DAILY_APP_LIMIT) {
+    throw new Error("DAILY_APP_LIMIT_EXCEEDED");
+  }
+}
+
 // ---- App Usage Tracking ----
 async function trackAppUsage(pool) {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -144,6 +168,15 @@ fastify.post("/chat", async (request, reply) => {
 
     // Track app-wide usage
     await trackAppUsage(db);
+
+    // Daily app limit check
+    try {
+      await enforceDailyAppLimit(db);
+    } catch {
+      return reply.code(429).send({
+        error: "Daily app usage limit reached. Please try again tomorrow."
+      });
+    }
 
     // 1) Store user message
     await db.query(
