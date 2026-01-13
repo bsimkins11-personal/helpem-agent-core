@@ -6,9 +6,9 @@ const fastify = Fastify({ logger: true });
 const PORT = Number(process.env.PORT);
 const DATABASE_URL = process.env.DATABASE_URL;
 
-// ✅ Let pg auto-configure SSL for Railway
+// 🔑 Force SSL mode for Railway public proxy
 const pool = new Pool({
-  connectionString: DATABASE_URL,
+  connectionString: DATABASE_URL + "?sslmode=require",
 });
 
 // ---- Routes ----
@@ -27,10 +27,9 @@ fastify.get("/db-health", async () => {
 });
 
 // ---- Start ----
-fastify.listen({ port: PORT, host: "0.0.0.0" }, (err, address) => {
+fastify.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
   if (err) {
     fastify.log.error(err);
     process.exit(1);
   }
-  fastify.log.info(`Server listening at ${address}`);
 });
