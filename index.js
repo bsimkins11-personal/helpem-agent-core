@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import pg from "pg";
-import crypto from "crypto";
+import { randomUUID } from "crypto";
 
 const fastify = Fastify({ logger: true });
 
@@ -21,7 +21,7 @@ function safeString(x) {
 }
 
 function getSessionId(input) {
-  return input ?? crypto.randomUUID();
+  return input ?? randomUUID();
 }
 
 // ---- DB helpers ----
@@ -45,7 +45,7 @@ async function appendMessage(sessionId, role, content) {
     INSERT INTO chat_messages (id, session_id, role, content)
     VALUES ($1, $2, $3, $4)
     `,
-    [crypto.randomUUID(), sessionId, role, content]
+    [randomUUID(), sessionId, role, content]
   );
 }
 
