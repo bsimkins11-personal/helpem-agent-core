@@ -9,6 +9,64 @@ const fastify = Fastify({
 });
 const PORT = Number(process.env.PORT || 8080);
 
+// ---- Rate Limiting ----
+const RATE_LIMIT_COUNT = 30;
+const RATE_LIMIT_WINDOW_MINUTES = 15;
+
+async function enforceSessionRateLimit(pool, sessionId) {
+  const now = new Date();
+
+  const { rows } = await pool.query(
+    `
+    SELECT request_count, window_start
+    FROM session_rate_limits
+    WHERE session_id = $1
+    `,
+    [sessionId]
+  );
+
+  if (rows.length === 0) {
+    await pool.query(
+      `
+      INSERT INTO session_rate_limits (session_id, window_start, request_count)
+      VALUES ($1, $2, 1)
+      `,
+      [sessionId, now]
+    );
+    return;
+  }
+
+  const { request_count, window_start } = rows[0];
+  const windowStart = new Date(window_start);
+  const minutesElapsed =
+    (now.getTime() - windowStart.getTime()) / 60000;
+
+  if (minutesElapsed > RATE_LIMIT_WINDOW_MINUTES) {
+    await pool.query(
+      `
+      UPDATE session_rate_limits
+      SET window_start = $2, request_count = 1
+      WHERE session_id = $1
+      `,
+      [sessionId, now]
+    );
+    return;
+  }
+
+  if (request_count >= RATE_LIMIT_COUNT) {
+    throw new Error("RATE_LIMIT_EXCEEDED");
+  }
+
+  await pool.query(
+    `
+    UPDATE session_rate_limits
+    SET request_count = request_count + 1
+    WHERE session_id = $1
+    `,
+    [sessionId]
+  );
+}
+
 // ---- OpenAI ----
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -59,6 +117,15 @@ fastify.post("/chat", async (request, reply) => {
     }
 
     const db = getPool();
+
+    // Rate limit check
+    try {
+      await enforceSessionRateLimit(db, session_id);
+    } catch {
+      return reply.code(429).send({
+        error: "Rate limit exceeded. Please wait and try again."
+      });
+    }
 
     // 1) Store user message
     await db.query(
