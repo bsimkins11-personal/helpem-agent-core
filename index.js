@@ -3,40 +3,58 @@ import { Pool } from "pg";
 
 const fastify = Fastify({ logger: true });
 const PORT = Number(process.env.PORT || 8080);
-const DATABASE_URL = process.env.DATABASE_URL;
 
-// ---- Postgres (only if DATABASE_URL exists) ----
-let pool = null;
-if (DATABASE_URL) {
-  pool = new Pool({ connectionString: DATABASE_URL });
-  pool.on("error", (err) => {
-    console.error("Postgres pool error:", err);
-  });
+// Build DATABASE_URL explicitly from PG vars
+function buildDatabaseUrl() {
+  const {
+    PGHOST,
+    PGPORT,
+    PGDATABASE,
+    PGUSER,
+    PGPASSWORD,
+  } = process.env;
+
+  if (!PGHOST || !PGPORT || !PGDATABASE || !PGUSER || !PGPASSWORD) {
+    throw new Error("Missing Postgres environment variables");
+  }
+
+  return `postgresql://${encodeURIComponent(PGUSER)}:${encodeURIComponent(
+    PGPASSWORD
+  )}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
 }
 
-// ---- Routes ----
-fastify.get("/", async () => {
-  return "API is running";
-});
+let pool;
 
-fastify.get("/health", async () => {
-  return { status: "ok" };
-});
-
-fastify.get("/db-health", async () => {
+function getPool() {
   if (!pool) {
-    return { db: "skipped", reason: "DATABASE_URL not set" };
+    const connectionString = buildDatabaseUrl();
+    pool = new Pool({
+      connectionString,
+      ssl: { rejectUnauthorized: false }, // required for Railway
+    });
   }
+  return pool;
+}
+
+// Root
+fastify.get("/", async () => "API is running");
+
+// Health
+fastify.get("/health", async () => ({ status: "ok" }));
+
+// DB Health
+fastify.get("/db-health", async () => {
   try {
-    const result = await pool.query("SELECT 1 AS ok");
+    const db = getPool();
+    const result = await db.query("SELECT 1 AS ok");
     return { db: "ok", result: result.rows };
   } catch (err) {
     fastify.log.error("DB HEALTH ERROR:", err);
-    return { db: "error", message: err?.message ?? "unknown" };
+    return { db: "error", message: err.message };
   }
 });
 
-// ---- Start ----
+// Start
 fastify.listen({ port: PORT, host: "0.0.0.0" }, (err, address) => {
   if (err) {
     console.error("BOOT ERROR:", err);
