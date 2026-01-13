@@ -1,18 +1,26 @@
-import http from "http";
+import Fastify from "fastify";
+
+const fastify = Fastify({
+  logger: true,
+});
 
 const PORT = Number(process.env.PORT);
 
-const server = http.createServer((req, res) => {
-  if (req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "ok" }));
-    return;
-  }
-
-  res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("API is running");
+// Root route
+fastify.get("/", async () => {
+  return "API is running";
 });
 
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+// Health check
+fastify.get("/health", async () => {
+  return { status: "ok" };
+});
+
+// Start server
+fastify.listen({ port: PORT, host: "0.0.0.0" }, (err, address) => {
+  if (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+  fastify.log.info(`Server listening at ${address}`);
 });
