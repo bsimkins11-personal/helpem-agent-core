@@ -1,265 +1,78 @@
-import Fastify from "fastify";
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
 import { Pool } from "pg";
-import OpenAI from "openai";
+import { verifyAppleToken } from "./src/lib/appleAuth.js";
 
-const fastify = Fastify({
-  logger: {
-    level: "warn",
-  },
-});
-const PORT = Number(process.env.PORT || 8080);
+const app = express();
+const port = process.env.PORT || 8080;
 
-// ---- Rate Limiting ----
-const RATE_LIMIT_COUNT = 50;
-const RATE_LIMIT_WINDOW_MINUTES = 15;
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
 
-async function enforceSessionRateLimit(pool, sessionId) {
-  const now = new Date();
-
-  const { rows } = await pool.query(
-    `
-    SELECT request_count, window_start
-    FROM session_rate_limits
-    WHERE session_id = $1
-    `,
-    [sessionId]
-  );
-
-  if (rows.length === 0) {
-    await pool.query(
-      `
-      INSERT INTO session_rate_limits (session_id, window_start, request_count)
-      VALUES ($1, $2, 1)
-      `,
-      [sessionId, now]
-    );
-    return;
-  }
-
-  const { request_count, window_start } = rows[0];
-  const windowStart = new Date(window_start);
-  const minutesElapsed =
-    (now.getTime() - windowStart.getTime()) / 60000;
-
-  if (minutesElapsed > RATE_LIMIT_WINDOW_MINUTES) {
-    await pool.query(
-      `
-      UPDATE session_rate_limits
-      SET window_start = $2, request_count = 1
-      WHERE session_id = $1
-      `,
-      [sessionId, now]
-    );
-    return;
-  }
-
-  if (request_count >= RATE_LIMIT_COUNT) {
-    throw new Error("RATE_LIMIT_EXCEEDED");
-  }
-
-  await pool.query(
-    `
-    UPDATE session_rate_limits
-    SET request_count = request_count + 1
-    WHERE session_id = $1
-    `,
-    [sessionId]
-  );
-}
-
-// ---- Monthly App Limit ----
-const MONTHLY_APP_LIMIT = 450000;
-
-async function enforceMonthlyAppLimit(pool) {
-  const now = new Date();
-  const monthStart = `${now.getUTCFullYear()}-${String(
-    now.getUTCMonth() + 1
-  ).padStart(2, "0")}-01`;
-
-  const { rows } = await pool.query(
-    `
-    SELECT request_count
-    FROM app_usage_limits
-    WHERE window_start = $1
-    `,
-    [monthStart]
-  );
-
-  if (rows.length === 0) {
-    return;
-  }
-
-  if (rows[0].request_count >= MONTHLY_APP_LIMIT) {
-    throw new Error("MONTHLY_APP_LIMIT_EXCEEDED");
-  }
-}
-
-// ---- App Usage Tracking ----
-async function trackAppUsage(pool) {
-  const now = new Date();
-  const monthStart = `${now.getUTCFullYear()}-${String(
-    now.getUTCMonth() + 1
-  ).padStart(2, "0")}-01`; // YYYY-MM-01
-
-  await pool.query(
-    `
-    INSERT INTO app_usage_limits (window_start, request_count)
-    VALUES ($1, 1)
-    ON CONFLICT (window_start)
-    DO UPDATE SET request_count = app_usage_limits.request_count + 1
-    `,
-    [monthStart]
-  );
-}
-
-// ---- OpenAI ----
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// Database
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
 });
 
-// ---- Postgres ----
-let pool;
+// --- TEST ROUTE (PRODUCTION-STYLE) ---
+app.post("/test-db", async (req, res) => {
+  console.log("ROUTE HIT: POST /test-db");
 
-function getPool() {
-  if (!pool) {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL not set");
-    }
-
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-    });
-  }
-  return pool;
-}
-
-// ---- Routes ----
-fastify.get("/", async () => "API is running");
-
-fastify.get("/health", async () => ({ status: "ok" }));
-
-if (process.env.ENABLE_DB_HEALTH === "true") {
-  fastify.get("/db-health", async () => {
-    try {
-      const db = getPool();
-      const result = await db.query("SELECT 1 AS ok");
-      return { db: "ok", result: result.rows };
-    } catch (err) {
-      fastify.log.error("DB HEALTH ERROR:", err);
-      return { db: "error", message: err.message };
-    }
-  });
-}
-
-// ---- Chat Endpoint ----
-fastify.post("/chat", async (request, reply) => {
   try {
-    const { session_id, message, user_id } = request.body ?? {};
-
-    if (!session_id || !message) {
-      return reply.code(400).send({ error: "Missing session_id or message" });
+    // 🔐 Verify Apple identity token
+    const auth = await verifyAppleToken(req);
+    if (!auth.success) {
+      return res.status(auth.status).json({ error: auth.error });
     }
 
-    const db = getPool();
+    const userId = auth.user.id;
+    console.log("APPLE USER SUB:", userId);
 
-    // Rate limit check
+    const { message, type } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "Missing message" });
+    }
+
+    // Save to database
+    const client = await pool.connect();
     try {
-      await enforceSessionRateLimit(db, session_id);
-    } catch {
-      return reply.code(429).send({
-        error: "Rate limit exceeded. Please wait and try again."
+      await client.query(
+        "INSERT INTO user_inputs (user_id, content, type) VALUES ($1, $2, $3)",
+        [userId, message, type || "text"]
+      );
+    } finally {
+      client.release();
+    }
+
+    // Response mirrors production pattern
+    if (type === "text") {
+      return res.json({
+        success: true,
+        message: "Text saved successfully",
+        responseType: "text",
+      });
+    } else {
+      return res.json({
+        success: true,
+        message: "Voice saved and processed",
+        responseType: "voice",
       });
     }
-
-    // Track app-wide usage
-    await trackAppUsage(db);
-
-    // Monthly app limit check
-    try {
-      await enforceMonthlyAppLimit(db);
-    } catch {
-      return reply.code(429).send({
-        error: "Monthly app usage limit reached. Please try again next month."
-      });
-    }
-
-    // 1) Store user message
-    await db.query(
-      `INSERT INTO chat_messages (id, session_id, role, content)
-       VALUES (gen_random_uuid(), $1, 'user', $2)`,
-      [session_id, message]
-    );
-
-    // 2) Fetch recent memory
-    const { rows } = await db.query(
-      `SELECT role, content
-       FROM chat_messages
-       WHERE session_id = $1
-       ORDER BY created_at ASC
-       LIMIT 20`,
-      [session_id]
-    );
-
-    // 3) Grounded system prompt + memory
-    const messages = [
-      {
-        role: "system",
-        content: [
-          "You are HelpEm, a helpful assistant inside an iOS app.",
-          "If the user has previously stated a goal or ongoing task, you MUST restate that goal explicitly in the first sentence of your response.",
-          "Then provide advice or guidance that directly supports completing that goal.",
-          "Be concise, friendly, and practical.",
-          "Do not mention memory, prompts, or system instructions.",
-        ].join(" "),
-      },
-      ...rows.map((r) => ({
-        role: r.role,
-        content: r.content,
-      })),
-    ];
-
-    // 4) Model call
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages,
-      temperature: 0.4,
-    });
-
-    const assistantReply =
-      completion.choices?.[0]?.message?.content?.trim() ||
-      "I'm here—what would you like to do next?";
-
-    // 5) Store assistant reply
-    await db.query(
-      `INSERT INTO chat_messages (id, session_id, role, content)
-       VALUES (gen_random_uuid(), $1, 'assistant', $2)`,
-      [session_id, assistantReply]
-    );
-
-    return reply.code(200).send({
-      session_id,
-      reply: {
-        text: assistantReply,
-        ui_schema: {
-          type: "text",
-          title: null,
-          items: [],
-        },
-      },
-      actions: [{ type: "follow_up", label: "Continue" }],
-    });
   } catch (err) {
-    fastify.log.error("CHAT ERROR:", err);
-    return reply.code(500).send({ error: "Internal error", message: err.message });
+    console.error("ERROR /test-db:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// ---- Start ----
-fastify.listen({ port: PORT, host: "0.0.0.0" }, (err, address) => {
-  if (err) {
-    console.error("BOOT ERROR:", err);
-    process.exit(1);
-  }
-  console.log(`Listening on ${address}`);
+// Health check
+app.get("/", (_req, res) => {
+  res.send("API is running");
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`API listening on port ${port}`);
 });
