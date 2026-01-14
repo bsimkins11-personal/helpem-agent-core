@@ -3,6 +3,8 @@ import jwksClient from "jwks-rsa";
 
 const client = jwksClient({
   jwksUri: "https://appleid.apple.com/auth/keys",
+  cache: true,
+  cacheMaxAge: 86400000, // 24 hours
 });
 
 function getKey(header, callback) {
@@ -20,8 +22,74 @@ function getKey(header, callback) {
 }
 
 /**
- * Verifies an Apple identity token from the Authorization header.
- * Works with Express request objects.
+ * Verifies an Apple identity token (JWT string).
+ * Used by /auth/apple endpoint.
+ * 
+ * Per policy: we do NOT store or expose Apple email or name.
+ */
+export async function verifyAppleIdentityToken(identityToken) {
+  if (!identityToken) {
+    return {
+      success: false,
+      error: "Missing identity token",
+      status: 401,
+    };
+  }
+
+  const audience = process.env.APPLE_CLIENT_ID;
+  if (!audience) {
+    console.error("APPLE_CLIENT_ID environment variable not set");
+    return {
+      success: false,
+      error: "Server configuration error",
+      status: 500,
+    };
+  }
+
+  return new Promise((resolve) => {
+    jwt.verify(
+      identityToken,
+      getKey,
+      {
+        audience,
+        issuer: "https://appleid.apple.com",
+        algorithms: ["RS256"],
+      },
+      (err, decoded) => {
+        if (err) {
+          console.error("Apple token verification failed:", err.message);
+          resolve({
+            success: false,
+            error: "Invalid Apple identity token",
+            status: 401,
+          });
+          return;
+        }
+
+        if (!decoded?.sub) {
+          resolve({
+            success: false,
+            error: "Invalid Apple token payload: missing sub",
+            status: 401,
+          });
+          return;
+        }
+
+        // ✅ Only return the stable Apple user ID - no email/name per policy
+        resolve({
+          success: true,
+          user: {
+            id: decoded.sub,
+          },
+        });
+      }
+    );
+  });
+}
+
+/**
+ * @deprecated Use verifyAppleIdentityToken for /auth/apple endpoint.
+ * Legacy function for existing routes that use Authorization header.
  */
 export async function verifyAppleToken(req) {
   const authHeader = req.headers.authorization;
@@ -35,43 +103,5 @@ export async function verifyAppleToken(req) {
   }
 
   const token = authHeader.replace("Bearer ", "");
-
-  return new Promise((resolve) => {
-    jwt.verify(
-      token,
-      getKey,
-      {
-        audience: process.env.APPLE_CLIENT_ID,
-        issuer: "https://appleid.apple.com",
-        algorithms: ["RS256"],
-      },
-      (err, decoded) => {
-        if (err) {
-          resolve({
-            success: false,
-            error: "Invalid Apple identity token",
-            status: 401,
-          });
-          return;
-        }
-
-        if (!decoded?.sub) {
-          resolve({
-            success: false,
-            error: "Invalid Apple token payload",
-            status: 401,
-          });
-          return;
-        }
-
-        resolve({
-          success: true,
-          user: {
-            id: decoded.sub,    // 🔑 stable Apple user ID
-            email: decoded.email,
-          },
-        });
-      }
-    );
-  });
+  return verifyAppleIdentityToken(token);
 }
