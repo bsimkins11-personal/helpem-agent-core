@@ -19,28 +19,29 @@ struct SignInView: View {
             VStack(spacing: 40) {
                 Spacer()
 
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
+                    // App logo - clean circular icon
                     ZStack {
                         Circle()
-                            .fill(.white.opacity(0.2))
+                            .fill(.white)
                             .frame(width: 120, height: 120)
-
-                        Text("H")
-                            .font(.system(size: 60, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.15), radius: 15, x: 0, y: 8)
+                        
+                        Image(systemName: "hand.raised.fill")
+                            .font(.system(size: 50))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color(hex: "0077CC"), Color(hex: "00C896")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                     }
-
-                    HStack(spacing: 0) {
-                        Text("help")
-                            .foregroundColor(.white)
-                        Text("em")
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                    .font(.system(size: 42, weight: .bold, design: .rounded))
-
+                    
                     Text("Life Management")
-                        .font(.title3)
-                        .foregroundColor(.white.opacity(0.8))
+                        .font(.title2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.9))
                 }
 
                 Spacer()
