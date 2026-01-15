@@ -39,14 +39,19 @@ Open `ios/HelpEmApp.xcodeproj` in Xcode.
 
 Use Railway's **internal** Postgres `DATABASE_URL` and run migrations on deploy.
 
-Recommended Railway commands:
-- Build: `npm ci -w backend`
-- Deploy/Start: `npm run -w backend prisma:migrate && npm run -w backend start`
+**Configuration:** See `railway.json` in repo root.
 
-Required Railway environment variables:
-- `DATABASE_URL` (internal Railway Postgres URL)
-- `JWT_SECRET`
-- `APPLE_CLIENT_ID`
+**Build:** `npm install -w backend --omit=dev --no-audit --no-fund --cache /tmp/npm-cache`
+
+**Deploy/Start:** `npm run -w backend prisma:migrate && npm run -w backend start`
+
+**Required Railway environment variables:**
+- `DATABASE_URL` (internal Railway Postgres URL: `postgres.railway.internal`)
+- `JWT_SECRET` (min 32 characters, must match web)
+- `APPLE_CLIENT_ID` (iOS Bundle ID: `com.helpem.agent`)
+- `NIXPACKS_NODE_VERSION=22.12.0` (Prisma 7 requirement)
+
+See `ENVIRONMENT_VARIABLES.md` for complete reference.
 
 ## Auth
 
