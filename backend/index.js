@@ -64,8 +64,8 @@ app.post("/auth/apple", async (req, res) => {
 
     const userId = user.id;
 
-    // Determine if this is a new user (created_at is very recent)
-    const createdAt = new Date(user.created_at);
+    // Determine if this is a new user (createdAt is very recent)
+    const createdAt = new Date(user.createdAt);
     const now = new Date();
     const isNewUser = now.getTime() - createdAt.getTime() < 5000;
 
