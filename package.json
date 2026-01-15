@@ -13,5 +13,8 @@
     "start:web": "npm --prefix web run start",
     "start:backend": "npm --prefix backend run start",
     "install:all": "npm install --workspaces"
+  },
+  "engines": {
+    "node": "22.12.0"
   }
 }
