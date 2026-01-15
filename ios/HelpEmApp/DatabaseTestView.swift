@@ -74,11 +74,18 @@ struct DatabaseTestView: View {
             
             Spacer()
             
-            // Test connection button
-            Button("Test DB Connection") {
-                testConnection()
+            // Test buttons
+            HStack(spacing: 12) {
+                Button("Test DB") {
+                    testConnection()
+                }
+                .buttonStyle(.bordered)
+                
+                Button("Test Notification") {
+                    testNotification()
+                }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.bordered)
         }
         .padding()
     }
@@ -109,6 +116,28 @@ struct DatabaseTestView: View {
             
             if manager.error == nil {
                 statusMessage = "✅ Database connection OK!"
+            }
+        }
+    }
+    
+    private func testNotification() {
+        statusMessage = ""
+        
+        Task {
+            // Schedule a test notification in 5 seconds
+            try? await NotificationManager.shared.scheduleNotification(
+                id: "test-notification",
+                title: "HelpEm Test",
+                body: "Notifications are working! 🎉",
+                timeInterval: 5,
+                userInfo: ["type": "test"]
+            )
+            
+            statusMessage = "🔔 Notification scheduled for 5 seconds from now!"
+            
+            // Clear status after 3 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                statusMessage = ""
             }
         }
     }
