@@ -2,7 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSMicrophoneInjectionUsageDescription</key>
-	<string>HelpEm needs microphone access for voice commands</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>HelpEm uses your microphone to record voice messages and commands.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>HelpEm uses speech recognition to convert your voice into text for easy input.</string>
 </dict>
 </plist>
