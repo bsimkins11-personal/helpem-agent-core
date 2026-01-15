@@ -153,6 +153,23 @@ app.get("/", (_req, res) => {
   res.send("API is running");
 });
 
+// Health check with optional DB probe
+app.get("/health", async (_req, res) => {
+  const dbHealthEnabled = process.env.ENABLE_DB_HEALTH === "true";
+
+  if (!dbHealthEnabled) {
+    return res.json({ status: "ok", db: "skipped" });
+  }
+
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({ status: "ok", db: "ok" });
+  } catch (error) {
+    console.error("DB health check failed:", error);
+    return res.status(500).json({ status: "error", db: "error" });
+  }
+});
+
 // Start server
 app.listen(port, () => {
   console.log(`API listening on port ${port}`);
