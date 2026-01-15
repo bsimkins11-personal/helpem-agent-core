@@ -34,11 +34,30 @@ struct RootView: View {
                     ZStack {
                         WebViewContainer(authManager: authManager)
                         
-                        // Floating test button
+                        // Floating buttons
                         VStack {
-                            Spacer()
                             HStack {
                                 Spacer()
+                                // Logout button (top right)
+                                Button(action: {
+                                    authManager.logout()
+                                }) {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.white)
+                                        .padding(12)
+                                        .background(Color.red.opacity(0.8))
+                                        .clipShape(Circle())
+                                        .shadow(radius: 4)
+                                }
+                                .padding()
+                            }
+                            
+                            Spacer()
+                            
+                            HStack {
+                                Spacer()
+                                // Database test button (bottom right)
                                 Button(action: {
                                     showDatabaseTest = true
                                 }) {
