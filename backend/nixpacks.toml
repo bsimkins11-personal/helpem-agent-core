@@ -5,4 +5,4 @@ nixPkgs = ['nodejs_22']
 cmds = ['npm install --omit=dev --no-audit --no-fund']
 
 [start]
-cmd = 'npm run prisma:migrate && npm run start'
+cmd = 'npm run start'
