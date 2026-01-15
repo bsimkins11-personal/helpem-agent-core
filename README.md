@@ -35,6 +35,19 @@ Open `ios/HelpEmApp.xcodeproj` in Xcode.
 - Backend: Railway (GitHub integration)
 - iOS: Xcode Archive -> TestFlight
 
+### Railway backend deploy (secure)
+
+Use Railway's **internal** Postgres `DATABASE_URL` and run migrations on deploy.
+
+Recommended Railway commands:
+- Build: `npm ci -w backend`
+- Deploy/Start: `npm run -w backend prisma:migrate && npm run -w backend start`
+
+Required Railway environment variables:
+- `DATABASE_URL` (internal Railway Postgres URL)
+- `JWT_SECRET`
+- `APPLE_CLIENT_ID`
+
 ## Auth
 
 - Sign in with Apple only

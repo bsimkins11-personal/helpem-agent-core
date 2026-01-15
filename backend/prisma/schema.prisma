@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appleUserId  String      @unique @map("apple_user_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  lastActiveAt DateTime    @default(now()) @map("last_active_at")
+  inputs       UserInput[]
+
+  @@map("users")
+}
+
+model UserInput {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
+  content   String
+  type      String   @default("text")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_inputs")
+}

@@ -1,9 +1,9 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { Pool } from "pg";
-import { verifyAppleToken, verifyAppleIdentityToken } from "./src/lib/appleAuth.js";
+import { verifyAppleIdentityToken } from "./src/lib/appleAuth.js";
 import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js";
+import { prisma } from "./src/lib/prisma.js";
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -11,11 +11,6 @@ const port = process.env.PORT || 8080;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-
-// Database
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
 
 // =============================================================================
 // AUTH ENDPOINTS
@@ -60,21 +55,12 @@ app.post("/auth/apple", async (req, res) => {
       return res.status(401).json({ error: "Apple user ID mismatch" });
     }
 
-    // Upsert user in database
-    const client = await pool.connect();
-    let user;
-    try {
-      const result = await client.query(
-        `INSERT INTO users (apple_user_id)
-         VALUES ($1)
-         ON CONFLICT (apple_user_id) DO UPDATE SET apple_user_id = EXCLUDED.apple_user_id
-         RETURNING id, created_at`,
-        [apple_user_id]
-      );
-      user = result.rows[0];
-    } finally {
-      client.release();
-    }
+    const user = await prisma.user.upsert({
+      where: { appleUserId: apple_user_id },
+      update: { lastActiveAt: new Date() },
+      create: { appleUserId: apple_user_id, lastActiveAt: new Date() },
+      select: { id: true, createdAt: true },
+    });
 
     const userId = user.id;
 
@@ -120,13 +106,13 @@ app.post("/test-db", async (req, res) => {
 
   try {
     // 🔐 Verify Apple identity token
-    const auth = await verifyAppleToken(req);
-    if (!auth.success) {
-      return res.status(auth.status).json({ error: auth.error });
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
     }
 
-    const userId = auth.user.id;
-    console.log("APPLE USER SUB:", userId);
+    const userId = session.session.userId;
+    console.log("SESSION USER ID:", userId);
 
     const { message, type } = req.body;
 
@@ -134,16 +120,13 @@ app.post("/test-db", async (req, res) => {
       return res.status(400).json({ error: "Missing message" });
     }
 
-    // Save to database
-    const client = await pool.connect();
-    try {
-      await client.query(
-        "INSERT INTO user_inputs (user_id, content, type) VALUES ($1, $2, $3)",
-        [userId, message, type || "text"]
-      );
-    } finally {
-      client.release();
-    }
+    await prisma.userInput.create({
+      data: {
+        userId,
+        content: message,
+        type: type || "text",
+      },
+    });
 
     // Response mirrors production pattern
     if (type === "text") {
