@@ -4,9 +4,8 @@
 import Foundation
 import Speech
 import AVFoundation
-import Combine
 
-final class SpeechManager: ObservableObject {
+final class SpeechManager {
     
     var onFinalResult: ((String) -> Void)?
     
@@ -19,7 +18,7 @@ final class SpeechManager: ObservableObject {
     private var finalTranscript: String?
     
     // Cache authorization status for efficiency
-    @Published private(set) var isAuthorized = false
+    private(set) var isAuthorized = false
     
     init() {
         checkAuthorization()
