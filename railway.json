@@ -9,6 +9,6 @@
     "healthcheckPath": "/"
   },
   "variables": {
-    "NIXPACKS_NODE_VERSION": "22"
+    "NIXPACKS_NODE_VERSION": "22.12.0"
   }
 }
