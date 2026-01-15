@@ -21,26 +21,15 @@ struct SignInView: View {
                 Spacer()
 
                 VStack(spacing: 24) {
-                    // HelpEm logo with fallback
-                    if let _ = UIImage(named: "HelpEm_Logo") {
-                        Image("HelpEm_Logo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 140, height: 140)
-                            .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
-                    } else {
-                        // Fallback: Clean "helpem" text logo
-                        VStack(spacing: 4) {
-                            HStack(spacing: 0) {
-                                Text("help")
-                                    .foregroundColor(.white)
-                                Text("em")
-                                    .foregroundColor(.white.opacity(0.85))
-                            }
-                            .font(.system(size: 52, weight: .bold, design: .rounded))
-                            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                        }
+                    // HelpEm text logo
+                    HStack(spacing: 0) {
+                        Text("help")
+                            .foregroundColor(.white)
+                        Text("em")
+                            .foregroundColor(.white.opacity(0.85))
                     }
+                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                     
                     // Tagline
                     Text("Built for you.")
