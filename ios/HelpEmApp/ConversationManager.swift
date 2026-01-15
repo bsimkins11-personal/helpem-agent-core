@@ -1,66 +1,75 @@
+// ConversationManager.swift
+// Manages conversation state and database persistence
+
 import Foundation
 import Combine
 
 @MainActor
 final class ConversationManager: ObservableObject {
-
-    @Published var messages: [String] = []
-
-    // Railway Express API base
-    private let baseURL = "https://api-production-2989.up.railway.app"
-
-    func sendMessageToDatabase(content: String, type: String = "text") {
-
-        print("🚀 sendMessageToDatabase CALLED")
-
-        guard let url = URL(string: "\(baseURL)/test-db") else {
-            print("❌ Bad URL")
-            return
+    
+    @Published var messages: [Message] = []
+    @Published var isLoading = false
+    @Published var error: String?
+    
+    private let apiClient = APIClient.shared
+    
+    // MARK: - Message Model
+    
+    struct Message: Identifiable {
+        let id = UUID()
+        let content: String
+        let type: MessageType
+        let timestamp: Date
+        
+        enum MessageType {
+            case text
+            case voice
         }
-
-        print("🌐 URL:", url.absoluteString)
-
-        // 🔑 Fetch Apple identity token
-        guard let identityToken = UserDefaults.standard.string(forKey: "appleIdentityToken"),
-              !identityToken.isEmpty else {
-            print("❌ Missing Apple identity token")
-            return
+    }
+    
+    // MARK: - Public Methods
+    
+    /// Save a message to the database
+    func saveMessage(content: String, type: Message.MessageType = .text) async {
+        guard !content.isEmpty else { return }
+        
+        isLoading = true
+        error = nil
+        
+        // Add message to local state immediately for better UX
+        let message = Message(content: content, type: type, timestamp: Date())
+        messages.append(message)
+        
+        do {
+            let typeString = type == .text ? "text" : "voice"
+            let response = try await apiClient.saveUserInput(content: content, type: typeString)
+            
+            print("✅ Message saved: \(response.message)")
+            
+        } catch {
+            print("❌ Failed to save message:", error)
+            self.error = error.localizedDescription
+            
+            // Optionally remove message from local state on failure
+            // messages.removeAll { $0.id == message.id }
         }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        // 🔐 Attach Apple token
-        request.setValue("Bearer \(identityToken)", forHTTPHeaderField: "Authorization")
-
-        let body: [String: Any] = [
-            "message": content,
-            "type": type
-        ]
-
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-
-            if let error = error {
-                print("❌ URLSession ERROR:", error.localizedDescription)
-                return
-            }
-
-            if let httpResponse = response as? HTTPURLResponse {
-                print("✅ HTTP STATUS:", httpResponse.statusCode)
-            }
-
-            if let data = data {
-                print("📦 RESPONSE DATA:", String(decoding: data, as: UTF8.self))
-            }
-
-            Task { @MainActor in
-                self.messages.append(content)
-            }
-
-        }.resume()
+        
+        isLoading = false
+    }
+    
+    /// Clear all local messages
+    func clearMessages() {
+        messages.removeAll()
+    }
+    
+    /// Test database connection
+    func testConnection() async {
+        do {
+            let health = try await apiClient.testDatabaseConnection()
+            print("🏥 Health check: status=\(health.status), db=\(health.db ?? "unknown")")
+        } catch {
+            print("❌ Health check failed:", error)
+            self.error = error.localizedDescription
+        }
     }
 }
-
