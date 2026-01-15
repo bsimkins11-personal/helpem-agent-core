@@ -206,9 +206,10 @@ final class AuthManager: NSObject, ObservableObject {
     /// TODO: Remove this method before TestFlight/production release
     /// This creates mock credentials for testing WebView and other features
     func skipAuthForTesting() {
-        let mockSessionToken = "test_token_\(UUID().uuidString)"
-        let mockAppleUserId = "test_user_\(UUID().uuidString)"
-        let mockUserId = UUID().uuidString
+        // REAL TEST TOKEN - Generated from Railway JWT_SECRET
+        let mockSessionToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LTE3Njg0NTI4MTQ2NDEiLCJhcHBsZVVzZXJJZCI6ImFwcGxlLXRlc3QtMTc2ODQ1MjgxNDY0MSIsImlhdCI6MTc2ODQ1MjgxNCwiZXhwIjoxNzcxMDQ0ODE0fQ.Ua0d1sOU_5GCwNwXE2pjHqGG3MH_gRVo_7extL8EVE0"
+        let mockAppleUserId = "apple-test-1768452814641"
+        let mockUserId = "test-1768452814641"
         
         KeychainHelper.shared.sessionToken = mockSessionToken
         KeychainHelper.shared.appleUserId = mockAppleUserId
@@ -216,8 +217,9 @@ final class AuthManager: NSObject, ObservableObject {
         
         isAuthenticated = true
         
-        print("⚠️ TESTING MODE: Skipped real authentication")
-        print("🔑 Mock token: \(mockSessionToken.prefix(20))...")
+        print("⚠️ TESTING MODE: Using REAL test token from Railway")
+        print("🔑 Token valid until:", Date(timeIntervalSince1970: 1771044814))
+        print("👤 User ID:", mockUserId)
     }
 
     enum AuthError: LocalizedError {
