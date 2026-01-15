@@ -20,34 +20,26 @@ struct SignInView: View {
                 Spacer()
 
                 VStack(spacing: 24) {
-                    // App logo with helping hand
+                    // HelpEm logo in white circle
                     ZStack {
                         Circle()
                             .fill(.white)
                             .frame(width: 120, height: 120)
                             .shadow(color: .black.opacity(0.15), radius: 15, x: 0, y: 8)
                         
-                        // HelpEm logo - two hands reaching together
-                        HStack(spacing: 4) {
-                            Image(systemName: "hand.raised.fill")
-                                .font(.system(size: 38))
-                                .rotationEffect(.degrees(-15))
-                            
-                            Image(systemName: "hand.raised.fill")
-                                .font(.system(size: 38))
-                                .rotationEffect(.degrees(15))
-                                .scaleEffect(x: -1, y: 1) // Mirror the hand
-                        }
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color(hex: "0077CC"), Color(hex: "00C896")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                        // HelpEm "H" with gradient (placeholder for your logo)
+                        Text("H")
+                            .font(.system(size: 60, weight: .bold, design: .rounded))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color(hex: "0077CC"), Color(hex: "00C896")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
                     }
                     
-                    // "Helping hands to life management" tagline
+                    // "Helping hands to life management" - hands flanking text
                     HStack(spacing: 8) {
                         Image(systemName: "hand.raised.fill")
                             .font(.system(size: 16))
