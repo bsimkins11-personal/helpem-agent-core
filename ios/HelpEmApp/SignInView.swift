@@ -20,24 +20,13 @@ struct SignInView: View {
                 Spacer()
 
                 VStack(spacing: 24) {
-                    // HelpEm logo in white circle
-                    ZStack {
-                        Circle()
-                            .fill(.white)
-                            .frame(width: 120, height: 120)
-                            .shadow(color: .black.opacity(0.15), radius: 15, x: 0, y: 8)
-                        
-                        // HelpEm "H" with gradient (placeholder for your logo)
-                        Text("H")
-                            .font(.system(size: 60, weight: .bold, design: .rounded))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color(hex: "0077CC"), Color(hex: "00C896")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
+                    // HelpEm logo
+                    Image("AppIcon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 26.4))
+                        .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
                     
                     // "Helping hands to life management" - hands flanking text
                     HStack(spacing: 8) {
