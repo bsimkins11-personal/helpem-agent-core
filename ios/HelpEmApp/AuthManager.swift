@@ -142,6 +142,20 @@ final class AuthManager: NSObject, ObservableObject {
         isAuthenticated = false
         error = nil
     }
+    
+    // TEMPORARY: Skip auth for local testing without Apple Developer membership
+    func skipAuthForTesting() {
+        let mockSessionToken = "test_token_\(UUID().uuidString)"
+        let mockAppleUserId = "test_user_\(UUID().uuidString)"
+        let mockUserId = UUID().uuidString
+        
+        KeychainHelper.shared.sessionToken = mockSessionToken
+        KeychainHelper.shared.appleUserId = mockAppleUserId
+        KeychainHelper.shared.userId = mockUserId
+        
+        isAuthenticated = true
+        print("⚠️ TESTING MODE: Skipped real authentication")
+    }
 
     enum AuthError: LocalizedError {
         case invalidURL
