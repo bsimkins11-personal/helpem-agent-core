@@ -1,0 +1,17 @@
+{
+  "name": "helpem-monorepo",
+  "private": true,
+  "workspaces": [
+    "web",
+    "backend",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --prefix web run dev",
+    "build:web": "npm --prefix web run build",
+    "lint:web": "npm --prefix web run lint",
+    "start:web": "npm --prefix web run start",
+    "start:backend": "npm --prefix backend run start",
+    "install:all": "npm install --workspaces"
+  }
+}
