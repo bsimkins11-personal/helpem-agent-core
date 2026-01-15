@@ -3,8 +3,20 @@
 
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-const prisma = new PrismaClient();
+// Check for required environment variables
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+    console.error('❌ DATABASE_URL environment variable not set');
+    console.error('\nRun this script on Railway:');
+    console.error('  railway run node create-test-user.js');
+    console.error('\nOr set DATABASE_URL locally (get from Railway dashboard)');
+    process.exit(1);
+}
+
+const adapter = new PrismaPg({ connectionString: databaseUrl });
+const prisma = new PrismaClient({ adapter });
 
 async function createTestUser() {
     const testAppleUserId = 'test_user_local_' + Date.now();
