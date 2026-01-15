@@ -28,22 +28,11 @@ struct SignInView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 26.4))
                         .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
                     
-                    // "Helping hands to life management" - hands flanking text
-                    HStack(spacing: 8) {
-                        Image(systemName: "hand.raised.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.white.opacity(0.8))
-                        
-                        Text("Life Management")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Image(systemName: "hand.raised.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.white.opacity(0.8))
-                            .scaleEffect(x: -1, y: 1) // Mirror
-                    }
+                    // Tagline
+                    Text("Built for you.")
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.9))
                 }
 
                 Spacer()
