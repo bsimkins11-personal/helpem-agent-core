@@ -9,7 +9,9 @@ import UIKit
 // MARK: - Configuration
 
 struct AppConfig {
-    static let webAppURL = "https://helpem-poc.vercel.app"
+    // For local testing: http://localhost:3001
+    // For production: https://helpem-poc.vercel.app
+    static let webAppURL = "http://localhost:3001"
     static let apiURL = "https://api-production-2989.up.railway.app"
     
     /// Returns true if URL should receive session token
