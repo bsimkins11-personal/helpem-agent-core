@@ -20,24 +20,12 @@ struct SignInView: View {
                 Spacer()
 
                 VStack(spacing: 24) {
-                    // HelpEm logo - clean gradient circle
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "0077CC"), Color(hex: "00C896")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 120, height: 120)
-                            .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
-                        
-                        // Icon representing help/conversation
-                        Image(systemName: "bubble.left.and.bubble.right.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(.white)
-                    }
+                    // HelpEm logo
+                    Image("HelpEm_Logo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 140, height: 140)
+                        .shadow(color: .black.opacity(0.2), radius: 15, x: 0, y: 8)
                     
                     // Tagline
                     Text("Built for you.")
