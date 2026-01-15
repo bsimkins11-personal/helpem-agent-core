@@ -3,14 +3,15 @@
 
 import Foundation
 import UserNotifications
+import UIKit
 
 /// Manages local and push notifications
 @MainActor
-final class NotificationManager: NSObject, ObservableObject {
+final class NotificationManager: NSObject {
     
     static let shared = NotificationManager()
     
-    @Published var authorizationStatus: UNAuthorizationStatus = .notDetermined
+    var authorizationStatus: UNAuthorizationStatus = .notDetermined
     
     private override init() {
         super.init()
