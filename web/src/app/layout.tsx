@@ -3,6 +3,7 @@ import { Outfit } from 'next/font/google';
 import Link from 'next/link';
 import { LifeProvider } from '@/state/LifeStore';
 import { ReminderProvider } from '@/components/ReminderProvider';
+import { CryptoUUIDShim } from '@/components/CryptoUUIDShim';
 import './globals.css';
 
 const outfit = Outfit({
@@ -38,6 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={outfit.variable}>
       <body className="min-h-screen bg-gray-50 text-brandText antialiased">
+        <CryptoUUIDShim />
         <LifeProvider>
           <ReminderProvider>
             <div className="min-h-screen pb-20 md:pb-0">

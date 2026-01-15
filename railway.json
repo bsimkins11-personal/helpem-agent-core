@@ -6,5 +6,11 @@
   },
   "deploy": {
     "startCommand": "npm run start"
-  }
+  },
+  "crons": [
+    {
+      "schedule": "0 3 * * *",
+      "command": "npm --prefix backend run rules:aggregate"
+    }
+  ]
 }

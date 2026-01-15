@@ -7,6 +7,8 @@ import { prisma } from "./src/lib/prisma.js";
 
 const app = express();
 const port = process.env.PORT || 8080;
+const MAX_BIAS_ENTRIES = 200;
+const GLOBAL_RULE_KEY = "classification_biases_v1";
 
 // Middleware
 app.use(cors());
@@ -169,6 +171,128 @@ app.get("/health", async (_req, res) => {
     return res.status(500).json({ status: "error", db: "error" });
   }
 });
+
+// =============================================================================
+// INSTRUCTION / FEEDBACK ENDPOINTS
+// =============================================================================
+
+// Record a user correction/feedback event to make personal bias smarter.
+app.post("/feedback", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+    const userId = session.session.userId;
+
+    const { text, from, to, timestamp } = req.body || {};
+    if (typeof text !== "string") {
+      return res.status(400).json({ error: "Missing or invalid text" });
+    }
+    if (!["todo", "grocery"].includes(to)) {
+      return res.status(400).json({ error: "Invalid target type" });
+    }
+
+    const normalized = normalizeText(text);
+    if (!normalized) {
+      return res.status(400).json({ error: "Empty text" });
+    }
+
+    const seenAt = parseTimestamp(timestamp);
+
+    const existing = await prisma.userInstruction.findUnique({
+      where: { userId },
+    });
+
+    const data = existing?.data ?? {};
+    const biases = data.biases ?? {};
+    const prior = biases[normalized] ?? { direction: to, count: 0 };
+
+    biases[normalized] = {
+      direction: to,
+      count: (prior.count || 0) + 1,
+      lastSeen: seenAt,
+      from: from || prior.from || null,
+    };
+
+    pruneBiases(biases);
+
+    const nextData = { ...data, biases };
+
+    await prisma.userInstruction.upsert({
+      where: { userId },
+      update: { data: nextData },
+      create: { userId, data: nextData },
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("ERROR /feedback:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Fetch the current user instruction doc (for client-side biasing).
+app.get("/instructions/me", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+    const userId = session.session.userId;
+
+    const instruction = await prisma.userInstruction.findUnique({
+      where: { userId },
+    });
+
+    return res.json({ data: instruction?.data ?? {} });
+  } catch (err) {
+    console.error("ERROR /instructions/me:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Debug: fetch current global rules snapshot.
+app.get("/rules/global", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const rule = await prisma.globalRule.findUnique({
+      where: { key: GLOBAL_RULE_KEY },
+    });
+
+    return res.json({ data: rule?.data ?? {} });
+  } catch (err) {
+    console.error("ERROR /rules/global:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+function normalizeText(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function parseTimestamp(ts) {
+  const d = ts ? new Date(ts) : new Date();
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+function pruneBiases(biases) {
+  const keys = Object.keys(biases);
+  if (keys.length <= MAX_BIAS_ENTRIES) return;
+
+  keys
+    .sort((a, b) => {
+      const aTime = biases[a].lastSeen || "";
+      const bTime = biases[b].lastSeen || "";
+      return aTime > bTime ? -1 : 1;
+    })
+    .slice(MAX_BIAS_ENTRIES)
+    .forEach((key) => delete biases[key]);
+}
 
 // Start server
 app.listen(port, () => {

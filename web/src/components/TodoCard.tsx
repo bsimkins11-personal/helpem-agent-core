@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Todo, Priority } from '@/types/todo';
 import { CompleteTodoButton } from './CompleteTodoButton';
 import { useLife } from '@/state/LifeStore';
+import { isGroceryCandidate } from '@/lib/classifier';
 
 interface TodoCardProps {
   todo: Todo;
@@ -34,10 +35,14 @@ const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
 export function TodoCard({ todo }: TodoCardProps) {
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
-  const { updateTodoPriority } = useLife();
+  const { updateTodoPriority, moveTodoToGroceries } = useLife();
   
   const isCompleted = !!todo.completedAt;
   const config = PRIORITY_CONFIG[todo.priority];
+  const showMoveToGroceries = useMemo(() => {
+    if (isCompleted) return false;
+    return isGroceryCandidate(todo.title);
+  }, [isCompleted, todo.title]);
 
   // Memoize overdue calculation
   const isOverdue = useMemo(() => {
@@ -135,6 +140,17 @@ export function TodoCard({ todo }: TodoCardProps) {
                   {PRIORITY_CONFIG[p].label}
                 </button>
               ))}
+            </div>
+          )}
+
+          {showMoveToGroceries && (
+            <div className="mt-2">
+              <button
+                onClick={() => moveTodoToGroceries(todo.id)}
+                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+              >
+                Move to groceries
+              </button>
             </div>
           )}
         </div>

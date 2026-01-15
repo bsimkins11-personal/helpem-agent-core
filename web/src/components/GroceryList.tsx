@@ -1,9 +1,10 @@
 "use client";
 
 import { useLife } from "@/state/LifeStore";
+import { isTodoSignal } from "@/lib/classifier";
 
 export function GroceryList() {
-  const { routines, completeRoutineItem, clearCompletedRoutineItems } = useLife();
+  const { routines, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos } = useLife();
   
   const groceryRoutine = routines.find(r => r.category === "groceries");
   
@@ -56,7 +57,17 @@ export function GroceryList() {
               >
                 <span className="opacity-0 group-hover:opacity-100 text-orange-500 text-xs">✓</span>
               </button>
-              <span className="text-brandText capitalize">{item.content}</span>
+              <div className="flex-1 flex items-center gap-3">
+                <span className="text-brandText capitalize">{item.content}</span>
+                {isTodoSignal(item.content) && (
+                  <button
+                    onClick={() => moveRoutineItemToTodos(groceryRoutine.id, item.id, item.content)}
+                    className="text-xs text-brandBlue hover:text-blue-700"
+                  >
+                    Move to todos
+                  </button>
+                )}
+              </div>
             </div>
           ))}
 

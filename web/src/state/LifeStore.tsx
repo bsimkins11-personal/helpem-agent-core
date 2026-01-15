@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { Todo, Priority } from "@/types/todo";
 import { Habit } from "@/types/habit";
 import { Appointment } from "@/types/appointment";
@@ -114,6 +115,7 @@ export type LifeContextType = {
   addTodo: (todo: Todo) => void;
   completeTodo: (id: string) => void;
   updateTodoPriority: (id: string, priority: Priority) => void;
+  moveTodoToGroceries: (id: string) => void;
   addHabit: (habit: Habit) => void;
   logHabit: (id: string) => void;
   addAppointment: (appt: Appointment) => void;
@@ -121,6 +123,7 @@ export type LifeContextType = {
   addRoutineItem: (routineId: string, item: RoutineItem) => void;
   completeRoutineItem: (routineId: string, itemId: string) => void;
   clearCompletedRoutineItems: (routineId: string) => void;
+  moveRoutineItemToTodos: (routineId: string, itemId: string, title: string) => void;
 };
 
 const LifeContext = createContext<LifeContextType | null>(null);
@@ -146,6 +149,65 @@ export function LifeProvider({ children }: LifeProviderProps) {
   const updateTodoPriority = useCallback((id: string, priority: Priority) => {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, priority } : t));
   }, []);
+
+  const sendFeedback = useCallback((text: string, to: "todo" | "grocery", from?: "todo" | "grocery") => {
+    if (typeof window === "undefined") return;
+    const payload = { text, to, from };
+    void fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {
+      // Best-effort only; ignore network failures.
+    });
+  }, []);
+
+  const addItemsToGroceryRoutine = useCallback((items: string[]) => {
+    const now = new Date();
+    setRoutines(prev => {
+      const existing = prev.find(r => r.category === "groceries");
+      if (!existing) {
+        const newRoutine: Routine = {
+          id: uuidv4(),
+          category: "groceries",
+          title: "Groceries",
+          createdAt: now,
+          items: items.map(content => ({
+            id: uuidv4(),
+            content,
+            addedAt: now,
+          })),
+        };
+        return [...prev, newRoutine];
+      }
+
+      return prev.map(r =>
+        r.id === existing.id
+          ? {
+              ...r,
+              items: [
+                ...r.items,
+                ...items.map(content => ({
+                  id: uuidv4(),
+                  content,
+                  addedAt: now,
+                })),
+              ],
+            }
+          : r
+      );
+    });
+  }, []);
+
+  const moveTodoToGroceries = useCallback((id: string) => {
+    setTodos(prev => {
+      const todo = prev.find(t => t.id === id);
+      if (!todo) return prev;
+      addItemsToGroceryRoutine([todo.title]);
+      sendFeedback(todo.title, "grocery", "todo");
+      return prev.filter(t => t.id !== id);
+    });
+  }, [addItemsToGroceryRoutine, sendFeedback]);
 
   const addHabit = useCallback((habit: Habit) => {
     setHabits(prev => [...prev, habit]);
@@ -194,6 +256,28 @@ export function LifeProvider({ children }: LifeProviderProps) {
     ));
   }, []);
 
+  const moveRoutineItemToTodos = useCallback((routineId: string, itemId: string, title: string) => {
+    const now = new Date();
+    setRoutines(prev =>
+      prev.map(r =>
+        r.id === routineId
+          ? { ...r, items: r.items.filter(item => item.id !== itemId) }
+          : r
+      )
+    );
+
+    setTodos(prev => [
+      ...prev,
+      {
+        id: uuidv4(),
+        title,
+        priority: "medium",
+        createdAt: now,
+      },
+    ]);
+    sendFeedback(title, "todo", "grocery");
+  }, [sendFeedback]);
+
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo<LifeContextType>(() => ({
     todos,
@@ -203,6 +287,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     addTodo,
     completeTodo,
     updateTodoPriority,
+    moveTodoToGroceries,
     addHabit,
     logHabit,
     addAppointment,
@@ -210,7 +295,8 @@ export function LifeProvider({ children }: LifeProviderProps) {
     addRoutineItem,
     completeRoutineItem,
     clearCompletedRoutineItems,
-  }), [todos, habits, appointments, routines, addTodo, completeTodo, updateTodoPriority, addHabit, logHabit, addAppointment, addRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems]);
+    moveRoutineItemToTodos,
+  }), [todos, habits, appointments, routines, addTodo, completeTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, addAppointment, addRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos]);
 
   return (
     <LifeContext.Provider value={value}>

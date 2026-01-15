@@ -11,7 +11,7 @@ import UIKit
 struct AppConfig {
     // For local testing: http://192.168.1.18:3001 (Mac's IP on local network)
     // For production: https://helpem-poc.vercel.app
-    static let webAppURL = "http://192.168.1.18:3001"
+    static let webAppURL = "https://helpem-poc.vercel.app"
     static let apiURL = "https://api-production-2989.up.railway.app"
     
     /// Returns true if URL should receive session token

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { useLife } from "@/state/LifeStore";
 import { Priority } from "@/types/todo";
 import { useNativeAudio } from "@/hooks/useNativeAudio";
@@ -141,7 +142,7 @@ export default function ChatInput() {
     }
 
     const userMessage: Message = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       role: "user",
       content: text,
     };
@@ -200,7 +201,7 @@ export default function ChatInput() {
         const responseText = `I'll add this ${displayType}: "${data.title}"`;
         
         const assistantMessage: Message = {
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           role: "assistant",
           content: responseText,
           action: {
@@ -232,7 +233,7 @@ export default function ChatInput() {
           updateTodoPriority(todoToUpdate.id, data.newPriority);
           const responseText = `Updated "${data.todoTitle}" to ${data.newPriority} priority.`;
           addMessage({
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             role: "assistant",
             content: `✓ ${responseText}`,
           });
@@ -245,7 +246,7 @@ export default function ChatInput() {
         } else {
           const responseText = `I couldn't find a todo called "${data.todoTitle}".`;
           addMessage({
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             role: "assistant",
             content: responseText,
           });
@@ -261,7 +262,7 @@ export default function ChatInput() {
         const rawResponse = data.message || data.error || "I'm not sure how to help with that.";
         const responseText = stripMarkdown(rawResponse);
         addMessage({
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           role: "assistant",
           content: responseText,
         });
@@ -276,7 +277,7 @@ export default function ChatInput() {
     } catch {
       const errorText = "Sorry, something went wrong. Please try again.";
       addMessage({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         role: "assistant",
         content: errorText,
       });
@@ -530,7 +531,7 @@ export default function ChatInput() {
   const confirmAction = useCallback(() => {
     if (!pendingAction) return;
 
-    const id = crypto.randomUUID();
+    const id = uuidv4();
     const now = new Date();
 
     switch (pendingAction.type) {
@@ -548,7 +549,7 @@ export default function ChatInput() {
     const displayType = pendingAction.type === "habit" ? "routine" : pendingAction.type;
     const confirmText = `Done! Added to your ${displayType}s.`;
     
-    addMessage({ id: crypto.randomUUID(), role: "assistant", content: `✓ ${confirmText}` });
+    addMessage({ id: uuidv4(), role: "assistant", content: `✓ ${confirmText}` });
     if (isNativeApp) {
       window.webkit?.messageHandlers?.native?.postMessage({
         action: "speak",
@@ -561,7 +562,7 @@ export default function ChatInput() {
   const cancelAction = useCallback(() => {
     setPendingAction(null);
     const cancelText = "No problem, cancelled.";
-    addMessage({ id: crypto.randomUUID(), role: "assistant", content: cancelText });
+    addMessage({ id: uuidv4(), role: "assistant", content: cancelText });
     if (isNativeApp) {
       window.webkit?.messageHandlers?.native?.postMessage({
         action: "speak",

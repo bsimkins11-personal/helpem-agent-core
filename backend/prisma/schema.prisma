@@ -12,6 +12,7 @@ model User {
   createdAt    DateTime    @default(now()) @map("created_at")
   lastActiveAt DateTime    @default(now()) @map("last_active_at")
   inputs       UserInput[]
+  instruction  UserInstruction?
 
   @@map("users")
 }
@@ -26,4 +27,26 @@ model UserInput {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_inputs")
+}
+
+model UserInstruction {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @unique @db.Uuid @map("user_id")
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_instructions")
+}
+
+model GlobalRule {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key       String   @unique
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("global_rules")
 }

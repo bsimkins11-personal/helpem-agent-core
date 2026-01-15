@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { useLife } from "@/state/LifeStore";
 import { Priority } from "@/types/todo";
 
@@ -37,22 +38,37 @@ export default function CaptureInput() {
     setResult(null);
     setSaved(false);
 
-    const res = await fetch("/api/classify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input: text }),
-    });
+    try {
+      const response = await fetch("/api/classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: text }),
+      });
 
-    const data = await res.json();
-    setResult(data);
-    setSelectedPriority(data.priority || "medium");
-    setLoading(false);
+      if (!response.ok) {
+        throw new Error(`Classification failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      setResult(data as ClassifyResult);
+      setSelectedPriority("medium");
+    } catch (error) {
+      console.error("Classification error:", error);
+      setResult({
+        type: "todo",
+        title: text,
+        confidence: 0.5,
+      });
+      setSelectedPriority("medium");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveItem = () => {
     if (!result) return;
 
-    const id = crypto.randomUUID();
+    const id = uuidv4();
     const now = new Date();
 
     switch (result.type) {
@@ -92,7 +108,7 @@ export default function CaptureInput() {
         if (groceryRoutine && result.items) {
           result.items.forEach(itemContent => {
             addRoutineItem(groceryRoutine.id, {
-              id: crypto.randomUUID(),
+              id: uuidv4(),
               content: itemContent,
               addedAt: now,
             });
@@ -108,6 +124,8 @@ export default function CaptureInput() {
       setSaved(false);
     }, 2000);
   };
+
+  const successText = result?.type === "grocery" ? "Added." : "Got it.";
 
   return (
     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -216,7 +234,7 @@ export default function CaptureInput() {
             onClick={saveItem}
             disabled={saved}
           >
-            {saved ? "✓ Saved!" : `Add to ${result.type}s`}
+            {saved ? successText : `Add to ${result.type}s`}
           </button>
         </div>
       )}
