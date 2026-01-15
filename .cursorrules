@@ -1,0 +1,8 @@
+# Project Vibe
+- I am building a hybrid iOS app (SwiftUI + Vercel WebView + Railway Postgres).
+- iOS code is in /ios, Web is in /web, Backend is in /backend.
+- Database: Postgres on Railway (no Prisma currently).
+- WebView: Use WKWebView for main app UI; use SFSafariViewController for external links.
+- Always check /backend before suggesting changes that affect API contracts.
+- Keep auth Apple-only; do not store Apple email/name.
+- Session tokens are app-owned JWTs stored in Keychain.

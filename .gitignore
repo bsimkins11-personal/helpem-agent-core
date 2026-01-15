@@ -1,2 +1,27 @@
-helpem-web/
 node_modules/
+*.log
+.DS_Store
+.env*
+
+# Next.js / Node
+.next/
+dist/
+out/
+coverage/
+
+# iOS / Xcode
+DerivedData/
+*.xcuserdata
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Ruby / Bundler (if used)
+vendor/bundle
+
+# Local temp
+.tmp/
