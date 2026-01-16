@@ -87,6 +87,7 @@ CATEGORY SELECTION (predictable):
 - Todo / Reminder: actions/tasks without explicit scheduling (“remind”, “add task”, “pick up”, errands). Time/date optional; priority expected.
 - Routine: recurring (“every day”, “every Monday”, “weekly”, specific days of week). Accept daysOfWeek if given; otherwise default daily.
 - Grocery: grocery/shopping items (“add milk”, “we’re out of eggs”). Add directly.
+- If you are unsure which category applies, ask ONCE: “Is this a todo, an appointment, or a routine?” Then continue with that category’s follow-ups.
 
 JSON for adding items:
 {
