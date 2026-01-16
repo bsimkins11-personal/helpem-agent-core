@@ -248,12 +248,19 @@ export default function ChatInput() {
             createdAt: now,
           });
 
-          // Use agent's message if provided, otherwise use default
-          const responseText = data.message || (hasExplicitTime
-            ? `Added your task "${data.title}" for ${formatDateTimeForSpeech(reminderDate!)}.`
-            : hasDate
-              ? `Got it. Do you want a specific time on ${formatDateForSpeech(baseDate!)} for "${data.title}"?`
-              : `Got it. Do you want to add a date or time for "${data.title}"?`);
+          // FORCE confirmation with details - never allow empty message
+          let responseText = data.message;
+          
+          // If agent didn't provide proper confirmation, generate one
+          if (!responseText || responseText.trim() === "Got it." || responseText.trim() === "Okay." || responseText.trim() === "Done.") {
+            if (hasExplicitTime) {
+              responseText = `Got it. I'll remind you to ${data.title.toLowerCase()} on ${formatDateTimeForSpeech(reminderDate!)}.`;
+            } else if (hasDate) {
+              responseText = `Got it. I'll remind you to ${data.title.toLowerCase()} on ${formatDateForSpeech(baseDate!)}.`;
+            } else {
+              responseText = `Got it. I'll remind you to ${data.title.toLowerCase()}.`;
+            }
+          }
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -376,11 +383,8 @@ export default function ChatInput() {
         
       } else {
         const rawResponse = data.message || data.error || "I'm not sure how to help with that.";
-        let responseText = stripMarkdown(rawResponse);
-        if (isNativeApp && /confirm/i.test(responseText)) {
-          // Avoid confirmation prompts in talk mode
-          responseText = "Got it.";
-        }
+        const responseText = stripMarkdown(rawResponse);
+        // DON'T override the agent's response - let it speak naturally
         addMessage({
           id: uuidv4(),
           role: "assistant",
