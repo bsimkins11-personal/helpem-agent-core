@@ -248,11 +248,12 @@ export default function ChatInput() {
             createdAt: now,
           });
 
-          const responseText = hasExplicitTime
+          // Use agent's message if provided, otherwise use default
+          const responseText = data.message || (hasExplicitTime
             ? `Added your task "${data.title}" for ${formatDateTimeForSpeech(reminderDate!)}.`
             : hasDate
               ? `Got it. Do you want a specific time on ${formatDateForSpeech(baseDate!)} for "${data.title}"?`
-              : `Got it. Do you want to add a date or time for "${data.title}"?`;
+              : `Got it. Do you want to add a date or time for "${data.title}"?`);
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -277,20 +278,23 @@ export default function ChatInput() {
               role: "assistant",
               content: responseText,
             });
-            // Visual follow-up for time and priority in type mode
-            if (!hasExplicitTime) {
-              const timePrompt = `Add a specific date or time for "${data.title}"?`;
+            // Only show follow-ups if agent didn't provide custom message
+            if (!data.message) {
+              // Visual follow-up for time and priority in type mode
+              if (!hasExplicitTime) {
+                const timePrompt = `Add a specific date or time for "${data.title}"?`;
+                addMessage({
+                  id: uuidv4(),
+                  role: "assistant",
+                  content: timePrompt,
+                });
+              }
               addMessage({
                 id: uuidv4(),
                 role: "assistant",
-                content: timePrompt,
+                content: `Set a priority for "${data.title}": high, medium, or low. Default is ${priorityValue}.`,
               });
             }
-            addMessage({
-              id: uuidv4(),
-              role: "assistant",
-              content: `Set a priority for "${data.title}": high, medium, or low. Default is ${priorityValue}.`,
-            });
           }
         } else if (internalType === "habit") {
           addHabit({
