@@ -249,10 +249,10 @@ export default function ChatInput() {
           });
 
           const responseText = hasExplicitTime
-            ? `Added "${data.title}" for ${formatDateTimeForSpeech(reminderDate)}.`
+            ? `Added your task "${data.title}" for ${formatDateTimeForSpeech(reminderDate)}.`
             : hasDate
-              ? `Added "${data.title}" for ${formatDateForSpeech(baseDate!)} with no specific time.`
-              : `Added "${data.title}" with no date or time.`;
+              ? `Added your task "${data.title}" for ${formatDateForSpeech(baseDate!)} with no specific time.`
+              : `Added your task "${data.title}" with no date or time.`;
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -264,7 +264,7 @@ export default function ChatInput() {
             if (!hasExplicitTime) {
               window.webkit?.messageHandlers?.native?.postMessage({
                 action: "speak",
-                text: `Do you want to add a date or time?`,
+                text: `Do you want to add a specific date or time for this task?`,
               });
             }
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -279,7 +279,7 @@ export default function ChatInput() {
             });
             // Visual follow-up for time and priority in type mode
             if (!hasExplicitTime) {
-              const timePrompt = `Add a date or time for "${data.title}"?`;
+              const timePrompt = `Add a specific date or time for "${data.title}"?`;
               addMessage({
                 id: uuidv4(),
                 role: "assistant",
