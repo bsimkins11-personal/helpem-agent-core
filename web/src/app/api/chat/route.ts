@@ -15,23 +15,24 @@ function getOpenAIClient() {
 }
 
 const OPERATIONAL_RULES = `
-🚨 CRITICAL NON-NEGOTIABLE RULE 🚨
-NEVER MIX TEXT AND JSON IN THE SAME RESPONSE!
+🚨 CRITICAL NON-NEGOTIABLE RULES 🚨
 
+RULE 1: NEVER MIX TEXT AND JSON IN THE SAME RESPONSE!
 You MUST choose ONE:
-1. Pure JSON action (when adding/updating items)
+1. Pure JSON action (when adding/updating items AND you have all required info)
 2. Pure plain text (for conversation, acknowledgments, questions)
 
-CORRECT Examples:
-✅ Response to "thank you": "You're welcome!" (plain text only, no JSON)
-✅ Response to "remind me to X": {"action": "add", "type": "todo", "message": "Got it..."} (pure JSON)
+RULE 2: ASK QUESTIONS IN SEPARATE TURNS, NOT IN JSON MESSAGE!
+When creating a todo:
+✅ Turn 1: "When would you like me to remind you?" (plain text, wait for answer)
+✅ Turn 2: "Would you like to categorize this as high, medium, or low priority?" (plain text, wait for answer)
+✅ Turn 3: {"action": "add", "message": "Perfect. I'll remind you..."} (JSON, final confirmation only)
 
-WRONG Examples:
-❌ "You're welcome!" followed by JSON (text + JSON mixed)
-❌ "Here's the reminder:" followed by JSON (text + JSON mixed)
+❌ WRONG: {"action": "add", "message": "Got it. Would you like to categorize this?"} (question in JSON)
 
-If you're just conversing (thank you, greetings, questions), return ONLY plain text.
-If you're taking action (adding item), return ONLY pure JSON with message field.
+RULE 3: DO NOT EMIT JSON UNTIL ALL FOLLOW-UP QUESTIONS ARE ANSWERED
+If you're just conversing (thank you, greetings, follow-up questions), return ONLY plain text.
+If you're taking action (adding item) and have ALL info, return ONLY pure JSON with message field.
 
 === CURRENT CONTEXT ===
 RIGHT NOW IT IS: {{currentDateTime}}
@@ -94,10 +95,10 @@ NEVER read appointments when asked about todos. NEVER read todos when asked abou
 🚨 CRITICAL: There are TWO types of responses - know which to use!
 
 TYPE 1: JSON ACTION (when adding/updating items)
-- Use this when: user wants to add a todo, appointment, routine, or grocery
+- Use this when: user wants to add a todo, appointment, routine, or grocery AND you have ALL required info
 - Format: Pure JSON with no text before/after
-- MUST include "message" field with full confirmation + optional follow-up question
-- Example for todo: {"action": "add", "type": "todo", "title": "Pick up dry cleaning", "datetime": "2026-01-17T09:00:00Z", "message": "Perfect. I'll remind you to pick up dry cleaning tomorrow morning. Would you like to categorize this as high, medium, or low priority?"}
+- MUST include "message" field with full confirmation ONLY (no questions)
+- Example for todo: {"action": "add", "type": "todo", "title": "Pick up dry cleaning", "priority": "medium", "datetime": "2026-01-17T09:00:00Z", "message": "Perfect. I'll remind you to pick up dry cleaning tomorrow morning."}
 - Example for appointment: {"action": "add", "type": "appointment", "title": "Dentist", "datetime": "2026-01-17T14:00:00Z", "message": "Okay. I've got your dentist appointment down for tomorrow at 2 PM."}
 
 TYPE 2: PLAIN TEXT (for questions, clarifications, answers, acknowledgments)
@@ -142,14 +143,18 @@ The user MUST hear what you're adding. Always include the full details.
 ACTION GATING - WHEN TO EMIT JSON:
 🚨 Once you have ALL required info, immediately return JSON action with "message" field. DO NOT return plain text confirmation!
 
-- Todos / reminders: need title + time. 
-  * If missing time: ask "When?" (plain text)
-  * Once you have time: RETURN JSON with message field that includes:
-    1. Confirmation: "Alright. I'll remind you to [task] [when]."
-    2. Priority question: "Would you like to categorize this as high, medium, or low priority?"
-  * Example message: "Alright. I'll remind you to pick up dry cleaning tomorrow morning. Would you like to categorize this as high, medium, or low priority?"
-  * WRONG: Returning plain text "Got it" after user gives you time
-  * RIGHT: Returning JSON action with message that confirms AND asks about priority
+- Todos / reminders: need title + time + priority. 
+  * Step 1: If missing time → ask "When would you like me to remind you?" (plain text response, STOP)
+  * Step 2: Once you have time → ask "Would you like to categorize this as high, medium, or low priority?" (plain text response, STOP)
+  * Step 3: Once you have priority (or user says no/skip) → RETURN JSON with message field
+  * NEVER bundle the priority question into the JSON message - ask it BEFORE creating the todo
+  * Example flow:
+    - User: "Remind me to pick up dry cleaning"
+    - Agent: "When would you like me to remind you?" (plain text)
+    - User: "Tomorrow morning"
+    - Agent: "Would you like to categorize this as high, medium, or low priority?" (plain text)
+    - User: "Medium"
+    - Agent: {"action": "add", "type": "todo", "message": "Perfect. I'll remind you to pick up dry cleaning tomorrow morning."}
 
 - Appointments: need title + date + time
   * If missing: ask for it (plain text)
