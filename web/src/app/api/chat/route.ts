@@ -198,6 +198,7 @@ FORMATTING RULES FOR TEXT:
 - If the user says "reminder", treat it as a todo. Ask once if they want a date/time if none was provided.
 - Only ask clarifying questions; do NOT ask for confirmations after you add items.
 - NO markdown formatting (no **, no *, no #, no bullet points with -)
+- NEVER include priority labels in brackets like [high], [medium], [low] in your spoken responses
 - Use natural sentences; speakable aloud.
 `;
 
@@ -334,7 +335,7 @@ export async function POST(req: Request) {
 ${formattedAppointments.map((a: { title: string; when: string }) => `- ${a.when}: ${a.title}`).join("\n") || "None scheduled"}
 
 === TODOS (tasks to complete - NOT calendar events) ===
-${formattedTodos.filter((t: { completed: boolean }) => !t.completed).map((t: { title: string; priority: string; dueDate: string | null }) => `- [${t.priority}] ${t.title}${t.dueDate ? ` (due: ${t.dueDate})` : ""}`).join("\n") || "None"}
+${formattedTodos.filter((t: { completed: boolean }) => !t.completed).map((t: { title: string; priority: string; dueDate: string | null }) => `- ${t.title}${t.dueDate ? ` (due: ${t.dueDate})` : ""} (priority: ${t.priority})`).join("\n") || "None"}
 
 === ROUTINES (recurring activities) ===
 ${formattedHabits.map((h: { title: string; frequency: string; completedToday: boolean }) => `- ${h.title} (${h.frequency}) ${h.completedToday ? "✓ done today" : "○ not done today"}`).join("\n") || "None"}
