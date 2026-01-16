@@ -299,7 +299,6 @@ export default function ChatInput() {
             frequency: data.frequency || "daily",
             createdAt: now,
             completions: [],
-            // @ts-expect-error allow optional daysOfWeek passthrough
             daysOfWeek: data.daysOfWeek,
           });
 
