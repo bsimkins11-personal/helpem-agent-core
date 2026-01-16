@@ -6,28 +6,32 @@ import Link from "next/link";
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
 
   const slides = [
     {
       title: "Busy Parent",
       description: "Juggling kids, work, and life—HelpEm keeps it all organized",
-      // Replace with your image path: "/images/busy-parent.jpg"
-      image: "👨‍👩‍👧‍👦",
-      bgGradient: "from-brandBlue/80 via-brandBlue/60 to-brandGreen/80"
+      video: "/videos/busy-parent.mp4",
+      bgGradient: "from-brandBlue/70 via-brandBlue/50 to-brandGreen/70"
     },
     {
       title: "Entrepreneur", 
       description: "Managing multiple projects—HelpEm never lets anything slip",
-      // Replace with your image path: "/images/entrepreneur.jpg"
-      image: "💼",
-      bgGradient: "from-purple-600/80 via-brandBlue/60 to-brandGreen/80"
+      video: "/videos/entrepreneur.mp4",
+      bgGradient: "from-purple-600/70 via-brandBlue/50 to-brandGreen/70"
     },
     {
       title: "Student",
       description: "Balancing classes and deadlines—HelpEm keeps you on track",
-      // Replace with your image path: "/images/student.jpg"
-      image: "🎓",
-      bgGradient: "from-brandGreen/80 via-brandBlue/60 to-purple-600/80"
+      video: "/videos/student.mp4",
+      bgGradient: "from-brandGreen/70 via-brandBlue/50 to-purple-600/70"
+    },
+    {
+      title: "Active Senior",
+      description: "Living life fully—HelpEm helps you never miss a moment",
+      video: "/videos/active-senior.mp4",
+      bgGradient: "from-orange-500/70 via-brandBlue/50 to-brandGreen/70"
     }
   ];
 
@@ -131,19 +135,16 @@ export default function LandingPage() {
                   currentSlide === index ? "opacity-100" : "opacity-0"
                 }`}
               >
-                {/* Background Image/Video - Ready for your images */}
-                {slide.image.startsWith('/') || slide.image.startsWith('http') ? (
-                  // When you add real images, they'll show here
-                  <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${slide.image})` }}
-                  />
-                ) : (
-                  // Temporary emoji placeholder
-                  <div className="absolute inset-0 bg-gradient-to-br from-brandBlue via-brandBlue/90 to-brandGreen flex items-center justify-center">
-                    <div className="text-8xl sm:text-9xl animate-pulse">{slide.image}</div>
-                  </div>
-                )}
+                {/* Background Video */}
+                <video
+                  autoPlay
+                  loop
+                  muted={isMuted}
+                  playsInline
+                  className="absolute inset-0 w-full h-full object-cover"
+                >
+                  <source src={slide.video} type="video/mp4" />
+                </video>
                 
                 {/* Dark overlay for text readability */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${slide.bgGradient}`} />
@@ -159,6 +160,24 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+            
+            {/* Sound toggle button */}
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="absolute top-6 right-6 z-30 w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all flex items-center justify-center group"
+              aria-label={isMuted ? "Unmute video" : "Mute video"}
+            >
+              {isMuted ? (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+              )}
+            </button>
             
             {/* Carousel dots */}
             <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2 z-20">
