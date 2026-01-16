@@ -93,11 +93,11 @@ export function getPlanDisplayName(plan: UsageData["plan"]): string {
 export function getUpgradeOptions(currentPlan: UsageData["plan"]) {
   const options = {
     free: [
-      { plan: "pro", name: "Pro", price: 9, limit: 500 },
-      { plan: "max", name: "Max", price: 19, limit: 5000 },
+      { plan: "pro", name: "Basic", price: 4.99, limit: 500 },
+      { plan: "max", name: "Premium", price: 9.99, limit: 5000 },
     ],
     pro: [
-      { plan: "max", name: "Max", price: 19, limit: 5000 },
+      { plan: "max", name: "Premium", price: 9.99, limit: 5000 },
     ],
     max: [],
   };

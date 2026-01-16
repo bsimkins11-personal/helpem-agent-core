@@ -33,7 +33,7 @@ export default function PricingPage() {
     {
       name: "Basic",
       tagline: "For busy individuals",
-      price: { monthly: 9, annual: 90 },
+      price: { monthly: 4.99, annual: 50 },
       features: [
         "500 tasks per month",
         "Unlimited appointments",
@@ -55,7 +55,7 @@ export default function PricingPage() {
     {
       name: "Premium",
       tagline: "For power users & teams",
-      price: { monthly: 19, annual: 190 },
+      price: { monthly: 9.99, annual: 100 },
       features: [
         "Unlimited everything",
         "All Basic features",
