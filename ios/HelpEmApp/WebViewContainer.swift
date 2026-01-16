@@ -20,9 +20,18 @@ struct WebViewContainer: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        // Configure WebView
+        // Configure WebView with memory optimization
         let config = WKWebViewConfiguration()
         let controller = WKUserContentController()
+        
+        // 🛡️ Memory Management Configuration
+        config.suppressesIncrementalRendering = true
+        config.websiteDataStore = .nonPersistent() // Use non-persistent store to reduce memory
+        
+        // Limit media playback to reduce memory usage
+        if #available(iOS 15.0, *) {
+            config.mediaTypesRequiringUserActionForPlayback = .all
+        }
         
         // Register native message handler
         controller.add(context.coordinator, name: "native")
@@ -39,7 +48,14 @@ struct WebViewContainer: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = "\(webView.value(forKey: "userAgent") as? String ?? "Safari") \(userAgentSuffix)"
         
+        // 🧹 Configure for lower memory usage
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.allowsBackForwardNavigationGestures = false
+        
         context.coordinator.webView = webView
+        
+        // 🚨 Setup memory warning observer
+        context.coordinator.setupMemoryWarningObserver()
         
         // Load web app
         guard let url = URL(string: AppEnvironment.webAppURL) else {
@@ -48,6 +64,7 @@ struct WebViewContainer: UIViewRepresentable {
         }
         
         var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalCacheData // Prevent cache buildup
         if !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
@@ -167,6 +184,9 @@ struct WebViewContainer: UIViewRepresentable {
         // Voice input tracking
         private var lastInputWasVoice = false
         
+        // Memory management
+        private var memoryObserver: NSObjectProtocol?
+        
         // MARK: - Initialization
         
         init(authManager: AuthManager) {
@@ -200,6 +220,46 @@ struct WebViewContainer: UIViewRepresentable {
                 }
             }
         }
+        
+        deinit {
+            // Remove memory observer
+            if let observer = memoryObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
+        
+        // MARK: - Memory Management
+        
+        /// Setup memory warning observer to clear cache when memory is low
+        func setupMemoryWarningObserver() {
+            memoryObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.didReceiveMemoryWarningNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.handleMemoryWarning()
+            }
+        }
+        
+        /// Clear WebView cache and data when memory warning is received
+        private func handleMemoryWarning() {
+            print("⚠️ Memory warning received - clearing WebView cache")
+            
+            // Clear website data
+            let dataStore = WKWebsiteDataStore.default()
+            let dataTypes = Set([
+                WKWebsiteDataTypeDiskCache,
+                WKWebsiteDataTypeMemoryCache,
+                WKWebsiteDataTypeOfflineWebApplicationCache
+            ])
+            
+            dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date.distantPast) {
+                print("✅ WebView cache cleared")
+            }
+            
+            // Force JavaScript garbage collection
+            webView?.evaluateJavaScript("if (window.gc) { window.gc(); }", completionHandler: nil)
+        }
 
         // MARK: - WKNavigationDelegate
         
@@ -211,6 +271,25 @@ struct WebViewContainer: UIViewRepresentable {
             // Send any queued speech results
             pendingFinalTexts.forEach(sendToWeb)
             pendingFinalTexts.removeAll()
+            
+            // 🧹 Periodic cache cleanup (every page load helps prevent buildup)
+            clearOldCacheData()
+        }
+        
+        /// Clear old cached data to prevent memory buildup
+        private func clearOldCacheData() {
+            let dataStore = WKWebsiteDataStore.default()
+            
+            // Clear data older than 1 day
+            let oneDay = Date().addingTimeInterval(-24 * 60 * 60)
+            let dataTypes = Set([
+                WKWebsiteDataTypeDiskCache,
+                WKWebsiteDataTypeMemoryCache
+            ])
+            
+            dataStore.removeData(ofTypes: dataTypes, modifiedSince: oneDay) {
+                print("🧹 Cleared old WebView cache data")
+            }
         }
         
         /// Called when navigation fails
