@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rateLimiter";
 
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY_SUPPORT;
@@ -97,6 +98,33 @@ REMEMBER: You're here to help users succeed with HelpEm. Be supportive, answer c
 
 export async function POST(request: NextRequest) {
   try {
+    // 🛡️ RATE LIMITING - Protect against API abuse
+    const clientIp = getClientIdentifier(request);
+    const rateLimit = await checkRateLimit({
+      ...RATE_LIMITS.SUPPORT,
+      identifier: `support:${clientIp}`,
+    });
+
+    if (!rateLimit.allowed) {
+      const resetDate = new Date(rateLimit.resetAt);
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded",
+          message: "Too many requests. Please try again later.",
+          resetAt: resetDate.toISOString(),
+        },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": RATE_LIMITS.SUPPORT.maxRequests.toString(),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": resetDate.toISOString(),
+            "Retry-After": Math.ceil((rateLimit.resetAt - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const body = await request.json();
     const { message, conversationHistory = [] } = body;
 
@@ -107,6 +135,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate message length to prevent abuse
+    if (message.length > 1000) {
+      return NextResponse.json(
+        { error: "Message too long (max 1000 characters)" },
+        { status: 400 }
+      );
+    }
+
+    // Limit conversation history to prevent token abuse
+    const limitedHistory = conversationHistory.slice(-10); // Last 10 messages only
+
     const openai = getOpenAIClient();
 
     // Build conversation with support instructions
@@ -115,7 +154,7 @@ export async function POST(request: NextRequest) {
         role: "system",
         content: SUPPORT_INSTRUCTIONS,
       },
-      ...conversationHistory.map((msg: { role: string; content: string }) => ({
+      ...limitedHistory.map((msg: { role: string; content: string }) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
       })),
@@ -134,10 +173,19 @@ export async function POST(request: NextRequest) {
 
     const reply = completion.choices[0]?.message?.content || "I'm here to help! Could you please rephrase your question?";
 
-    return NextResponse.json({
-      message: reply,
-      timestamp: new Date().toISOString(),
-    });
+    return NextResponse.json(
+      {
+        message: reply,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        headers: {
+          "X-RateLimit-Limit": RATE_LIMITS.SUPPORT.maxRequests.toString(),
+          "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+          "X-RateLimit-Reset": new Date(rateLimit.resetAt).toISOString(),
+        },
+      }
+    );
 
   } catch (error: unknown) {
     console.error("Support API error:", error);

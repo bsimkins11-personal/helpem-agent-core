@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { AGENT_INSTRUCTIONS } from "@/lib/agentInstructions";
 import { checkUsageLimit, trackUsage, usageLimitError } from "@/lib/usageTracker";
 import { query } from "@/lib/db";
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rateLimiter";
 
 let openai: OpenAI | null = null;
 function getOpenAIClient() {
@@ -612,13 +613,48 @@ type ConversationMessage = {
 };
 
 export async function POST(req: Request) {
-  // Check usage limit
+  // 🛡️ RATE LIMITING - First line of defense against API abuse
+  const clientIp = getClientIdentifier(req);
+  const rateLimit = await checkRateLimit({
+    ...RATE_LIMITS.CHAT,
+    identifier: `chat:${clientIp}`,
+  });
+
+  if (!rateLimit.allowed) {
+    const resetDate = new Date(rateLimit.resetAt);
+    return NextResponse.json(
+      {
+        action: "error",
+        error: "Rate limit exceeded. Please wait before sending more messages.",
+        resetAt: resetDate.toISOString(),
+      },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": RATE_LIMITS.CHAT.maxRequests.toString(),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": resetDate.toISOString(),
+          "Retry-After": Math.ceil((rateLimit.resetAt - Date.now()) / 1000).toString(),
+        },
+      }
+    );
+  }
+
+  // Check usage limit (session-based)
   const usage = checkUsageLimit();
   if (!usage.allowed) {
     return NextResponse.json(usageLimitError(), { status: 429 });
   }
 
   const { message, conversationHistory, userData, currentDateTime, currentDateTimeISO, fulfilledIntents = [] } = await req.json();
+
+  // Validate message length
+  if (!message || message.length > 500) {
+    return NextResponse.json(
+      { action: "error", error: "Invalid message (max 500 characters)" },
+      { status: 400 }
+    );
+  }
 
   // Record user input to database
   try {

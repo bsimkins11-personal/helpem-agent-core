@@ -55,9 +55,24 @@ export default function SupportPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to get response");
-
       const data = await response.json();
+
+      if (!response.ok) {
+        // Handle rate limit
+        if (response.status === 429) {
+          const resetTime = data.resetAt ? new Date(data.resetAt).toLocaleTimeString() : "a few minutes";
+          const errorMessage: Message = {
+            role: "assistant",
+            content: `I've received a lot of questions recently! Please try again after ${resetTime}. For urgent help, email support@helpem.ai`,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          setIsLoading(false);
+          return;
+        }
+        throw new Error(data.error || "Failed to get response");
+      }
+
       const assistantMessage: Message = {
         role: "assistant",
         content: data.message,
