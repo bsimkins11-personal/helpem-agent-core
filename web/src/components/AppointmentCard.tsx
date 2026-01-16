@@ -70,10 +70,10 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
             </div>
           </div>
 
-          {/* Delete button - shows on hover */}
+          {/* Delete button - always visible on mobile, shows on hover on desktop */}
           <button
             onClick={() => setShowConfirm(true)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+            className="md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
             aria-label="Delete appointment"
           >
             <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

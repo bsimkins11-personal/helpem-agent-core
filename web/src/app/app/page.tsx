@@ -134,6 +134,37 @@ export default function AppPage() {
                 </svg>
               </button>
               <div className="flex items-center gap-2">
+                {/* Date navigation arrows */}
+                {expandedModules.today && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        const prevDay = new Date(selectedDate);
+                        prevDay.setDate(prevDay.getDate() - 1);
+                        setSelectedDate(prevDay);
+                      }}
+                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      aria-label="Previous day"
+                    >
+                      <svg className="w-4 h-4 text-brandTextLight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const nextDay = new Date(selectedDate);
+                        nextDay.setDate(nextDay.getDate() + 1);
+                        setSelectedDate(nextDay);
+                      }}
+                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      aria-label="Next day"
+                    >
+                      <svg className="w-4 h-4 text-brandTextLight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
                 <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">{viewDateAppointments.length} appts</span>
                 {!isViewingToday && (
                   <button
