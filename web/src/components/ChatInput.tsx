@@ -214,7 +214,7 @@ export default function ChatInput() {
 
           const responseText = data.datetime
             ? `Added "${data.title}" with a reminder.`
-            : `Added "${data.title}" as a to do without a date or time. Want to add one?`;
+            : `Added "${data.title}" as a to do. Want to add a specific time for tomorrow?`;
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -227,16 +227,14 @@ export default function ChatInput() {
               role: "assistant",
               content: responseText,
             });
-          }
-
-          // Prompt for priority (no confirmation flow)
-          const priorityPrompt = `Set a priority for "${data.title}": high, medium, or low.`;
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: priorityPrompt,
+            // Visual follow-up for time and priority in type mode
+            const timePrompt = `Add a specific time for "${data.title}"?`;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: timePrompt,
             });
-          } else {
+            const priorityPrompt = `Set a priority for "${data.title}": high, medium, or low.`;
             addMessage({
               id: uuidv4(),
               role: "assistant",
