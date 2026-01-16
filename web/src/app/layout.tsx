@@ -48,12 +48,12 @@ export default function RootLayout({
                 <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4">
                   <div className="flex items-center justify-between">
                     {/* Logo */}
-                    <div className="flex items-center">
+                    <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
                       <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
                         <span className="text-brandBlue">help</span>
                         <span className="text-brandGreen">em</span>
                       </h1>
-                    </div>
+                    </Link>
 
                     {/* Navigation - Desktop */}
                     <nav className="flex items-center gap-1">
@@ -76,10 +76,12 @@ export default function RootLayout({
               {/* Mobile Header */}
               <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
                 <div className="px-4 py-3">
-                  <h1 className="text-xl font-bold tracking-tight">
-                    <span className="text-brandBlue">help</span>
-                    <span className="text-brandGreen">em</span>
-                  </h1>
+                  <Link href="/" className="inline-block hover:opacity-80 transition-opacity">
+                    <h1 className="text-xl font-bold tracking-tight">
+                      <span className="text-brandBlue">help</span>
+                      <span className="text-brandGreen">em</span>
+                    </h1>
+                  </Link>
                 </div>
               </header>
 
