@@ -29,6 +29,7 @@ export function LayoutHeader() {
                      pathname?.startsWith('/habits');
   
   const isLandingPage = pathname === '/';
+  const isMarketingPage = isLandingPage || pathname === '/pricing' || pathname === '/support';
   const showDemoNav = isDemo && isAppRoute;
 
   return (
@@ -51,18 +52,18 @@ export function LayoutHeader() {
               </div>
             </Link>
 
-            {/* Landing Page Navigation */}
-            {isLandingPage && (
+            {/* Marketing Pages Navigation (Landing, Pricing, Support) */}
+            {isMarketingPage && (
               <div className="flex items-center gap-4 sm:gap-6">
-                <a href="#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                <Link href="/#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
                   Features
-                </a>
+                </Link>
                 <Link href="/pricing" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
                   Pricing
                 </Link>
-                <a href="#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                <Link href="/#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
                   About
-                </a>
+                </Link>
                 <Link href="/support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
                   Support
                 </Link>
@@ -75,8 +76,8 @@ export function LayoutHeader() {
               </div>
             )}
 
-            {/* Back to Home - Show on all non-landing pages */}
-            {!isLandingPage && (
+            {/* Back to Home - Show on app pages only */}
+            {!isMarketingPage && (
               <Link
                 href="/"
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-brandTextLight
@@ -136,8 +137,8 @@ export function LayoutHeader() {
               </div>
             </Link>
 
-            {/* Landing Page - Try App button */}
-            {isLandingPage && (
+            {/* Marketing Pages - Try App button */}
+            {isMarketingPage && (
               <Link
                 href="/app"
                 className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-xs font-semibold hover:shadow-lg transition-all"
@@ -146,8 +147,8 @@ export function LayoutHeader() {
               </Link>
             )}
 
-            {/* Back to Home - Show on all non-landing pages */}
-            {!isLandingPage && (
+            {/* App Pages - Back to Home */}
+            {!isMarketingPage && (
               <Link
                 href="/"
                 className="flex items-center gap-1 text-brandTextLight hover:text-brandText text-sm"
