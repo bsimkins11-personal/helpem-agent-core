@@ -214,18 +214,33 @@ export default function ChatInput() {
 
           const responseText = data.datetime
             ? `Added "${data.title}" with a reminder.`
-            : `Added "${data.title}" as a todo without a date or time.`;
-
-          addMessage({
-            id: uuidv4(),
-            role: "assistant",
-            content: responseText,
-          });
+            : `Added "${data.title}" as a to do without a date or time. Want to add one?`;
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
               action: "speak",
               text: responseText,
+            });
+          } else {
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: responseText,
+            });
+          }
+
+          // Prompt for priority (no confirmation flow)
+          const priorityPrompt = `Set a priority for "${data.title}": high, medium, or low.`;
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: priorityPrompt,
+            });
+          } else {
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: priorityPrompt,
             });
           }
         } else if (internalType === "habit") {
