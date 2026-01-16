@@ -105,7 +105,7 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Hero */}
-      <section className="py-12 sm:py-16">
+      <section className="pt-8 pb-8 sm:pt-10 sm:pb-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brandBlue to-brandGreen flex items-center justify-center text-3xl mx-auto mb-6">
             💬
