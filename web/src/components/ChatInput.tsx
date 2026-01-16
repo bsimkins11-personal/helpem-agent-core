@@ -728,7 +728,7 @@ export default function ChatInput() {
         ))}
 
         {/* Priority selector for todos */}
-        {pendingAction?.type === "todo" && (
+        {!isNativeApp && pendingAction?.type === "todo" && (
           <div className="bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-200">
             <p className="text-xs md:text-sm text-brandTextLight mb-2">Set priority:</p>
             <div className="flex gap-1.5 md:gap-2 mb-2 md:mb-3">
@@ -758,7 +758,7 @@ export default function ChatInput() {
           </div>
         )}
 
-        {pendingAction && pendingAction.type !== "todo" && (
+        {!isNativeApp && pendingAction && pendingAction.type !== "todo" && (
           <div className="flex gap-2">
             <button onClick={confirmAction} className="flex-1 py-2 bg-brandGreen text-white rounded-lg text-sm font-medium hover:bg-green-600">
               Confirm
