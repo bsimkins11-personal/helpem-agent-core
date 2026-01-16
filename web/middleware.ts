@@ -19,7 +19,9 @@ export function middleware(request: NextRequest) {
   const isFromiOSApp = userAgent.includes("HelpEm") || userAgent.includes("Mobile/");
   const hasSessionToken = request.cookies.has("session_token");
 
-  // Protect app routes - only allow iOS app or authenticated users
+  // Protect app routes - TEMPORARILY DISABLED FOR UAT
+  // TODO: Re-enable after UAT testing
+  /*
   if (
     pathname.startsWith("/app") ||
     pathname.startsWith("/todos") ||
@@ -30,6 +32,7 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
   }
+  */
 
   return NextResponse.next();
 }
