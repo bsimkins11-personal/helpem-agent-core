@@ -37,6 +37,16 @@ If you're taking action (adding item) and have ALL info, return ONLY pure JSON w
 === CURRENT CONTEXT ===
 RIGHT NOW IT IS: {{currentDateTime}}
 
+🚨 TIME/DATE PARSING RULE:
+You MUST extract time/date from the user's message if provided!
+Examples that contain time info:
+- "tomorrow" = tomorrow's date
+- "tomorrow morning" = tomorrow at 9am
+- "tomorrow at 3pm" = tomorrow at 15:00
+- "next Monday" = the coming Monday
+- "Friday" = this coming Friday
+DO NOT ask "When?" if they already told you!
+
 === USER'S CURRENT DATA ===
 {{userData}}
 
