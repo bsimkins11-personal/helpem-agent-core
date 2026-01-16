@@ -7,21 +7,27 @@ export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const personas = [
+  const slides = [
     {
       title: "Busy Parent",
       description: "Juggling kids, work, and life—HelpEm keeps it all organized",
-      image: "👨‍👩‍👧‍👦"
+      // Replace with your image path: "/images/busy-parent.jpg"
+      image: "👨‍👩‍👧‍👦",
+      bgGradient: "from-brandBlue/80 via-brandBlue/60 to-brandGreen/80"
     },
     {
       title: "Entrepreneur", 
       description: "Managing multiple projects—HelpEm never lets anything slip",
-      image: "💼"
+      // Replace with your image path: "/images/entrepreneur.jpg"
+      image: "💼",
+      bgGradient: "from-purple-600/80 via-brandBlue/60 to-brandGreen/80"
     },
     {
       title: "Student",
       description: "Balancing classes and deadlines—HelpEm keeps you on track",
-      image: "🎓"
+      // Replace with your image path: "/images/student.jpg"
+      image: "🎓",
+      bgGradient: "from-brandGreen/80 via-brandBlue/60 to-purple-600/80"
     }
   ];
 
@@ -73,10 +79,10 @@ export default function LandingPage() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % personas.length);
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -115,24 +121,48 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Carousel */}
-      <section className="pt-24 pb-12 sm:pt-32 sm:pb-20 bg-gradient-to-br from-gray-50 to-white">
+      <section className="pt-20 pb-8 sm:pt-20 sm:pb-12 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative h-[500px] sm:h-[600px] rounded-3xl overflow-hidden bg-gradient-to-br from-brandBlue via-brandBlue/90 to-brandGreen">
-            {personas.map((persona, index) => (
+          <div className="relative h-[500px] sm:h-[600px] rounded-3xl overflow-hidden">
+            {slides.map((slide, index) => (
               <div
                 key={index}
-                className={`absolute inset-0 flex flex-col items-center justify-center text-center px-6 transition-opacity duration-1000 ${
+                className={`absolute inset-0 transition-opacity duration-1000 ${
                   currentSlide === index ? "opacity-100" : "opacity-0"
                 }`}
               >
-                <div className="text-8xl sm:text-9xl mb-6 animate-pulse">{persona.image}</div>
-                <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4">{persona.title}</h2>
-                <p className="text-lg sm:text-xl text-white/90 max-w-2xl">{persona.description}</p>
+                {/* Background Image/Video - Ready for your images */}
+                {slide.image.startsWith('/') || slide.image.startsWith('http') ? (
+                  // When you add real images, they'll show here
+                  <div
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${slide.image})` }}
+                  />
+                ) : (
+                  // Temporary emoji placeholder
+                  <div className="absolute inset-0 bg-gradient-to-br from-brandBlue via-brandBlue/90 to-brandGreen flex items-center justify-center">
+                    <div className="text-8xl sm:text-9xl animate-pulse">{slide.image}</div>
+                  </div>
+                )}
+                
+                {/* Dark overlay for text readability */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${slide.bgGradient}`} />
+                
+                {/* Text overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 z-10">
+                  <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">
+                    {slide.title}
+                  </h2>
+                  <p className="text-lg sm:text-xl md:text-2xl text-white/95 max-w-2xl drop-shadow-md">
+                    {slide.description}
+                  </p>
+                </div>
               </div>
             ))}
+            
             {/* Carousel dots */}
-            <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2">
-              {personas.map((_, index) => (
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2 z-20">
+              {slides.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentSlide(index)}
