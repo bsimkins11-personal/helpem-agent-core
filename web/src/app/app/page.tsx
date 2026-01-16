@@ -102,7 +102,7 @@ export default function AppPage() {
 
         <div className="space-y-4 md:space-y-6 order-2">
           {/* Expand/Collapse All Control */}
-          <div className="flex justify-end">
+          <div className="flex justify-start">
             <button
               onClick={toggleAllModules}
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
