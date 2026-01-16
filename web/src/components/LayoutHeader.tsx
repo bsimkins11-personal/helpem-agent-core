@@ -39,10 +39,10 @@ export function LayoutHeader() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="flex items-center gap-2">
-                <img src="/helpem-logo.png" alt="HelpEm" className="h-12 w-auto" />
+              <div className="flex items-center gap-3">
+                <img src="/helpem-logo.png" alt="HelpEm" className="h-16 w-auto" />
                 <div>
-                  <h1 className="text-xl lg:text-2xl font-bold tracking-tight leading-tight">
+                  <h1 className="text-2xl font-bold tracking-tight leading-tight">
                     <span className="text-brandBlue">help</span>
                     <span className="text-brandGreen">em</span>
                   </h1>
@@ -126,7 +126,7 @@ export function LayoutHeader() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-2">
-              <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
+              <img src="/helpem-logo.png" alt="HelpEm" className="h-12 w-auto" />
               <div>
                 <h1 className="text-lg font-bold tracking-tight leading-tight">
                   <span className="text-brandBlue">help</span>

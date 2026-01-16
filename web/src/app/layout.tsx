@@ -39,8 +39,8 @@ export default function RootLayout({
             <div className="min-h-screen pb-24 md:pb-16">
               <LayoutHeader />
               
-              {/* Main content */}
-              <main className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4">
+              {/* Main content - no container constraints to allow pages full control */}
+              <main>
                 {children}
               </main>
               

@@ -25,7 +25,8 @@ export default function HabitsPage() {
     : 0;
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4">
+      <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 md:gap-3 mb-2">
@@ -77,6 +78,7 @@ export default function HabitsPage() {
             </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
