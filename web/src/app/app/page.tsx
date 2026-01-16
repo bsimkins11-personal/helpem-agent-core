@@ -183,9 +183,9 @@ export default function AppPage() {
             </div>
 
             {expandedModules.todos && (
-              <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
+              <div className={`space-y-2 ${priorityFilter === "all" ? "" : "max-h-[150px] md:max-h-[200px]"} overflow-y-auto`}>
                 {filteredTodos.length > 0 ? (
-                  filteredTodos.slice(0, 5).map((todo) => <TodoCard key={todo.id} todo={todo} />)
+                  (priorityFilter === "all" ? filteredTodos : filteredTodos.slice(0, 5)).map((todo) => <TodoCard key={todo.id} todo={todo} />)
                 ) : (
                   <p className="text-sm text-brandTextLight text-center py-3 md:py-4">
                     {priorityFilter === "all" ? "All caught up!" : `No ${priorityFilter} priority todos`}
