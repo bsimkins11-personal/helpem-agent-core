@@ -6,8 +6,7 @@ import { HabitCard } from "@/components/HabitCard";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { GroceryList } from "@/components/GroceryList";
 import { useLife } from "@/state/LifeStore";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState } from "react";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 type PriorityFilter = "all" | "high" | "medium" | "low";
@@ -22,16 +21,6 @@ export default function AppPage() {
   const { todos, habits, appointments } = useLife();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [isDemo, setIsDemo] = useState(false);
-  const [showDemoBanner, setShowDemoBanner] = useState(true);
-  
-  // Check if user is in demo mode (no auth)
-  useEffect(() => {
-    const hasSessionToken = document.cookie.includes("session_token");
-    const isFromiOSApp = navigator.userAgent.includes("HelpEm");
-    const isDemoMode = !hasSessionToken && !isFromiOSApp;
-    setIsDemo(isDemoMode);
-  }, []);
   
   // Expand/collapse states for each module
   const [expandedModules, setExpandedModules] = useState({
@@ -98,46 +87,7 @@ export default function AppPage() {
   const allExpanded = Object.values(expandedModules).every(v => v);
 
   return (
-    <>
-      {/* Demo Banner - Only show for non-authenticated users */}
-      {isDemo && showDemoBanner && (
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-lg">
-                🎉
-              </div>
-              <div>
-                <p className="text-sm sm:text-base font-semibold">You're trying the HelpEm Demo!</p>
-                <p className="text-xs text-white/80 hidden sm:block">Your data is saved in your browser for this session only</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/"
-                className="text-xs sm:text-sm font-medium hover:underline flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span className="hidden sm:inline">Return to Home</span>
-                <span className="sm:hidden">Home</span>
-              </Link>
-              <button
-                onClick={() => setShowDemoBanner(false)}
-                className="w-6 h-6 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
-                aria-label="Dismiss banner"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      <div className="space-y-4 md:space-y-8">
+    <div className="space-y-4 md:space-y-8">
         <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
@@ -287,6 +237,5 @@ export default function AppPage() {
         </div>
       </div>
     </div>
-    </>
   );
 }
