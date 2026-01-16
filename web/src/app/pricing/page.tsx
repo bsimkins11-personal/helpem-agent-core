@@ -98,7 +98,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       {/* Hero */}
-      <section className="pt-8 pb-12 sm:pt-12 sm:pb-16">
+      <section className="pt-4 pb-6 sm:pt-6 sm:pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-6xl font-bold text-brandText mb-6">
             Simple, Transparent Pricing

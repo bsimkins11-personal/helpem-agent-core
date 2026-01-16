@@ -87,7 +87,7 @@ export default function AppPage() {
   const allExpanded = Object.values(expandedModules).every(v => v);
 
   return (
-    <div className="space-y-4 md:space-y-8">
+    <div className="space-y-2 md:space-y-4">
       <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
         <div>
           <h1 className="text-2xl md:3xl font-bold">{greeting()}</h1>

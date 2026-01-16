@@ -40,7 +40,7 @@ export default function RootLayout({
               <LayoutHeader />
               
               {/* Main content */}
-              <main className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8">
+              <main className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4">
                 {children}
               </main>
               
