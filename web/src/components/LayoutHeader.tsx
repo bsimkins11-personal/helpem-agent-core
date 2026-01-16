@@ -28,8 +28,6 @@ export function LayoutHeader() {
                      pathname?.startsWith('/todos') || 
                      pathname?.startsWith('/habits');
   
-  const isLandingPage = pathname === '/';
-  const isMarketingPage = isLandingPage || pathname === '/pricing' || pathname === '/support';
   const showDemoNav = isDemo && isAppRoute;
 
   return (
@@ -52,43 +50,27 @@ export function LayoutHeader() {
               </div>
             </Link>
 
-            {/* Marketing Pages Navigation (Landing, Pricing, Support) */}
-            {isMarketingPage && (
-              <div className="flex items-center gap-4 sm:gap-6">
-                <Link href="/#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
-                  Features
-                </Link>
-                <Link href="/pricing" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
-                  Pricing
-                </Link>
-                <Link href="/#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
-                  About
-                </Link>
-                <Link href="/support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
-                  Support
-                </Link>
-                <Link
-                  href="/app"
-                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
-                >
-                  Try App
-                </Link>
-              </div>
-            )}
-
-            {/* Back to Home - Show on app pages only */}
-            {!isMarketingPage && (
-              <Link
-                href="/"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-brandTextLight
-                           hover:text-brandText hover:bg-gray-100 transition-all duration-200"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span className="font-medium">Back to Home</span>
+            {/* Global Navigation - ALWAYS SHOW ON ALL PAGES */}
+            <div className="flex items-center gap-4 sm:gap-6">
+              <Link href="/#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                Features
               </Link>
-            )}
+              <Link href="/pricing" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                Pricing
+              </Link>
+              <Link href="/#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                About
+              </Link>
+              <Link href="/support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                Support
+              </Link>
+              <Link
+                href="/app"
+                className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
+              >
+                Try App
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -137,28 +119,13 @@ export function LayoutHeader() {
               </div>
             </Link>
 
-            {/* Marketing Pages - Try App button */}
-            {isMarketingPage && (
-              <Link
-                href="/app"
-                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-xs font-semibold hover:shadow-lg transition-all"
-              >
-                Try App
-              </Link>
-            )}
-
-            {/* App Pages - Back to Home */}
-            {!isMarketingPage && (
-              <Link
-                href="/"
-                className="flex items-center gap-1 text-brandTextLight hover:text-brandText text-sm"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span>Home</span>
-              </Link>
-            )}
+            {/* Mobile - Try App button - ALWAYS SHOW */}
+            <Link
+              href="/app"
+              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-xs font-semibold hover:shadow-lg transition-all"
+            >
+              Try App
+            </Link>
           </div>
         </div>
       </header>
