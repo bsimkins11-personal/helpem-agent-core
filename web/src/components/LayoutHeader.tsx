@@ -28,7 +28,10 @@ export function LayoutHeader() {
                      pathname?.startsWith('/todos') || 
                      pathname?.startsWith('/habits');
   
+  const isPricingOrSupport = pathname === '/pricing' || pathname === '/support';
+  
   const showNavigation = isDemo && isAppRoute;
+  const showBackToHome = showNavigation || isPricingOrSupport;
 
   return (
     <>
@@ -61,8 +64,8 @@ export function LayoutHeader() {
               </nav>
             )}
 
-            {/* Back to Home - Show in demo mode on app routes */}
-            {showNavigation && (
+            {/* Back to Home - Show in demo mode on app routes OR on pricing/support pages */}
+            {showBackToHome && (
               <Link
                 href="/"
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-brandTextLight
@@ -89,8 +92,8 @@ export function LayoutHeader() {
               </h1>
             </Link>
 
-            {/* Back to Home - Show in demo mode on app routes */}
-            {showNavigation && (
+            {/* Back to Home - Show in demo mode on app routes OR on pricing/support pages */}
+            {showBackToHome && (
               <Link
                 href="/"
                 className="flex items-center gap-1 text-brandTextLight hover:text-brandText text-sm"
