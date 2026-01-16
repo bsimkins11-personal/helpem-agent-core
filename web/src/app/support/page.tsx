@@ -29,7 +29,10 @@ export default function SupportPage() {
   };
 
   useEffect(() => {
-    scrollToBottom();
+    // Only scroll when there are messages (not on initial load)
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   const sendMessage = async (messageText: string) => {
@@ -103,9 +106,9 @@ export default function SupportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <>
       {/* Hero */}
-      <section className="pt-4 pb-4 sm:pt-5 sm:pb-5">
+      <section className="pt-4 pb-4 sm:pt-5 sm:pb-5 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brandBlue to-brandGreen flex items-center justify-center text-3xl mx-auto mb-6">
             💬
@@ -120,7 +123,7 @@ export default function SupportPage() {
       </section>
 
       {/* Chat Interface */}
-      <section className="pb-16">
+      <section className="pb-16 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Messages */}
@@ -223,6 +226,6 @@ export default function SupportPage() {
           </div>
         </div>
       </section>
-    </div>
+    </>
   );
 }

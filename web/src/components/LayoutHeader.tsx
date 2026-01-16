@@ -28,14 +28,12 @@ export function LayoutHeader() {
                      pathname?.startsWith('/todos') || 
                      pathname?.startsWith('/habits');
   
-  const isPricingOrSupport = pathname === '/pricing' || pathname === '/support';
-  
-  const showNavigation = isDemo && isAppRoute;
-  const showBackToHome = showNavigation || isPricingOrSupport;
+  const isLandingPage = pathname === '/';
+  const showDemoNav = isDemo && isAppRoute;
 
   return (
     <>
-      {/* Header - Desktop */}
+      {/* Global Header - Desktop */}
       <header className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4">
           <div className="flex items-center justify-between">
@@ -53,25 +51,8 @@ export function LayoutHeader() {
               </div>
             </Link>
 
-            {/* Navigation - Only show in demo mode on app routes */}
-            {showNavigation && (
-              <nav className="flex items-center gap-1">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-brandTextLight
-                               hover:text-brandText hover:bg-gray-100 transition-all duration-200"
-                  >
-                    <span className="text-lg">{item.icon}</span>
-                    <span className="font-medium">{item.label}</span>
-                  </Link>
-                ))}
-              </nav>
-            )}
-
-            {/* Back to Home - Show in demo mode on app routes OR on pricing/support pages */}
-            {showBackToHome && (
+            {/* Back to Home - Show on all non-landing pages */}
+            {!isLandingPage && (
               <Link
                 href="/"
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-brandTextLight
@@ -87,7 +68,36 @@ export function LayoutHeader() {
         </div>
       </header>
 
-      {/* Mobile Header */}
+      {/* Demo App Navigation - Desktop (only for app routes in demo mode) */}
+      {showDemoNav && (
+        <div className="hidden md:block bg-purple-50 border-b border-purple-200">
+          <div className="max-w-7xl mx-auto px-4 lg:px-6 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-purple-700 bg-purple-100 px-2 py-1 rounded">
+                  DEMO MODE
+                </span>
+                <span className="text-xs text-purple-600">Your data is session-only</span>
+              </div>
+              <nav className="flex items-center gap-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-purple-700 text-sm
+                               hover:bg-purple-100 transition-all duration-200"
+                  >
+                    <span>{item.icon}</span>
+                    <span className="font-medium">{item.label}</span>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Header - Mobile */}
       <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
@@ -102,8 +112,8 @@ export function LayoutHeader() {
               </div>
             </Link>
 
-            {/* Back to Home - Show in demo mode on app routes OR on pricing/support pages */}
-            {showBackToHome && (
+            {/* Back to Home - Show on all non-landing pages */}
+            {!isLandingPage && (
               <Link
                 href="/"
                 className="flex items-center gap-1 text-brandTextLight hover:text-brandText text-sm"
@@ -118,16 +128,30 @@ export function LayoutHeader() {
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation - Only show in demo mode on app routes */}
-      {showNavigation && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom">
+      {/* Demo App Navigation - Mobile Banner (only for app routes in demo mode) */}
+      {showDemoNav && (
+        <div className="md:hidden bg-purple-50 border-b border-purple-200 px-4 py-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">
+                DEMO
+              </span>
+              <span className="text-[10px] text-purple-600">Session only</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Demo App Bottom Navigation - Mobile (only for app routes in demo mode) */}
+      {showDemoNav && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-purple-50 border-t-2 border-purple-200 z-50 safe-area-bottom">
           <div className="flex justify-around items-center py-2">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center gap-1 px-4 py-2 text-brandTextLight
-                           active:text-brandBlue transition-colors min-w-[60px]"
+                className="flex flex-col items-center gap-1 px-4 py-2 text-purple-700
+                           active:text-purple-900 transition-colors min-w-[60px]"
               >
                 <span className="text-xl">{item.icon}</span>
                 <span className="text-xs font-medium">{item.label}</span>
