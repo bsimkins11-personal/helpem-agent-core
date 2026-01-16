@@ -95,11 +95,16 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
-                <span className="text-brandBlue">help</span>
-                <span className="text-brandGreen">em</span>
-              </h1>
-              <p className="text-xs text-brandTextLight">Built for you.</p>
+              <div className="flex items-center gap-3">
+                <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
+                <div>
+                  <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
+                    <span className="text-brandBlue">help</span>
+                    <span className="text-brandGreen">em</span>
+                  </h1>
+                  <p className="text-xs text-brandTextLight">Built for you.</p>
+                </div>
+              </div>
             </Link>
             <div className="flex items-center gap-4 sm:gap-6">
               <a href="#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
@@ -449,9 +454,7 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brandBlue to-brandGreen flex items-center justify-center text-xl font-bold">
-                H
-              </div>
+              <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
               <div>
                 <p className="font-semibold">helpem</p>
                 <p className="text-xs text-white/60">Built for you.</p>

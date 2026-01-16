@@ -41,11 +41,16 @@ export function LayoutHeader() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
-                <span className="text-brandBlue">help</span>
-                <span className="text-brandGreen">em</span>
-              </h1>
-              <p className="text-xs text-brandTextLight">Built for you.</p>
+              <div className="flex items-center gap-3">
+                <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
+                <div>
+                  <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
+                    <span className="text-brandBlue">help</span>
+                    <span className="text-brandGreen">em</span>
+                  </h1>
+                  <p className="text-xs text-brandTextLight">Built for you.</p>
+                </div>
+              </div>
             </Link>
 
             {/* Navigation - Only show in demo mode on app routes */}
@@ -86,12 +91,15 @@ export function LayoutHeader() {
       <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link href="/" className="hover:opacity-80 transition-opacity">
-              <h1 className="text-xl font-bold tracking-tight">
-                <span className="text-brandBlue">help</span>
-                <span className="text-brandGreen">em</span>
-              </h1>
-              <p className="text-xs text-brandTextLight">Built for you.</p>
+            <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-2">
+              <img src="/helpem-logo.png" alt="HelpEm" className="h-8 w-auto" />
+              <div>
+                <h1 className="text-lg font-bold tracking-tight">
+                  <span className="text-brandBlue">help</span>
+                  <span className="text-brandGreen">em</span>
+                </h1>
+                <p className="text-[10px] text-brandTextLight leading-tight">Built for you.</p>
+              </div>
             </Link>
 
             {/* Back to Home - Show in demo mode on app routes OR on pricing/support pages */}
