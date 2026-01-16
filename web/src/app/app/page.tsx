@@ -10,6 +10,7 @@ import { useState } from "react";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 type PriorityFilter = "all" | "high" | "medium" | "low";
+type CalendarView = "day" | "week" | "month";
 
 const PRIORITY_TABS = [
   { key: "high" as const, label: "High", color: "bg-red-500", activeText: "text-white", inactiveText: "text-red-600", inactiveBg: "bg-red-50" },
@@ -21,6 +22,7 @@ export default function AppPage() {
   const { todos, habits, appointments } = useLife();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarView, setCalendarView] = useState<CalendarView>("day");
   
   // Expand/collapse states for each module
   const [expandedModules, setExpandedModules] = useState({
@@ -50,17 +52,62 @@ export default function AppPage() {
   
   const viewDate = new Date(selectedDate);
   viewDate.setHours(0, 0, 0, 0);
-  const nextDay = new Date(viewDate);
-  nextDay.setDate(nextDay.getDate() + 1);
 
+  // Calculate date range based on view
+  const getDateRange = () => {
+    const start = new Date(viewDate);
+    const end = new Date(viewDate);
+    
+    if (calendarView === "day") {
+      end.setDate(end.getDate() + 1);
+    } else if (calendarView === "week") {
+      // Start on Sunday of the week
+      const dayOfWeek = start.getDay();
+      start.setDate(start.getDate() - dayOfWeek);
+      end.setDate(start.getDate() + 7);
+    } else if (calendarView === "month") {
+      start.setDate(1); // First day of month
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(1); // First day of next month
+    }
+    
+    return { start, end };
+  };
+
+  const { start: rangeStart, end: rangeEnd } = getDateRange();
   const isViewingToday = viewDate.getTime() === today.getTime();
 
   const viewDateAppointments = appointments
     .filter((apt) => {
       const aptDate = new Date(apt.datetime);
-      return aptDate >= viewDate && aptDate < nextDay;
+      return aptDate >= rangeStart && aptDate < rangeEnd;
     })
     .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+
+  // Navigation functions
+  const navigatePrev = () => {
+    const newDate = new Date(selectedDate);
+    if (calendarView === "day") {
+      newDate.setDate(newDate.getDate() - 1);
+    } else if (calendarView === "week") {
+      newDate.setDate(newDate.getDate() - 7);
+    } else if (calendarView === "month") {
+      newDate.setMonth(newDate.getMonth() - 1);
+    }
+    setSelectedDate(newDate);
+  };
+
+  const navigateNext = () => {
+    const newDate = new Date(selectedDate);
+    if (calendarView === "day") {
+      newDate.setDate(newDate.getDate() + 1);
+    } else if (calendarView === "week") {
+      newDate.setDate(newDate.getDate() + 7);
+    } else if (calendarView === "month") {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setSelectedDate(newDate);
+  };
 
   const activeTodos = todos.filter((todo) => !todo.completedAt).sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
@@ -78,11 +125,24 @@ export default function AppPage() {
     day: "numeric",
   });
 
-  const formattedViewDate = viewDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  const formattedViewDate = () => {
+    if (calendarView === "day") {
+      return viewDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      });
+    } else if (calendarView === "week") {
+      const weekEnd = new Date(rangeStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      return `${rangeStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${weekEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    } else {
+      return viewDate.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      });
+    }
+  };
 
   const allExpanded = Object.values(expandedModules).every(v => v);
 
@@ -128,7 +188,7 @@ export default function AppPage() {
                 className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base hover:opacity-70 transition-opacity"
               >
                 <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600 text-xs md:text-sm">◷</span>
-                {isViewingToday ? "Today" : formattedViewDate}
+                {isViewingToday && calendarView === "day" ? "Today" : formattedViewDate()}
                 <svg className={`w-4 h-4 transition-transform ${expandedModules.today ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -138,26 +198,18 @@ export default function AppPage() {
                 {expandedModules.today && (
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => {
-                        const prevDay = new Date(selectedDate);
-                        prevDay.setDate(prevDay.getDate() - 1);
-                        setSelectedDate(prevDay);
-                      }}
+                      onClick={navigatePrev}
                       className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      aria-label="Previous day"
+                      aria-label={`Previous ${calendarView}`}
                     >
                       <svg className="w-4 h-4 text-brandTextLight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
                     <button
-                      onClick={() => {
-                        const nextDay = new Date(selectedDate);
-                        nextDay.setDate(nextDay.getDate() + 1);
-                        setSelectedDate(nextDay);
-                      }}
+                      onClick={navigateNext}
                       className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      aria-label="Next day"
+                      aria-label={`Next ${calendarView}`}
                     >
                       <svg className="w-4 h-4 text-brandTextLight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -176,12 +228,49 @@ export default function AppPage() {
                 )}
               </div>
             </div>
+            {/* View toggle buttons */}
+            {expandedModules.today && (
+              <div className="flex items-center gap-1 mb-3 border-b border-gray-200 pb-3">
+                <button
+                  onClick={() => setCalendarView("day")}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    calendarView === "day"
+                      ? "bg-violet-100 text-violet-700"
+                      : "text-brandTextLight hover:bg-gray-100"
+                  }`}
+                >
+                  Day
+                </button>
+                <button
+                  onClick={() => setCalendarView("week")}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    calendarView === "week"
+                      ? "bg-violet-100 text-violet-700"
+                      : "text-brandTextLight hover:bg-gray-100"
+                  }`}
+                >
+                  Week
+                </button>
+                <button
+                  onClick={() => setCalendarView("month")}
+                  className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    calendarView === "month"
+                      ? "bg-violet-100 text-violet-700"
+                      : "text-brandTextLight hover:bg-gray-100"
+                  }`}
+                >
+                  Month
+                </button>
+              </div>
+            )}
             {expandedModules.today && (
               <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
                 {viewDateAppointments.length > 0 ? (
                   viewDateAppointments.map((apt) => <AppointmentCard key={apt.id} appointment={apt} />)
                 ) : (
-                  <p className="text-sm text-brandTextLight text-center py-3 md:py-4">No appointments {isViewingToday ? "today" : "on this day"}</p>
+                  <p className="text-sm text-brandTextLight text-center py-3 md:py-4">
+                    No appointments {calendarView === "day" ? (isViewingToday ? "today" : "on this day") : `this ${calendarView}`}
+                  </p>
                 )}
               </div>
             )}
