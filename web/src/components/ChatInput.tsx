@@ -224,6 +224,9 @@ export default function ChatInput() {
       if (!res.ok) throw new Error("API request failed");
 
       const data = await res.json();
+      
+      // DEBUG: Log what agent returned
+      console.log("Agent response:", JSON.stringify(data, null, 2));
 
       if (data.action === "add") {
         const displayType = data.type === "habit" ? "routine" : data.type;
