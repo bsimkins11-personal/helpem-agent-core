@@ -251,8 +251,8 @@ export default function ChatInput() {
           const responseText = hasExplicitTime
             ? `Added your task "${data.title}" for ${formatDateTimeForSpeech(reminderDate)}.`
             : hasDate
-              ? `Added your task "${data.title}" for ${formatDateForSpeech(baseDate!)} with no specific time.`
-              : `Added your task "${data.title}" with no date or time.`;
+              ? `Got it. Do you want a specific time on ${formatDateForSpeech(baseDate!)} for "${data.title}"?`
+              : `Got it. Do you want to add a date or time for "${data.title}"?`;
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
