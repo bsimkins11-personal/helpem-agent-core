@@ -4,6 +4,7 @@ import ChatInput from "@/components/ChatInput";
 import { TodoCard } from "@/components/TodoCard";
 import { HabitCard } from "@/components/HabitCard";
 import { AppointmentCard } from "@/components/AppointmentCard";
+import { GroceryList } from "@/components/GroceryList";
 import { useLife } from "@/state/LifeStore";
 import { useState } from "react";
 
@@ -20,6 +21,29 @@ export default function AppPage() {
   const { todos, habits, appointments } = useLife();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // Expand/collapse states for each module
+  const [expandedModules, setExpandedModules] = useState({
+    today: true,
+    todos: true,
+    routines: true,
+    groceries: true,
+  });
+
+  const toggleModule = (module: keyof typeof expandedModules) => {
+    setExpandedModules(prev => ({ ...prev, [module]: !prev[module] }));
+  };
+
+  const toggleAllModules = () => {
+    const allExpanded = Object.values(expandedModules).every(v => v);
+    const newState = !allExpanded;
+    setExpandedModules({
+      today: newState,
+      todos: newState,
+      routines: newState,
+      groceries: newState,
+    });
+  };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -60,11 +84,24 @@ export default function AppPage() {
     day: "numeric",
   });
 
+  const allExpanded = Object.values(expandedModules).every(v => v);
+
   return (
     <div className="space-y-4 md:space-y-8">
       <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
-        <h1 className="text-2xl md:3xl font-bold">{greeting()}</h1>
-        <p className="text-white/80 mt-1 text-sm md:text-base">{formattedDate}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:3xl font-bold">{greeting()}</h1>
+            <p className="text-white/80 mt-1 text-sm md:text-base">{formattedDate}</p>
+          </div>
+          <button
+            onClick={toggleAllModules}
+            className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition-colors text-sm font-medium"
+            title={allExpanded ? "Collapse all" : "Expand all"}
+          >
+            {allExpanded ? "Collapse all" : "Expand all"}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -75,10 +112,16 @@ export default function AppPage() {
         <div className="space-y-4 md:space-y-6 order-2">
           <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h2 className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base">
+              <button
+                onClick={() => toggleModule('today')}
+                className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base hover:opacity-70 transition-opacity"
+              >
                 <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600 text-xs md:text-sm">◷</span>
                 {isViewingToday ? "Today" : formattedViewDate}
-              </h2>
+                <svg className={`w-4 h-4 transition-transform ${expandedModules.today ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">{viewDateAppointments.length} appts</span>
                 {!isViewingToday && (
@@ -91,21 +134,29 @@ export default function AppPage() {
                 )}
               </div>
             </div>
-            <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
-              {viewDateAppointments.length > 0 ? (
-                viewDateAppointments.map((apt) => <AppointmentCard key={apt.id} appointment={apt} />)
-              ) : (
-                <p className="text-sm text-brandTextLight text-center py-3 md:py-4">No appointments {isViewingToday ? "today" : "on this day"}</p>
-              )}
-            </div>
+            {expandedModules.today && (
+              <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
+                {viewDateAppointments.length > 0 ? (
+                  viewDateAppointments.map((apt) => <AppointmentCard key={apt.id} appointment={apt} />)
+                ) : (
+                  <p className="text-sm text-brandTextLight text-center py-3 md:py-4">No appointments {isViewingToday ? "today" : "on this day"}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h2 className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base">
+              <button
+                onClick={() => toggleModule('todos')}
+                className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base hover:opacity-70 transition-opacity"
+              >
                 <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-brandBlueLight flex items-center justify-center text-brandBlue text-xs md:text-sm">✓</span>
                 Todos
-              </h2>
+                <svg className={`w-4 h-4 transition-transform ${expandedModules.todos ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
               <div className="flex items-center gap-1">
                 {PRIORITY_TABS.map((p) => (
                   <button
@@ -131,27 +182,57 @@ export default function AppPage() {
               </div>
             </div>
 
-            <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
-              {filteredTodos.length > 0 ? (
-                filteredTodos.slice(0, 5).map((todo) => <TodoCard key={todo.id} todo={todo} />)
-              ) : (
-                <p className="text-sm text-brandTextLight text-center py-3 md:py-4">
-                  {priorityFilter === "all" ? "All caught up!" : `No ${priorityFilter} priority todos`}
-                </p>
-              )}
-            </div>
+            {expandedModules.todos && (
+              <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
+                {filteredTodos.length > 0 ? (
+                  filteredTodos.slice(0, 5).map((todo) => <TodoCard key={todo.id} todo={todo} />)
+                ) : (
+                  <p className="text-sm text-brandTextLight text-center py-3 md:py-4">
+                    {priorityFilter === "all" ? "All caught up!" : `No ${priorityFilter} priority todos`}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h2 className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base">
+              <button
+                onClick={() => toggleModule('routines')}
+                className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base hover:opacity-70 transition-opacity"
+              >
                 <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-brandGreenLight flex items-center justify-center text-brandGreen text-xs md:text-sm">↻</span>
                 Routines
-              </h2>
+                <svg className={`w-4 h-4 transition-transform ${expandedModules.routines ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
-            <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
-              {habits.length > 0 ? habits.slice(0, 4).map((habit) => <HabitCard key={habit.id} habit={habit} />) : <p className="text-sm text-brandTextLight text-center py-3 md:py-4">No routines yet</p>}
+            {expandedModules.routines && (
+              <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
+                {habits.length > 0 ? habits.slice(0, 4).map((habit) => <HabitCard key={habit.id} habit={habit} />) : <p className="text-sm text-brandTextLight text-center py-3 md:py-4">No routines yet</p>}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-4 md:p-5">
+              <button
+                onClick={() => toggleModule('groceries')}
+                className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base hover:opacity-70 transition-opacity w-full"
+              >
+                <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500 text-xs md:text-sm">🛒</span>
+                Groceries
+                <svg className={`w-4 h-4 transition-transform ${expandedModules.groceries ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
+            {expandedModules.groceries && (
+              <div className="px-4 md:px-5 pb-4 md:pb-5">
+                <GroceryList />
+              </div>
+            )}
           </div>
         </div>
       </div>

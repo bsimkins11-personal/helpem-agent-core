@@ -16,23 +16,17 @@ export function GroceryList() {
   const completedItems = groceryRoutine.items.filter(item => item.completed);
 
   return (
-    <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 md:gap-3">
-          <span className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 text-lg md:text-xl">
-            🛒
-          </span>
-          <h2 className="text-lg md:text-xl font-bold text-brandText">Groceries</h2>
-        </div>
-        {completedItems.length > 0 && (
+    <div>
+      {completedItems.length > 0 && (
+        <div className="flex justify-end mb-4">
           <button
             onClick={() => clearCompletedRoutineItems(groceryRoutine.id)}
             className="text-xs md:text-sm text-brandTextLight hover:text-brandText transition-colors"
           >
             Clear completed
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {activeItems.length === 0 && completedItems.length === 0 ? (
         <div className="p-6 md:p-8 text-center border-2 border-dashed border-gray-200 rounded-xl">
