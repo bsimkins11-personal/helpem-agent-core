@@ -12,23 +12,12 @@ export function GroceryList() {
     return null;
   }
 
-  const activeItems = groceryRoutine.items.filter(item => !item.completed);
-  const completedItems = groceryRoutine.items.filter(item => item.completed);
+  const allItems = groceryRoutine.items;
+  const hasCompletedItems = allItems.some(item => item.completed);
 
   return (
     <div>
-      {completedItems.length > 0 && (
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={() => clearCompletedRoutineItems(groceryRoutine.id)}
-            className="text-xs md:text-sm text-brandTextLight hover:text-brandText transition-colors"
-          >
-            Clear completed
-          </button>
-        </div>
-      )}
-
-      {activeItems.length === 0 && completedItems.length === 0 ? (
+      {allItems.length === 0 ? (
         <div className="p-6 md:p-8 text-center border-2 border-dashed border-gray-200 rounded-xl">
           <div className="text-2xl md:text-3xl mb-2 md:mb-3">🛒</div>
           <p className="text-sm md:text-base text-brandTextLight mb-1">No items yet</p>
@@ -37,56 +26,57 @@ export function GroceryList() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {/* Active items */}
-          {activeItems.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-            >
-              <button
-                onClick={() => completeRoutineItem(groceryRoutine.id, item.id)}
-                className="w-5 h-5 rounded-full border-2 border-gray-300 hover:border-orange-500 
-                           flex items-center justify-center flex-shrink-0 transition-colors"
+        <>
+          <div className="space-y-2">
+            {allItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
-                <span className="opacity-0 group-hover:opacity-100 text-orange-500 text-xs">✓</span>
-              </button>
-              <div className="flex-1 flex items-center gap-3">
-                <span className="text-brandText capitalize">{item.content}</span>
-                {isTodoSignal(item.content) && (
-                  <button
-                    onClick={() => moveRoutineItemToTodos(groceryRoutine.id, item.id, item.content)}
-                    className="text-xs text-brandBlue hover:text-blue-700"
-                  >
-                    Move to todos
-                  </button>
-                )}
+                <button
+                  onClick={() => completeRoutineItem(groceryRoutine.id, item.id)}
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors
+                    ${item.completed 
+                      ? 'bg-orange-500 border-orange-500' 
+                      : 'border-gray-300 hover:border-orange-500'}`}
+                >
+                  {item.completed && (
+                    <span className="text-white text-xs">✓</span>
+                  )}
+                  {!item.completed && (
+                    <span className="opacity-0 group-hover:opacity-100 text-orange-500 text-xs">✓</span>
+                  )}
+                </button>
+                <div className="flex-1 flex items-center gap-3">
+                  <span className={`capitalize ${item.completed ? 'text-brandTextLight line-through' : 'text-brandText'}`}>
+                    {item.content}
+                  </span>
+                  {!item.completed && isTodoSignal(item.content) && (
+                    <button
+                      onClick={() => moveRoutineItemToTodos(groceryRoutine.id, item.id, item.content)}
+                      className="text-xs text-brandBlue hover:text-blue-700"
+                    >
+                      Move to todos
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
-          {/* Completed items (collapsed) */}
-          {completedItems.length > 0 && (
-            <details className="mt-4">
-              <summary className="text-sm text-brandTextLight cursor-pointer hover:text-brandText transition-colors">
-                {completedItems.length} completed
-              </summary>
-              <div className="mt-2 space-y-1">
-                {completedItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 p-2 text-sm opacity-50"
-                  >
-                    <span className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs flex-shrink-0">
-                      ✓
-                    </span>
-                    <span className="text-brandTextLight capitalize line-through">{item.content}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
+          {/* Clear list button at bottom */}
+          {hasCompletedItems && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => clearCompletedRoutineItems(groceryRoutine.id)}
+                className="w-full py-2 px-4 text-sm font-medium text-orange-600 hover:text-orange-700 
+                           hover:bg-orange-50 rounded-lg transition-colors"
+              >
+                Clear list
+              </button>
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
