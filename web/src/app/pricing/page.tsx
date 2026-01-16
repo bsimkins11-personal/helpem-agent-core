@@ -137,9 +137,9 @@ export default function PricingPage() {
       </section>
 
       {/* Pricing Cards */}
-      <section className="pb-16 sm:pb-24 bg-gradient-to-br from-gray-50 to-white">
+      <section className="pt-8 sm:pt-12 pb-16 sm:pb-24 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
             {plans.map((plan, index) => (
               <div
                 key={index}
