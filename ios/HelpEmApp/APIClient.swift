@@ -8,8 +8,9 @@ import Foundation
 final class APIClient {
     static let shared = APIClient()
     
-    private let baseURL = "https://api-production-2989.up.railway.app"
+    private let baseURL = AppEnvironment.apiURL
     private let session: URLSession
+    private let maxRetries = 2
     
     private init() {
         let config = URLSessionConfiguration.default
@@ -41,7 +42,7 @@ final class APIClient {
     // MARK: - Generic Request Methods
     
     private func get<T: Decodable>(endpoint: String) async throws -> T {
-        guard let url = URL(string: baseURL + endpoint) else {
+        guard !baseURL.isEmpty, let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
         }
         
@@ -56,7 +57,7 @@ final class APIClient {
         body: Request,
         token: String? = nil
     ) async throws -> Response {
-        guard let url = URL(string: baseURL + endpoint) else {
+        guard !baseURL.isEmpty, let url = URL(string: baseURL + endpoint) else {
             throw APIError.invalidURL
         }
         
@@ -74,32 +75,72 @@ final class APIClient {
     }
     
     private func execute<T: Decodable>(request: URLRequest) async throws -> T {
-        let (data, response) = try await session.data(for: request)
+        var lastError: Error?
         
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        // Log for debugging
-        print("📡 API: \(request.httpMethod ?? "?") \(request.url?.path ?? "?")")
-        print("📊 Status: \(httpResponse.statusCode)")
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            // Try to decode error message
-            if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
-                throw APIError.serverError(errorResponse.error)
+        for attempt in 0...maxRetries {
+            do {
+                let (data, response) = try await session.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                
+                // Log for debugging
+                print("📡 API: \(request.httpMethod ?? "?") \(request.url?.path ?? "?")")
+                print("📊 Status: \(httpResponse.statusCode)")
+                
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    // Try to decode error message
+                    if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                        throw APIError.serverError(errorResponse.error)
+                    }
+                    throw APIError.httpError(httpResponse.statusCode)
+                }
+                
+                do {
+                    let decoded = try JSONDecoder().decode(T.self, from: data)
+                    return decoded
+                } catch {
+                    print("❌ Decode error:", error)
+                    print("📦 Raw data:", String(data: data, encoding: .utf8) ?? "")
+                    throw APIError.decodingError(error)
+                }
+            } catch {
+                lastError = error
+                
+                // Only retry on transient network failures
+                if attempt < maxRetries, shouldRetry(error: error) {
+                    let backoff = UInt64(300_000_000) * UInt64(attempt + 1) // 0.3s, 0.6s
+                    try? await Task.sleep(nanoseconds: backoff)
+                    continue
+                }
+                
+                throw mapToAPIError(error)
             }
-            throw APIError.httpError(httpResponse.statusCode)
         }
         
-        do {
-            let decoded = try JSONDecoder().decode(T.self, from: data)
-            return decoded
-        } catch {
-            print("❌ Decode error:", error)
-            print("📦 Raw data:", String(data: data, encoding: .utf8) ?? "")
-            throw APIError.decodingError(error)
+        // Fallback
+        throw mapToAPIError(lastError ?? APIError.invalidResponse)
+    }
+
+    private func shouldRetry(error: Error) -> Bool {
+        if case APIError.notAuthenticated = error { return false }
+        if let urlError = error as? URLError {
+            return urlError.code == .timedOut ||
+                   urlError.code == .cannotFindHost ||
+                   urlError.code == .cannotConnectToHost ||
+                   urlError.code == .networkConnectionLost ||
+                   urlError.code == .notConnectedToInternet
         }
+        return false
+    }
+
+    private func mapToAPIError(_ error: Error) -> APIError {
+        if let apiError = error as? APIError { return apiError }
+        if let urlError = error as? URLError {
+            return APIError.networkError(urlError)
+        }
+        return APIError.networkError(error)
     }
 }
 

@@ -8,28 +8,12 @@ import UIKit
 
 // MARK: - Configuration
 
-struct AppConfig {
-    // For local testing: http://192.168.1.18:3001 (Mac's IP on local network)
-    // For production: https://helpem-poc.vercel.app
-    static let webAppURL = "https://helpem-poc.vercel.app"
-    static let apiURL = "https://api-production-2989.up.railway.app"
-    
-    /// Returns true if URL should receive session token
-    static func shouldAuthenticateRequest(url: String) -> Bool {
-        guard let requestURL = URL(string: url) else { return false }
-        let host = requestURL.host ?? ""
-        
-        return host.contains("helpem") ||
-               host.contains("railway.app") ||
-               url.contains("/api/")
-    }
-}
-
 // MARK: - WebView Container
 
 struct WebViewContainer: UIViewRepresentable {
     
     @ObservedObject var authManager: AuthManager
+    private let userAgentSuffix = "HelpEm-iOS"
     
     func makeCoordinator() -> Coordinator {
         Coordinator(authManager: authManager)
@@ -48,15 +32,17 @@ struct WebViewContainer: UIViewRepresentable {
         controller.addUserScript(Self.makeAuthScript(token: token))
         
         config.userContentController = controller
+        config.defaultWebpagePreferences.allowsContentJavaScript = true
         
         // Create WebView
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        webView.customUserAgent = "\(webView.value(forKey: "userAgent") as? String ?? "Safari") \(userAgentSuffix)"
         
         context.coordinator.webView = webView
         
         // Load web app
-        guard let url = URL(string: AppConfig.webAppURL) else {
+        guard let url = URL(string: AppEnvironment.webAppURL) else {
             print("❌ Invalid web app URL")
             return webView
         }
@@ -66,7 +52,7 @@ struct WebViewContainer: UIViewRepresentable {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        print("🌐 Loading web app: \(AppConfig.webAppURL)")
+        print("🌐 Loading web app: \(AppEnvironment.webAppURL)")
         webView.load(request)
         
         return webView
@@ -80,8 +66,8 @@ struct WebViewContainer: UIViewRepresentable {
     
     /// Generate JavaScript to inject session token into WebView
     static func makeAuthScript(token: String) -> WKUserScript {
-        let webHost = URL(string: AppConfig.webAppURL)?.host ?? ""
-        let apiHost = URL(string: AppConfig.apiURL)?.host ?? ""
+        let webHost = URL(string: AppEnvironment.webAppURL)?.host ?? ""
+        let apiHost = URL(string: AppEnvironment.apiURL)?.host ?? ""
         let safeToken = escapeForJavaScript(token)
         
         let source = """
@@ -195,6 +181,16 @@ struct WebViewContainer: UIViewRepresentable {
             speechManager.onFinalResult = { [weak self] text in
                 guard let self = self else { return }
                 self.lastInputWasVoice = true
+                
+                // Persist voice input to backend for auditing/analytics
+                Task.detached { [text] in
+                    do {
+                        try await APIClient.shared.saveUserInput(content: text, type: "voice")
+                        print("📥 Logged voice input to backend")
+                    } catch {
+                        print("⚠️ Failed to log voice input:", error.localizedDescription)
+                    }
+                }
                 
                 if self.pageReady {
                     self.sendToWeb(text)
@@ -380,7 +376,7 @@ struct WebViewContainer: UIViewRepresentable {
             controller.addUserScript(WebViewContainer.makeAuthScript(token: token))
             
             // Reload web app
-            guard let url = URL(string: AppConfig.webAppURL) else { return }
+            guard let url = URL(string: AppEnvironment.webAppURL) else { return }
             
             var request = URLRequest(url: url)
             if !token.isEmpty {

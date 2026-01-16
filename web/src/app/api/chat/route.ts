@@ -70,18 +70,22 @@ NEVER read appointments when asked about todos. NEVER read todos when asked abou
 - Group multi-day responses by day first, then list times chronologically
 - Be time-aware - if it's 2 PM and they ask about "today", only show future events
 
-=== JSON RESPONSE FORMAT ===
-For adding items:
+=== RESPONSE RULES ===
+- For add/update actions, respond with JSON in the exact schemas below.
+- For general answers/conversation, respond with plain text (speakable, no markdown).
+
+JSON for adding items:
 {
   "action": "add",
   "type": "todo" | "routine" | "appointment",
   "title": "string",
   "priority": "low" | "medium" | "high" (for todos),
   "datetime": "ISO string" (for appointments),
-  "frequency": "daily" | "weekly" (for routines)
+  "frequency": "daily" | "weekly" (for routines),
+  "daysOfWeek": ["monday","wednesday"] (optional for routines)
 }
 
-For changing todo priority:
+JSON for changing todo priority:
 {
   "action": "update_priority",
   "todoTitle": "exact title from list",
@@ -89,18 +93,13 @@ For changing todo priority:
 }
 
 For questions or conversation:
-{
-  "action": "respond",
-  "message": "your conversational response"
-}
+- Return plain conversational text (no markdown).
 
-FORMATTING RULES:
+FORMATTING RULES FOR TEXT:
+- If the user says "reminder", treat it as a todo. Ask once if they want a date/time if none was provided.
+- Only ask clarifying questions; do NOT ask for confirmations after you add items.
 - NO markdown formatting (no **, no *, no #, no bullet points with -)
-- Use plain conversational text only
-- For lists, use natural language: "First... Then... Also..."
-- Keep responses clean and speakable (they may be read aloud)
-
-Always respond with valid JSON only.
+- Use natural sentences; speakable aloud.
 `;
 
 // Helper to format date with ordinal suffix
@@ -304,7 +303,14 @@ FULFILLED_INTENTS: None yet
 
     try {
       const parsed = JSON.parse(content);
-      return NextResponse.json(parsed);
+      if (parsed && typeof parsed === "object" && "action" in parsed) {
+        return NextResponse.json(parsed);
+      }
+      // If it's JSON but not an action payload, treat as text message
+      return NextResponse.json({
+        action: "respond",
+        message: typeof parsed === "string" ? parsed : JSON.stringify(parsed),
+      });
     } catch {
       // If not valid JSON, wrap it as a message
       return NextResponse.json({

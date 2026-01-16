@@ -58,17 +58,17 @@ struct SignInView: View {
                                         authManager.signInWithApple()
                                     }
                             )
-                        
-                        // TEMPORARY: Skip auth for local testing
+#if DEBUG
                         Button(action: {
-                            authManager.skipAuthForTesting()
+                            authManager.setDebugTestSession()
                         }) {
-                            Text("Skip for Testing")
+                            Text("Use Debug Session")
                                 .font(.footnote)
-                                .foregroundColor(.white.opacity(0.7))
+                                .foregroundColor(.white.opacity(0.8))
                                 .underline()
                         }
                         .padding(.top, 8)
+#endif
                     }
 
                     if let error = authManager.error {

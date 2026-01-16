@@ -16,6 +16,7 @@ type Message = {
     priority?: Priority;
     datetime?: string;
     frequency?: "daily" | "weekly";
+    daysOfWeek?: string[];
   };
 };
 
@@ -198,32 +199,80 @@ export default function ChatInput() {
       if (data.action === "add") {
         const displayType = data.type === "habit" ? "routine" : data.type;
         const internalType = data.type === "routine" ? "habit" : data.type;
-        const responseText = `I'll add this ${displayType}: "${data.title}"`;
-        
-        const assistantMessage: Message = {
-          id: uuidv4(),
-          role: "assistant",
-          content: responseText,
-          action: {
-            type: internalType as "todo" | "habit" | "appointment",
+        const id = uuidv4();
+        const now = new Date();
+
+        if (internalType === "todo") {
+          addTodo({
+            id,
             title: data.title,
-            priority: data.priority,
-            datetime: data.datetime,
-            frequency: data.frequency,
-          },
-        };
-        
-        addMessage(assistantMessage);
-        setPendingAction(assistantMessage.action);
-        setSelectedPriority(data.priority || "medium");
-        // ALWAYS send to native for TTS when in native app
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText + ". Would you like me to confirm?",
+            priority: data.priority || "medium",
+            dueDate: data.datetime ? new Date(data.datetime) : undefined,
+            reminderTime: data.datetime ? new Date(data.datetime) : undefined,
+            createdAt: now,
           });
+
+          const responseText = data.datetime
+            ? `Added "${data.title}" with a reminder.`
+            : `Added "${data.title}" as a todo without a date or time.`;
+
+          addMessage({
+            id: uuidv4(),
+            role: "assistant",
+            content: responseText,
+          });
+
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: responseText,
+            });
+          }
+        } else if (internalType === "habit") {
+          addHabit({
+            id,
+            title: data.title,
+            frequency: data.frequency || "daily",
+            createdAt: now,
+            completions: [],
+            // @ts-expect-error allow optional daysOfWeek passthrough
+            daysOfWeek: data.daysOfWeek,
+          });
+
+          const days = data.daysOfWeek?.length ? ` on ${data.daysOfWeek.join(", ")}` : "";
+          const responseText = `Added routine "${data.title}"${days}.`;
+          addMessage({ id: uuidv4(), role: "assistant", content: responseText });
+
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: responseText,
+            });
+          }
+        } else if (internalType === "appointment") {
+          const datetime = data.datetime ? new Date(data.datetime) : now;
+          addAppointment({
+            id,
+            title: data.title,
+            datetime,
+            createdAt: now,
+          });
+
+          const responseText = `Added appointment "${data.title}" at ${datetime.toLocaleString()}.`;
+          addMessage({ id: uuidv4(), role: "assistant", content: responseText });
+
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: responseText,
+            });
+          }
         }
-        
+
+        // No confirmation flows; we add immediately.
+        setPendingAction(null);
+        setSelectedPriority(data.priority || "medium");
+
       } else if (data.action === "update_priority") {
         const todoToUpdate = todos.find(t => 
           t.title.toLowerCase() === data.todoTitle?.toLowerCase()

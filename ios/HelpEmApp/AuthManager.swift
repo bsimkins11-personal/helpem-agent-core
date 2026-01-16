@@ -5,6 +5,7 @@ import Foundation
 import AuthenticationServices
 import Combine
 import UIKit
+import WebKit
 
 /// Manages Apple Sign In authentication and session lifecycle
 @MainActor
@@ -198,14 +199,18 @@ final class AuthManager: NSObject, ObservableObject {
         KeychainHelper.shared.clearAll()
         isAuthenticated = false
         error = nil
+        
+        // Clear web data/session to avoid stale cookies in embedded webview
+        WKWebsiteDataStore.default().fetchDataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes()) { records in
+            WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), for: records) {
+                print("🧹 Cleared web data after logout")
+            }
+        }
     }
-    
-    // MARK: - Testing Only (Remove Before Production)
-    
-    /// ⚠️ TEMPORARY: Skip auth for local testing without Apple Developer membership
-    /// TODO: Remove this method before TestFlight/production release
-    /// This creates mock credentials for testing WebView and other features
-    func skipAuthForTesting() {
+
+#if DEBUG
+    /// Debug-only helper to inject a test session without Apple Sign In.
+    func setDebugTestSession() {
         // REAL TEST TOKEN - Generated from Railway JWT_SECRET
         let mockSessionToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LTE3Njg0NTI4MTQ2NDEiLCJhcHBsZVVzZXJJZCI6ImFwcGxlLXRlc3QtMTc2ODQ1MjgxNDY0MSIsImlhdCI6MTc2ODQ1MjgxNCwiZXhwIjoxNzcxMDQ0ODE0fQ.Ua0d1sOU_5GCwNwXE2pjHqGG3MH_gRVo_7extL8EVE0"
         let mockAppleUserId = "apple-test-1768452814641"
@@ -217,10 +222,9 @@ final class AuthManager: NSObject, ObservableObject {
         
         isAuthenticated = true
         
-        print("⚠️ TESTING MODE: Using REAL test token from Railway")
-        print("🔑 Token valid until:", Date(timeIntervalSince1970: 1771044814))
-        print("👤 User ID:", mockUserId)
+        print("⚠️ DEBUG MODE: Using test session token (not for production)")
     }
+#endif
 
     enum AuthError: LocalizedError {
         case invalidURL
