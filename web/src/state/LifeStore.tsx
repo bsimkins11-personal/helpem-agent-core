@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Todo, Priority } from "@/types/todo";
 import { Habit } from "@/types/habit";
@@ -137,6 +137,57 @@ export function LifeProvider({ children }: LifeProviderProps) {
   const [habits, setHabits] = useState<Habit[]>(seedHabits);
   const [appointments, setAppointments] = useState<Appointment[]>(seedAppointments);
   const [routines, setRoutines] = useState<Routine[]>(seedRoutines);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Load data from database on mount
+  useEffect(() => {
+    if (dataLoaded) return;
+    
+    const loadData = async () => {
+      try {
+        // Load todos from database
+        const todosRes = await fetch('/api/todos');
+        if (todosRes.ok) {
+          const todosData = await todosRes.json();
+          if (todosData.todos && todosData.todos.length > 0) {
+            const dbTodos: Todo[] = todosData.todos.map((t: any) => ({
+              id: t.id,
+              title: t.title,
+              priority: t.priority,
+              dueDate: t.due_date ? new Date(t.due_date) : undefined,
+              reminderTime: t.reminder_time ? new Date(t.reminder_time) : undefined,
+              completedAt: t.completed_at ? new Date(t.completed_at) : undefined,
+              createdAt: new Date(t.created_at),
+            }));
+            setTodos(dbTodos);
+          }
+        }
+
+        // Load appointments from database
+        const apptsRes = await fetch('/api/appointments');
+        if (apptsRes.ok) {
+          const apptsData = await apptsRes.json();
+          if (apptsData.appointments && apptsData.appointments.length > 0) {
+            const dbAppointments: Appointment[] = apptsData.appointments.map((a: any) => ({
+              id: a.id,
+              title: a.title,
+              datetime: new Date(a.datetime),
+              createdAt: new Date(a.created_at),
+            }));
+            setAppointments(dbAppointments);
+          }
+        }
+
+        setDataLoaded(true);
+      } catch (error) {
+        console.error("Failed to load data from database:", error);
+        // Continue with seed data if load fails
+        setDataLoaded(true);
+      }
+    };
+
+    loadData();
+  }, [dataLoaded]);
 
   const addTodo = useCallback((todo: Todo) => {
     setTodos(prev => [...prev, todo]);
