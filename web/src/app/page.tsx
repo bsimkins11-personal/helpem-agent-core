@@ -107,6 +107,9 @@ export default function LandingPage() {
               <a href="#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
                 Features
               </a>
+              <Link href="/pricing" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
+                Pricing
+              </Link>
               <a href="#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
                 About
               </a>
@@ -419,6 +422,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-white/70">
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
                 <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
                 <li><Link href="/app" className="hover:text-white transition-colors">Try App</Link></li>
               </ul>
             </div>
