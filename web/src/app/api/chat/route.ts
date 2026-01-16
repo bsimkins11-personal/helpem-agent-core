@@ -16,28 +16,22 @@ function getOpenAIClient() {
 
 const OPERATIONAL_RULES = `
 🚨 CRITICAL NON-NEGOTIABLE RULE 🚨
-When you emit a JSON action with "action": "add", you MUST:
-1. Return ONLY the JSON - nothing before or after it
-2. Include the "message" field with what you're adding and when
-3. NEVER add explanatory text outside the JSON
+NEVER MIX TEXT AND JSON IN THE SAME RESPONSE!
 
-CORRECT (pure JSON only):
-{
-  "action": "add",
-  "type": "todo",
-  "title": "Pick up dry cleaning",
-  "datetime": "2026-01-16T09:00:00Z",
-  "message": "Alright. I'll remind you to pick up your dry cleaning tomorrow morning."
-}
+You MUST choose ONE:
+1. Pure JSON action (when adding/updating items)
+2. Pure plain text (for conversation, acknowledgments, questions)
 
-WRONG (text + JSON):
-Here's the reminder:
-{
-  "action": "add",
-  ...
-}
+CORRECT Examples:
+✅ Response to "thank you": "You're welcome!" (plain text only, no JSON)
+✅ Response to "remind me to X": {"action": "add", "type": "todo", "message": "Got it..."} (pure JSON)
 
-Return ONLY the JSON, nothing else. The "message" field is what the user will hear.
+WRONG Examples:
+❌ "You're welcome!" followed by JSON (text + JSON mixed)
+❌ "Here's the reminder:" followed by JSON (text + JSON mixed)
+
+If you're just conversing (thank you, greetings, questions), return ONLY plain text.
+If you're taking action (adding item), return ONLY pure JSON with message field.
 
 === CURRENT CONTEXT ===
 RIGHT NOW IT IS: {{currentDateTime}}
@@ -103,12 +97,16 @@ TYPE 1: JSON ACTION (when adding/updating items)
 - MUST include "message" field with full confirmation
 - Example: {"action": "add", "type": "todo", "title": "Pick up dry cleaning", "datetime": "2026-01-17T09:00:00Z", "message": "Alright. I'll remind you to pick up dry cleaning tomorrow morning."}
 
-TYPE 2: PLAIN TEXT (for questions, clarifications, answers)
-- Use this when: asking for missing info, answering questions, having conversation
+TYPE 2: PLAIN TEXT (for questions, clarifications, answers, acknowledgments)
+- Use this when: asking for missing info, answering questions, having conversation, responding to thank you/greetings
 - Format: Plain conversational text (no JSON)
-- Example: "When do you want me to remind you about this?"
+- Examples:
+  * "When do you want me to remind you about this?"
+  * "You're welcome!"
+  * "Happy to help!"
+  * "Anything else I can do for you?"
 
-NEVER return just plain text "Got it" when you should be returning a JSON action!
+IMPORTANT: If someone just says "thank you" or is making small talk, respond with plain text ONLY. DO NOT create any JSON actions unless they're asking you to add/update something!
 
 CONFIRMATION STYLE - MANDATORY PLAYBACK:
 ⚠️ CRITICAL RULE: NEVER say just "Got it." or "Okay." or "Done." without the details!

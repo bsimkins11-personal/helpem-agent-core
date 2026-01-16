@@ -377,8 +377,11 @@ export default function ChatInput() {
         
       } else {
         const rawResponse = data.message || data.error || "I'm not sure how to help with that.";
-        const responseText = stripMarkdown(rawResponse);
-        // DON'T override the agent's response - let it speak naturally
+        let responseText = stripMarkdown(rawResponse);
+        
+        // Strip out any accidental JSON that might be in the response
+        responseText = responseText.replace(/\{[^}]*"action"[^}]*\}/g, '').trim();
+        
         addMessage({
           id: uuidv4(),
           role: "assistant",
