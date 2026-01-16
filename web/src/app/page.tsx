@@ -113,9 +113,9 @@ export default function LandingPage() {
               <a href="#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
                 About
               </a>
-              <a href="#support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+              <Link href="/support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
                 Support
-              </a>
+              </Link>
               <Link
                 href="/app"
                 className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
@@ -362,12 +362,12 @@ export default function LandingPage() {
           <p className="text-lg sm:text-xl text-brandTextLight mb-10">
             Our AI support agent is here 24/7 to answer questions and help you get the most out of HelpEm.
           </p>
-          <a
-            href="mailto:support@helpem.app"
+          <Link
+            href="/support"
             className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-brandBlue to-brandGreen text-white font-semibold text-lg hover:shadow-2xl transition-all"
           >
-            Get Support
-          </a>
+            Chat with Support
+          </Link>
         </div>
       </section>
 
@@ -437,8 +437,8 @@ export default function LandingPage() {
               <h3 className="font-semibold text-lg mb-4">Support</h3>
               <ul className="space-y-2 text-white/70">
                 <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
-                <li><a href="#support" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="mailto:support@helpem.app" className="hover:text-white transition-colors">Email Support</a></li>
+                <li><Link href="/support" className="hover:text-white transition-colors">AI Support Chat</Link></li>
+                <li><a href="mailto:support@helpem.ai" className="hover:text-white transition-colors">Email Support</a></li>
               </ul>
             </div>
             <div>
