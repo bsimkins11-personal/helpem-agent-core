@@ -232,12 +232,11 @@ export default function ChatInput() {
         const now = new Date();
 
         if (internalType === "todo") {
-          const fallbackReminder = getDefaultTomorrowReminder();
           const hasDate = !!data.datetime;
           const rawDate = hasDate ? new Date(data.datetime) : null;
           const hasExplicitTime = hasDate && rawDate && !isMidnight(rawDate);
-          const baseDate = hasDate && rawDate ? rawDate : fallbackReminder;
-          const reminderDate = hasExplicitTime ? baseDate : setDefaultTime(baseDate);
+          const baseDate = hasDate && rawDate ? rawDate : null;
+          const reminderDate = hasExplicitTime ? baseDate! : undefined;
           const priorityValue = data.priority || "medium";
 
           addTodo({
@@ -252,8 +251,8 @@ export default function ChatInput() {
           const responseText = hasExplicitTime
             ? `Added "${data.title}" for ${formatDateTimeForSpeech(reminderDate)}.`
             : hasDate
-              ? `Added "${data.title}" for ${formatDateForSpeech(baseDate)} with no specific time.`
-              : `Added "${data.title}" to tomorrow with no specific time.`;
+              ? `Added "${data.title}" for ${formatDateForSpeech(baseDate!)} with no specific time.`
+              : `Added "${data.title}" with no date or time.`;
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -265,7 +264,7 @@ export default function ChatInput() {
             if (!hasExplicitTime) {
               window.webkit?.messageHandlers?.native?.postMessage({
                 action: "speak",
-                text: `If you want a time, tell me. Otherwise I'll keep it for ${formatDateForSpeech(baseDate)}.`,
+                text: `Do you want to add a date or time?`,
               });
             }
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -280,7 +279,7 @@ export default function ChatInput() {
             });
             // Visual follow-up for time and priority in type mode
             if (!hasExplicitTime) {
-              const timePrompt = `Add a specific time for "${data.title}"? (default is ${formatDateForSpeech(baseDate)} at ${formatTimeForSpeech(reminderDate)})`;
+              const timePrompt = `Add a date or time for "${data.title}"?`;
               addMessage({
                 id: uuidv4(),
                 role: "assistant",
