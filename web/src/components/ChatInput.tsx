@@ -23,6 +23,17 @@ type Message = {
 const MAX_MESSAGES = 50;
 const SESSION_STORAGE_KEY = "helpem_chat_history";
 
+function getDefaultTomorrowReminder(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  return d;
+}
+
+function formatDateTimeForSpeech(date: Date) {
+  return date.toLocaleString([], { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 // Detect iOS native environment - single source of truth
 function isIOSNativeEnvironment(): boolean {
   if (typeof window === "undefined") return false;
@@ -203,23 +214,39 @@ export default function ChatInput() {
         const now = new Date();
 
         if (internalType === "todo") {
+          const fallbackReminder = getDefaultTomorrowReminder();
+          const hasProvidedTime = !!data.datetime;
+          const reminderDate = hasProvidedTime ? new Date(data.datetime) : fallbackReminder;
+
           addTodo({
             id,
             title: data.title,
             priority: data.priority || "medium",
-            dueDate: data.datetime ? new Date(data.datetime) : undefined,
-            reminderTime: data.datetime ? new Date(data.datetime) : undefined,
+            dueDate: reminderDate,
+            reminderTime: reminderDate,
             createdAt: now,
           });
 
-          const responseText = data.datetime
-            ? `Added "${data.title}" with a reminder.`
-            : `Added "${data.title}" as a to do. Want to add a specific time for tomorrow?`;
+          const responseText = hasProvidedTime
+            ? `Added "${data.title}" for ${formatDateTimeForSpeech(reminderDate)}.`
+            : `Added "${data.title}" for tomorrow at ${reminderDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Want a specific time?`;
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
               action: "speak",
               text: responseText,
+            });
+
+            // Follow-up for time (if not provided) and priority (verbal only)
+            if (!hasProvidedTime) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: `If yes, tell me a time. If no, I'll keep it for tomorrow.`,
+              });
+            }
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: `Set a priority for "${data.title}": high, medium, or low.`,
             });
           } else {
             addMessage({
@@ -228,17 +255,18 @@ export default function ChatInput() {
               content: responseText,
             });
             // Visual follow-up for time and priority in type mode
-            const timePrompt = `Add a specific time for "${data.title}"?`;
+            if (!hasProvidedTime) {
+              const timePrompt = `Add a specific time for "${data.title}"? (default is tomorrow at ${reminderDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })})`;
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: timePrompt,
+              });
+            }
             addMessage({
               id: uuidv4(),
               role: "assistant",
-              content: timePrompt,
-            });
-            const priorityPrompt = `Set a priority for "${data.title}": high, medium, or low.`;
-            addMessage({
-              id: uuidv4(),
-              role: "assistant",
-              content: priorityPrompt,
+              content: `Set a priority for "${data.title}": high, medium, or low.`,
             });
           }
         } else if (internalType === "habit") {
