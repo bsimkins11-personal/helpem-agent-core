@@ -263,22 +263,13 @@ export default function ChatInput() {
           }
 
           if (isNativeApp) {
+            // Only speak the main confirmation
             window.webkit?.messageHandlers?.native?.postMessage({
               action: "speak",
               text: responseText,
             });
-
-            // Follow-up for time (if not provided) and priority (verbal only)
-            if (!hasExplicitTime) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: `Do you want to add a specific date or time for this task?`,
-              });
-            }
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: `Set a priority for "${data.title}": high, medium, or low. I'll keep it at ${priorityValue} if you don't choose.`,
-            });
+            // DON'T send follow-up questions verbally - they interrupt the flow
+            // The agent's message should be complete and final
           } else {
             addMessage({
               id: uuidv4(),
