@@ -373,7 +373,11 @@ export default function ChatInput() {
         
       } else {
         const rawResponse = data.message || data.error || "I'm not sure how to help with that.";
-        const responseText = stripMarkdown(rawResponse);
+        let responseText = stripMarkdown(rawResponse);
+        if (isNativeApp && /confirm/i.test(responseText)) {
+          // Avoid confirmation prompts in talk mode
+          responseText = "Got it.";
+        }
         addMessage({
           id: uuidv4(),
           role: "assistant",
@@ -807,16 +811,7 @@ export default function ChatInput() {
           </div>
         )}
 
-        {!isNativeApp && pendingAction && pendingAction.type !== "todo" && (
-          <div className="flex gap-2">
-            <button onClick={confirmAction} className="flex-1 py-2 bg-brandGreen text-white rounded-lg text-sm font-medium hover:bg-green-600">
-              Confirm
-            </button>
-            <button onClick={cancelAction} className="py-2 px-3 md:px-4 bg-gray-200 text-brandTextLight rounded-lg text-sm hover:bg-gray-300">
-              Cancel
-            </button>
-          </div>
-        )}
+        {/* Confirm UI disabled for talk mode; not used for native */}
 
         {loading && (
           <div className="flex justify-start">
