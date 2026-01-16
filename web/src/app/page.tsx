@@ -94,15 +94,12 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-gray-100 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brandBlue to-brandGreen flex items-center justify-center text-xl font-bold text-white">
-                H
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-brandText">helpem</p>
-                <p className="text-xs text-brandTextLight hidden sm:block">Your calm personal assistant</p>
-              </div>
-            </div>
+            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+              <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
+                <span className="text-brandBlue">help</span>
+                <span className="text-brandGreen">em</span>
+              </h1>
+            </Link>
             <div className="flex items-center gap-4 sm:gap-6">
               <a href="#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
                 Features
