@@ -88,19 +88,10 @@ export default function AppPage() {
 
   return (
     <div className="space-y-4 md:space-y-8">
-        <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:3xl font-bold">{greeting()}</h1>
-            <p className="text-white/80 mt-1 text-sm md:text-base">{formattedDate}</p>
-          </div>
-          <button
-            onClick={toggleAllModules}
-            className="bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition-colors text-sm font-medium"
-            title={allExpanded ? "Collapse all" : "Expand all"}
-          >
-            {allExpanded ? "Collapse all" : "Expand all"}
-          </button>
+      <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
+        <div>
+          <h1 className="text-2xl md:3xl font-bold">{greeting()}</h1>
+          <p className="text-white/80 mt-1 text-sm md:text-base">{formattedDate}</p>
         </div>
       </div>
 
@@ -110,6 +101,25 @@ export default function AppPage() {
         </div>
 
         <div className="space-y-4 md:space-y-6 order-2">
+          {/* Expand/Collapse All Control */}
+          <div className="flex justify-end">
+            <button
+              onClick={toggleAllModules}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+              title={allExpanded ? "Collapse all modules" : "Expand all modules"}
+            >
+              <svg 
+                className={`w-4 h-4 transition-transform ${allExpanded ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              <span>{allExpanded ? "Collapse all" : "Expand all"}</span>
+            </button>
+          </div>
+          
           <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <button
