@@ -6,7 +6,7 @@ import { HabitCard } from "@/components/HabitCard";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { GroceryList } from "@/components/GroceryList";
 import { useLife } from "@/state/LifeStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
@@ -22,7 +22,16 @@ export default function AppPage() {
   const { todos, habits, appointments } = useLife();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isDemo, setIsDemo] = useState(false);
   const [showDemoBanner, setShowDemoBanner] = useState(true);
+  
+  // Check if user is in demo mode (no auth)
+  useEffect(() => {
+    const hasSessionToken = document.cookie.includes("session_token");
+    const isFromiOSApp = navigator.userAgent.includes("HelpEm");
+    const isDemoMode = !hasSessionToken && !isFromiOSApp;
+    setIsDemo(isDemoMode);
+  }, []);
   
   // Expand/collapse states for each module
   const [expandedModules, setExpandedModules] = useState({
@@ -90,8 +99,8 @@ export default function AppPage() {
 
   return (
     <>
-      {/* Demo Banner */}
-      {showDemoBanner && (
+      {/* Demo Banner - Only show for non-authenticated users */}
+      {isDemo && showDemoBanner && (
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
