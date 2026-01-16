@@ -242,6 +242,23 @@ export default function ChatInput() {
           const reminderDate: Date | undefined = hasExplicitTime ? baseDate! : undefined;
           const priorityValue = data.priority || "medium";
 
+          // Save to database
+          try {
+            await fetch("/api/todos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: data.title,
+                priority: priorityValue,
+                dueDate: reminderDate?.toISOString(),
+                reminderTime: reminderDate?.toISOString(),
+              }),
+            });
+          } catch (err) {
+            console.error("Failed to save todo to database:", err);
+          }
+          
+          // Also add to local state
           addTodo({
             id,
             title: data.title,
@@ -319,6 +336,24 @@ export default function ChatInput() {
           }
         } else if (internalType === "appointment") {
           const datetime = data.datetime ? new Date(data.datetime) : now;
+          
+          // Save to database
+          const responseText = data.message || `Added appointment "${data.title}" at ${datetime.toLocaleString()}.`;
+          
+          try {
+            await fetch("/api/appointments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: data.title,
+                datetime: datetime.toISOString(),
+              }),
+            });
+          } catch (err) {
+            console.error("Failed to save appointment to database:", err);
+          }
+          
+          // Also add to local state
           addAppointment({
             id,
             title: data.title,
@@ -326,7 +361,6 @@ export default function ChatInput() {
             createdAt: now,
           });
 
-          const responseText = `Added appointment "${data.title}" at ${datetime.toLocaleString()}.`;
           addMessage({ id: uuidv4(), role: "assistant", content: responseText });
 
           if (isNativeApp) {

@@ -50,3 +50,38 @@ model GlobalRule {
 
   @@map("global_rules")
 }
+
+model Appointment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
+  title     String
+  datetime  DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("appointments")
+}
+
+model Todo {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @db.Uuid @map("user_id")
+  title        String
+  priority     String    @default("medium")
+  dueDate      DateTime? @map("due_date")
+  reminderTime DateTime? @map("reminder_time")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("todos")
+}
+
+model Habit {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
+  title     String
+  frequency String   @default("daily")
+  daysOfWeek String[] @default([]) @map("days_of_week")
+  completions Json   @default("[]")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("habits")
+}
