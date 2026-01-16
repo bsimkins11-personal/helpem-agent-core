@@ -90,48 +90,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-gray-100 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="flex items-center gap-3">
-                <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
-                <div>
-                  <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
-                    <span className="text-brandBlue">help</span>
-                    <span className="text-brandGreen">em</span>
-                  </h1>
-                  <p className="text-xs text-brandTextLight">Built for you.</p>
-                </div>
-              </div>
-            </Link>
-            <div className="flex items-center gap-4 sm:gap-6">
-              <a href="#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
-                Features
-              </a>
-              <Link href="/pricing" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
-                Pricing
-              </Link>
-              <a href="#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
-                About
-              </a>
-              <Link href="/support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
-                Support
-              </Link>
-              <Link
-                href="/app"
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
-              >
-                Try App
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
 
       {/* Hero Carousel */}
-      <section className="pt-20 pb-4 sm:pt-20 sm:pb-6 bg-gradient-to-br from-gray-50 to-white">
+      <section className="pt-4 pb-4 sm:pt-6 sm:pb-6 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative h-[500px] sm:h-[600px] rounded-3xl overflow-hidden">
             {slides.map((slide, index) => (

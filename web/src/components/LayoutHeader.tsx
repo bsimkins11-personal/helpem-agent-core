@@ -39,17 +39,41 @@ export function LayoutHeader() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="flex items-center gap-3">
-                <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
+              <div className="flex items-center gap-2">
+                <img src="/helpem-logo.png" alt="HelpEm" className="h-12 w-auto" />
                 <div>
-                  <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
+                  <h1 className="text-xl lg:text-2xl font-bold tracking-tight leading-tight">
                     <span className="text-brandBlue">help</span>
                     <span className="text-brandGreen">em</span>
                   </h1>
-                  <p className="text-xs text-brandTextLight">Built for you.</p>
+                  <p className="text-xs text-brandTextLight leading-tight">Built for you.</p>
                 </div>
               </div>
             </Link>
+
+            {/* Landing Page Navigation */}
+            {isLandingPage && (
+              <div className="flex items-center gap-4 sm:gap-6">
+                <a href="#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                  Features
+                </a>
+                <Link href="/pricing" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                  Pricing
+                </Link>
+                <a href="#about" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                  About
+                </a>
+                <Link href="/support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
+                  Support
+                </Link>
+                <Link
+                  href="/app"
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
+                >
+                  Try App
+                </Link>
+              </div>
+            )}
 
             {/* Back to Home - Show on all non-landing pages */}
             {!isLandingPage && (
@@ -102,15 +126,25 @@ export function LayoutHeader() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-2">
-              <img src="/helpem-logo.png" alt="HelpEm" className="h-8 w-auto" />
+              <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
               <div>
-                <h1 className="text-lg font-bold tracking-tight">
+                <h1 className="text-lg font-bold tracking-tight leading-tight">
                   <span className="text-brandBlue">help</span>
                   <span className="text-brandGreen">em</span>
                 </h1>
                 <p className="text-[10px] text-brandTextLight leading-tight">Built for you.</p>
               </div>
             </Link>
+
+            {/* Landing Page - Try App button */}
+            {isLandingPage && (
+              <Link
+                href="/app"
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-xs font-semibold hover:shadow-lg transition-all"
+              >
+                Try App
+              </Link>
+            )}
 
             {/* Back to Home - Show on all non-landing pages */}
             {!isLandingPage && (
