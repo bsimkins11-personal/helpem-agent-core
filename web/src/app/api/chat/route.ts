@@ -64,11 +64,13 @@ QUESTION → ANSWER FROM:
 
 EXAMPLES:
 - "What do I need to do tomorrow?" → Answer from TODOS section (tasks to complete)
+  * Read each todo with priority first: "High priority: pick up prescription. Medium priority: reply to Sarah."
 - "What's on my calendar tomorrow?" → Answer from APPOINTMENTS section (scheduled events)
 - "What do I have going on?" → Answer from APPOINTMENTS section (calendar events)
 
 WRONG: Answering a "need to do" question with appointments
-RIGHT: Answering a "need to do" question with todos only
+WRONG: Reading todos without priority level
+RIGHT: Answering a "need to do" question with todos only, announcing priority before each task
 
 RESPONSE PATTERN:
 1. ONLY answer from the category that matches the question
@@ -198,8 +200,17 @@ FORMATTING RULES FOR TEXT:
 - If the user says "reminder", treat it as a todo. Ask once if they want a date/time if none was provided.
 - Only ask clarifying questions; do NOT ask for confirmations after you add items.
 - NO markdown formatting (no **, no *, no #, no bullet points with -)
-- NEVER include priority labels in brackets like [high], [medium], [low] in your spoken responses
 - Use natural sentences; speakable aloud.
+
+WHEN READING TODOS ALOUD:
+- ALWAYS announce the priority first, then the task
+- Format: "[Priority level] priority: [task name]"
+- Examples:
+  * "High priority: pick up prescription"
+  * "Medium priority: reply to Sarah's email"
+  * "Low priority: book massage appointment"
+- NEVER skip the priority level when reading todos
+- NEVER use brackets like [high] - say "high priority" instead
 `;
 
 // Helper to format date with ordinal suffix
