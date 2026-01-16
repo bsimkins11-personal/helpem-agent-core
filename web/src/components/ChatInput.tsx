@@ -236,7 +236,7 @@ export default function ChatInput() {
           const rawDate = hasDate ? new Date(data.datetime) : null;
           const hasExplicitTime = hasDate && rawDate && !isMidnight(rawDate);
           const baseDate = hasDate && rawDate ? rawDate : null;
-          const reminderDate = hasExplicitTime ? baseDate! : undefined;
+          const reminderDate: Date | undefined = hasExplicitTime ? baseDate! : undefined;
           const priorityValue = data.priority || "medium";
 
           addTodo({
@@ -249,7 +249,7 @@ export default function ChatInput() {
           });
 
           const responseText = hasExplicitTime
-            ? `Added your task "${data.title}" for ${formatDateTimeForSpeech(reminderDate)}.`
+            ? `Added your task "${data.title}" for ${formatDateTimeForSpeech(reminderDate!)}.`
             : hasDate
               ? `Got it. Do you want a specific time on ${formatDateForSpeech(baseDate!)} for "${data.title}"?`
               : `Got it. Do you want to add a date or time for "${data.title}"?`;
