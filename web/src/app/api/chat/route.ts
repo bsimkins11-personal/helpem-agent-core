@@ -180,6 +180,17 @@ JSON for changing todo priority:
   "newPriority": "low" | "medium" | "high"
 }
 
+JSON for navigating calendar to a specific date:
+{
+  "action": "navigate_calendar",
+  "date": "ISO string of the date",
+  "message": "Showing your appointments for [day]."
+}
+
+For calendar navigation (when user asks about appointments on a specific day):
+- Return navigate_calendar action with the date and appointments for that day
+- Examples: "What's on my calendar tomorrow?", "Show me next Monday", "What do I have on Friday?"
+
 For questions or conversation:
 - Return plain conversational text (no markdown).
 

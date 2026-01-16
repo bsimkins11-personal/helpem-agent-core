@@ -19,16 +19,22 @@ const PRIORITY_TABS = [
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const viewDate = new Date(selectedDate);
+  viewDate.setHours(0, 0, 0, 0);
+  const nextDay = new Date(viewDate);
+  nextDay.setDate(nextDay.getDate() + 1);
 
-  const todayAppointments = appointments
+  const isViewingToday = viewDate.getTime() === today.getTime();
+
+  const viewDateAppointments = appointments
     .filter((apt) => {
       const aptDate = new Date(apt.datetime);
-      return aptDate >= today && aptDate < tomorrow;
+      return aptDate >= viewDate && aptDate < nextDay;
     })
     .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
 
@@ -48,6 +54,12 @@ export default function AppPage() {
     day: "numeric",
   });
 
+  const formattedViewDate = viewDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
     <div className="space-y-4 md:space-y-8">
       <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-xl md:rounded-2xl p-4 md:p-6 text-white">
@@ -57,7 +69,7 @@ export default function AppPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <div className="order-1">
-          <ChatInput />
+          <ChatInput onNavigateCalendar={setSelectedDate} />
         </div>
 
         <div className="space-y-4 md:space-y-6 order-2">
@@ -65,15 +77,25 @@ export default function AppPage() {
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <h2 className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base">
                 <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600 text-xs md:text-sm">◷</span>
-                Today
+                {isViewingToday ? "Today" : formattedViewDate}
               </h2>
-              <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">{todayAppointments.length} appts</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">{viewDateAppointments.length} appts</span>
+                {!isViewingToday && (
+                  <button
+                    onClick={() => setSelectedDate(new Date())}
+                    className="text-xs text-brandBlue hover:text-brandBlue/80 font-medium underline"
+                  >
+                    Today
+                  </button>
+                )}
+              </div>
             </div>
             <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
-              {todayAppointments.length > 0 ? (
-                todayAppointments.map((apt) => <AppointmentCard key={apt.id} appointment={apt} />)
+              {viewDateAppointments.length > 0 ? (
+                viewDateAppointments.map((apt) => <AppointmentCard key={apt.id} appointment={apt} />)
               ) : (
-                <p className="text-sm text-brandTextLight text-center py-3 md:py-4">No appointments today</p>
+                <p className="text-sm text-brandTextLight text-center py-3 md:py-4">No appointments {isViewingToday ? "today" : "on this day"}</p>
               )}
             </div>
           </div>

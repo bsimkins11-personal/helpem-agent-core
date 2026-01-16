@@ -118,7 +118,11 @@ function isRequery(message: string): boolean {
   return lower.includes("again") || lower.includes("repeat") || lower.includes("tell me again");
 }
 
-export default function ChatInput() {
+interface ChatInputProps {
+  onNavigateCalendar?: (date: Date) => void;
+}
+
+export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(() => loadSessionMessages());
   const [loading, setLoading] = useState(false);
@@ -407,6 +411,27 @@ export default function ChatInput() {
               text: responseText,
             });
           }
+        }
+        
+      } else if (data.action === "navigate_calendar" && data.date) {
+        // Navigate calendar to specific date
+        const targetDate = new Date(data.date);
+        if (onNavigateCalendar) {
+          onNavigateCalendar(targetDate);
+        }
+        
+        const responseText = data.message || "Showing your calendar for that day.";
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        
+        if (isNativeApp) {
+          window.webkit?.messageHandlers?.native?.postMessage({
+            action: "speak",
+            text: responseText,
+          });
         }
         
       } else {
