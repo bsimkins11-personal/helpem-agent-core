@@ -286,21 +286,21 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             }
           }
 
+          // ALWAYS add message to chat window (both native and web)
+          addMessage({
+            id: uuidv4(),
+            role: "assistant",
+            content: responseText,
+          });
+
           if (isNativeApp) {
-            // Only speak the main confirmation
+            // Also speak the confirmation for native app
             window.webkit?.messageHandlers?.native?.postMessage({
               action: "speak",
               text: responseText,
             });
-            // DON'T send follow-up questions verbally - they interrupt the flow
-            // The agent's message should be complete and final
           } else {
-            addMessage({
-              id: uuidv4(),
-              role: "assistant",
-              content: responseText,
-            });
-            // Only show follow-ups if agent didn't provide custom message
+            // Only show follow-ups if agent didn't provide custom message (web only)
             if (!data.message) {
               // Visual follow-up for time and priority in type mode
               if (!hasExplicitTime) {
