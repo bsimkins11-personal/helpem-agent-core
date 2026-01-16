@@ -4,8 +4,8 @@
 import Foundation
 
 struct AppEnvironment {
-    // App experience (for WebView) lives at /app on the Vercel "web" project
-    static let webAppURL = "https://web-3jw6v1ple-bryan-simkins-projects.vercel.app/app"
+    // App experience (for WebView) lives at /app on the Vercel helpem-poc project
+    static let webAppURL = "https://helpem-poc.vercel.app/app"
     static let apiURL = "https://api-production-2989.up.railway.app"
     
     /// Returns true if URL should receive session token
