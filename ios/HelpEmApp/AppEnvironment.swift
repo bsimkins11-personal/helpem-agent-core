@@ -4,9 +4,8 @@
 import Foundation
 
 struct AppEnvironment {
-    // For production: https://helpem-poc.vercel.app
-    // For local testing: update these URLs per build configuration if needed.
-    static let webAppURL = "https://helpem-poc.vercel.app"
+    // App experience (for WebView) lives at /app on the Vercel "web" project
+    static let webAppURL = "https://web-3jw6v1ple-bryan-simkins-projects.vercel.app/app"
     static let apiURL = "https://api-production-2989.up.railway.app"
     
     /// Returns true if URL should receive session token
