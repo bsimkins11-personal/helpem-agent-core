@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const userAgent = request.headers.get("user-agent") || "";
 
   // Allow API routes (needed by iOS app)
   if (pathname.startsWith("/api/")) {
@@ -14,14 +15,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect all app routes to landing page (app is iOS-only)
+  // Check if request is from iOS app WebView or authenticated session
+  const isFromiOSApp = userAgent.includes("HelpEm") || userAgent.includes("Mobile/");
+  const hasSessionToken = request.cookies.has("session_token");
+
+  // Protect app routes - only allow iOS app or authenticated users
   if (
     pathname.startsWith("/app") ||
     pathname.startsWith("/todos") ||
     pathname.startsWith("/habits") ||
     pathname.startsWith("/appointments")
   ) {
-    return NextResponse.redirect(new URL("/", request.url));
+    if (!isFromiOSApp && !hasSessionToken) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   return NextResponse.next();
