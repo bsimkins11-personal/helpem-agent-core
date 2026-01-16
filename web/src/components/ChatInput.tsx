@@ -34,6 +34,24 @@ function formatDateTimeForSpeech(date: Date) {
   return date.toLocaleString([], { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+function formatDateForSpeech(date: Date) {
+  return date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function formatTimeForSpeech(date: Date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function isMidnight(date: Date) {
+  return date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0;
+}
+
+function setDefaultTime(date: Date, hour = 9, minute = 0) {
+  const d = new Date(date);
+  d.setHours(hour, minute, 0, 0);
+  return d;
+}
+
 // Detect iOS native environment - single source of truth
 function isIOSNativeEnvironment(): boolean {
   if (typeof window === "undefined") return false;
@@ -215,21 +233,27 @@ export default function ChatInput() {
 
         if (internalType === "todo") {
           const fallbackReminder = getDefaultTomorrowReminder();
-          const hasProvidedTime = !!data.datetime;
-          const reminderDate = hasProvidedTime ? new Date(data.datetime) : fallbackReminder;
+          const hasDate = !!data.datetime;
+          const rawDate = hasDate ? new Date(data.datetime) : null;
+          const hasExplicitTime = hasDate && rawDate && !isMidnight(rawDate);
+          const baseDate = hasDate && rawDate ? rawDate : fallbackReminder;
+          const reminderDate = hasExplicitTime ? baseDate : setDefaultTime(baseDate);
+          const priorityValue = data.priority || "medium";
 
           addTodo({
             id,
             title: data.title,
-            priority: data.priority || "medium",
+            priority: priorityValue,
             dueDate: reminderDate,
             reminderTime: reminderDate,
             createdAt: now,
           });
 
-          const responseText = hasProvidedTime
+          const responseText = hasExplicitTime
             ? `Added "${data.title}" for ${formatDateTimeForSpeech(reminderDate)}.`
-            : `Added "${data.title}" for tomorrow at ${reminderDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. Want a specific time?`;
+            : hasDate
+              ? `Added "${data.title}" for ${formatDateForSpeech(baseDate)} with no specific time.`
+              : `Added "${data.title}" to tomorrow with no specific time.`;
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -238,15 +262,15 @@ export default function ChatInput() {
             });
 
             // Follow-up for time (if not provided) and priority (verbal only)
-            if (!hasProvidedTime) {
+            if (!hasExplicitTime) {
               window.webkit?.messageHandlers?.native?.postMessage({
                 action: "speak",
-                text: `If yes, tell me a time. If no, I'll keep it for tomorrow.`,
+                text: `If you want a time, tell me. Otherwise I'll keep it for ${formatDateForSpeech(baseDate)}.`,
               });
             }
             window.webkit?.messageHandlers?.native?.postMessage({
               action: "speak",
-              text: `Set a priority for "${data.title}": high, medium, or low.`,
+              text: `Set a priority for "${data.title}": high, medium, or low. I'll keep it at ${priorityValue} if you don't choose.`,
             });
           } else {
             addMessage({
@@ -255,8 +279,8 @@ export default function ChatInput() {
               content: responseText,
             });
             // Visual follow-up for time and priority in type mode
-            if (!hasProvidedTime) {
-              const timePrompt = `Add a specific time for "${data.title}"? (default is tomorrow at ${reminderDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })})`;
+            if (!hasExplicitTime) {
+              const timePrompt = `Add a specific time for "${data.title}"? (default is ${formatDateForSpeech(baseDate)} at ${formatTimeForSpeech(reminderDate)})`;
               addMessage({
                 id: uuidv4(),
                 role: "assistant",
@@ -266,7 +290,7 @@ export default function ChatInput() {
             addMessage({
               id: uuidv4(),
               role: "assistant",
-              content: `Set a priority for "${data.title}": high, medium, or low.`,
+              content: `Set a priority for "${data.title}": high, medium, or low. Default is ${priorityValue}.`,
             });
           }
         } else if (internalType === "habit") {
