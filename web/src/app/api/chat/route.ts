@@ -101,16 +101,7 @@ TYPE 1: JSON ACTION (when adding/updating items)
 - Use this when: user wants to add a todo, appointment, routine, or grocery
 - Format: Pure JSON with no text before/after
 - MUST include "message" field with full confirmation
-- Example:
-```json
-{
-  "action": "add",
-  "type": "todo",
-  "title": "Pick up dry cleaning",
-  "datetime": "2026-01-17T09:00:00Z",
-  "message": "Alright. I'll remind you to pick up dry cleaning tomorrow morning."
-}
-```
+- Example: {"action": "add", "type": "todo", "title": "Pick up dry cleaning", "datetime": "2026-01-17T09:00:00Z", "message": "Alright. I'll remind you to pick up dry cleaning tomorrow morning."}
 
 TYPE 2: PLAIN TEXT (for questions, clarifications, answers)
 - Use this when: asking for missing info, answering questions, having conversation
