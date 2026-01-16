@@ -40,11 +40,12 @@ export function LayoutHeader() {
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <Link href="/" className="hover:opacity-80 transition-opacity">
               <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
                 <span className="text-brandBlue">help</span>
                 <span className="text-brandGreen">em</span>
               </h1>
+              <p className="text-xs text-brandTextLight">Built for you.</p>
             </Link>
 
             {/* Navigation - Only show in demo mode on app routes */}
@@ -85,11 +86,12 @@ export function LayoutHeader() {
       <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link href="/" className="inline-block hover:opacity-80 transition-opacity">
+            <Link href="/" className="hover:opacity-80 transition-opacity">
               <h1 className="text-xl font-bold tracking-tight">
                 <span className="text-brandBlue">help</span>
                 <span className="text-brandGreen">em</span>
               </h1>
+              <p className="text-xs text-brandTextLight">Built for you.</p>
             </Link>
 
             {/* Back to Home - Show in demo mode on app routes OR on pricing/support pages */}

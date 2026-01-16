@@ -94,11 +94,12 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-gray-100 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <Link href="/" className="hover:opacity-80 transition-opacity">
               <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
                 <span className="text-brandBlue">help</span>
                 <span className="text-brandGreen">em</span>
               </h1>
+              <p className="text-xs text-brandTextLight">Built for you.</p>
             </Link>
             <div className="flex items-center gap-4 sm:gap-6">
               <a href="#features" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors hidden sm:block">
@@ -221,7 +222,7 @@ export default function LandingPage() {
             Life's busy enough.<br />Let HelpEm handle the details.
           </h1>
           <p className="text-lg sm:text-2xl text-brandTextLight leading-relaxed max-w-3xl mx-auto">
-            A personal assistant that listens, organizes, and follows through—so you can focus on what matters most.
+            Built for you.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
             <Link
@@ -453,7 +454,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <p className="font-semibold">helpem</p>
-                <p className="text-xs text-white/60">Your calm personal assistant</p>
+                <p className="text-xs text-white/60">Built for you.</p>
               </div>
             </div>
             <p className="text-sm text-white/60">© 2026 HelpEm. All rights reserved.</p>
