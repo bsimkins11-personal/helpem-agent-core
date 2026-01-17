@@ -61,12 +61,14 @@ export function LayoutHeader() {
               <Link href="/support" className="text-sm text-brandTextLight hover:text-brandBlue transition-colors">
                 Support
               </Link>
-              <Link
-                href="/app"
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
-              >
-                Try App
-              </Link>
+              {!isAppRoute && (
+                <Link
+                  href="/app"
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
+                >
+                  Try App
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -130,13 +132,15 @@ export function LayoutHeader() {
                 </svg>
               </button>
 
-              {/* Try App CTA */}
-              <Link
-                href="/app"
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
-              >
-                Try App
-              </Link>
+              {/* Try App CTA - Only show on informational pages */}
+              {!isAppRoute && (
+                <Link
+                  href="/app"
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-sm font-semibold hover:shadow-lg transition-all"
+                >
+                  Try App
+                </Link>
+              )}
             </div>
           </div>
         </div>
