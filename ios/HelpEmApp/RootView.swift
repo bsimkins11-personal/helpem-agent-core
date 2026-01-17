@@ -15,6 +15,13 @@ struct RootView: View {
         }
     }
     
+    private func openUsageURL() {
+        // Open usage modal in default browser
+        if let url = URL(string: "\(AppEnvironment.webAppURL)?usage=true") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
     var body: some View {
         Group {
             if authManager.isAuthenticated {
@@ -71,6 +78,12 @@ struct RootView: View {
                                                 openFeedbackURL()
                                             }) {
                                                 Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
+                                            }
+                                            
+                                            Button(action: {
+                                                openUsageURL()
+                                            }) {
+                                                Label("View Usage", systemImage: "chart.bar.fill")
                                             }
                                             
                                             Divider()
