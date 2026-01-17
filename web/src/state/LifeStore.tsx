@@ -135,27 +135,44 @@ interface LifeProviderProps {
 }
 
 export function LifeProvider({ children }: LifeProviderProps) {
-  // Check if user is authenticated (has session token from cookie OR iOS native)
-  const isAuthenticated = typeof window !== 'undefined' && (
-    document.cookie.includes("session_token") || 
-    !!(window as any).__nativeSessionToken
-  );
-  
-  // Authenticated users start with empty arrays, demo users get seed data
-  const [todos, setTodos] = useState<Todo[]>(isAuthenticated ? [] : seedTodos);
-  const [habits, setHabits] = useState<Habit[]>(isAuthenticated ? [] : seedHabits);
-  const [appointments, setAppointments] = useState<Appointment[]>(isAuthenticated ? [] : seedAppointments);
-  const [routines, setRoutines] = useState<Routine[]>(isAuthenticated ? [] : seedRoutines);
+  // Always start with empty state - we'll load seed data only if needed
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Load data from database on mount (only for authenticated users)
+  // Load data from database or seed data on mount
   useEffect(() => {
-    if (dataLoaded || !isAuthenticated) {
-      setDataLoaded(true);
-      return;
-    }
+    if (dataLoaded) return;
     
     const loadData = async () => {
+      // Check authentication status (allow time for iOS to inject token)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const isAuthenticated = typeof window !== 'undefined' && (
+        document.cookie.includes("session_token") || 
+        !!(window as any).__nativeSessionToken
+      );
+      
+      console.log('🔐 Authentication check:', { 
+        isAuthenticated,
+        hasCookie: document.cookie.includes("session_token"),
+        hasNativeToken: !!(window as any).__nativeSessionToken
+      });
+      
+      if (!isAuthenticated) {
+        // Demo mode - load seed data
+        console.log('📋 Loading seed data for demo mode');
+        setTodos(seedTodos);
+        setHabits(seedHabits);
+        setAppointments(seedAppointments);
+        setRoutines(seedRoutines);
+        setDataLoaded(true);
+        return;
+      }
+      
+      // Authenticated user - load from database
       try {
         console.log('🔄 Loading user data from database...');
         
@@ -176,7 +193,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
             setTodos(dbTodos);
             console.log(`✅ Loaded ${dbTodos.length} todos from database`);
           } else {
-            console.log('✅ No todos in database - starting fresh');
+            console.log('✅ No todos in database - starting fresh with empty state');
           }
         }
 
@@ -194,7 +211,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
             setAppointments(dbAppointments);
             console.log(`✅ Loaded ${dbAppointments.length} appointments from database`);
           } else {
-            console.log('✅ No appointments in database - starting fresh');
+            console.log('✅ No appointments in database - starting fresh with empty state');
           }
         }
 
@@ -206,7 +223,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     };
 
     loadData();
-  }, [dataLoaded, isAuthenticated]);
+  }, [dataLoaded]);
 
   const addTodo = useCallback((todo: Todo) => {
     setTodos(prev => [...prev, todo]);
