@@ -8,6 +8,13 @@ struct RootView: View {
     @StateObject private var authManager = AuthManager.shared
     @State private var showDatabaseTest = false
     
+    private func openFeedbackURL() {
+        // Open feedback form in default browser to avoid navigation issues
+        if let url = URL(string: "\(AppEnvironment.webAppURL)?feedback=true") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
     var body: some View {
         Group {
             if authManager.isAuthenticated {
@@ -30,32 +37,66 @@ struct RootView: View {
                             }
                     }
                 } else {
-                    // Main app view
-                    ZStack {
-                        WebViewContainer(authManager: authManager)
-                        
-                        // Floating buttons
-                        VStack {
-                            Spacer()
+                    // Main app view with navigation
+                    NavigationView {
+                        ZStack {
+                            WebViewContainer(authManager: authManager)
                             
-                            HStack {
+                            // Floating buttons
+                            VStack {
                                 Spacer()
-                                // Database test button (bottom right)
-                                Button(action: {
-                                    showDatabaseTest = true
-                                }) {
-                                    Image(systemName: "cylinder.split.1x2")
-                                        .font(.title2)
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .background(Color.blue)
-                                        .clipShape(Circle())
-                                        .shadow(radius: 4)
+                                
+                                HStack {
+                                    Spacer()
+                                    // Database test button (bottom right)
+                                    Button(action: {
+                                        showDatabaseTest = true
+                                    }) {
+                                        Image(systemName: "cylinder.split.1x2")
+                                            .font(.title2)
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .background(Color.blue)
+                                            .clipShape(Circle())
+                                            .shadow(radius: 4)
+                                    }
+                                    .padding()
                                 }
-                                .padding()
+                            }
+                        }
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Image("HelpEm_Logo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 32)
+                            }
+                            
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Menu {
+                                    Button(action: {
+                                        openFeedbackURL()
+                                    }) {
+                                        Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
+                                    }
+                                    
+                                    Divider()
+                                    
+                                    Button(role: .destructive, action: {
+                                        authManager.logout()
+                                    }) {
+                                        Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .font(.title3)
+                                        .foregroundColor(.primary)
+                                }
                             }
                         }
                     }
+                    .navigationViewStyle(.stack)
                 }
             } else {
                 SignInView(authManager: authManager)
