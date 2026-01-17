@@ -54,14 +54,10 @@ export function LayoutHeader() {
   
   const showDemoNav = isDemo && isAppRoute;
 
-  // Don't render header at all in iOS WebView
-  if (isFromiOSApp) {
-    return null;
-  }
-
   return (
     <>
-      {/* Global Header - Desktop */}
+      {/* Global Header - Desktop (hidden for iOS) */}
+      {!isFromiOSApp && (
       <header className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-2">
           <div className="flex items-center justify-between">
@@ -246,9 +242,10 @@ export function LayoutHeader() {
           </div>
         )}
       </header>
+      )}
 
       {/* Demo App Navigation - Mobile Banner (only for app routes in demo mode) */}
-      {showDemoNav && (
+      {!isFromiOSApp && showDemoNav && (
         <div className="md:hidden bg-purple-50 border-b border-purple-200 px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -262,7 +259,7 @@ export function LayoutHeader() {
       )}
 
       {/* Demo App Bottom Navigation - Mobile (only for app routes in demo mode) */}
-      {showDemoNav && (
+      {!isFromiOSApp && showDemoNav && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-purple-50 border-t-2 border-purple-200 z-50 safe-area-bottom">
           <div className="flex justify-around items-center py-2">
             {navItems.map((item) => (
