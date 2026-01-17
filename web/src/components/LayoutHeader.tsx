@@ -34,7 +34,21 @@ export function LayoutHeader() {
     setIsDemo(isDemoMode);
     setIsFromiOSApp(fromiOSApp);
 
-    // Listen for iOS native triggers
+    // Expose functions globally for iOS to call
+    if (fromiOSApp) {
+      console.log('📱 Web: Exposing modal functions for iOS');
+      (window as any).showFeedbackModal = () => {
+        console.log('🌐 Web: showFeedbackModal called from iOS');
+        setShowFeedbackModal(true);
+      };
+      (window as any).showUsageModal = () => {
+        console.log('🌐 Web: showUsageModal called from iOS');
+        setShowUsageModal(true);
+      };
+      console.log('✅ Web: Modal functions exposed');
+    }
+
+    // Listen for iOS native triggers (backup method)
     const handleShowFeedback = () => {
       console.log('🌐 Web: showFeedbackModal event received');
       setShowFeedbackModal(true);
@@ -49,9 +63,13 @@ export function LayoutHeader() {
     window.addEventListener('showUsageModal', handleShowUsage);
     
     return () => {
-      console.log('🧹 Web: Cleaning up event listeners');
+      console.log('🧹 Web: Cleaning up');
       window.removeEventListener('showFeedbackModal', handleShowFeedback);
       window.removeEventListener('showUsageModal', handleShowUsage);
+      if (fromiOSApp) {
+        delete (window as any).showFeedbackModal;
+        delete (window as any).showUsageModal;
+      }
     };
   }, []);
 

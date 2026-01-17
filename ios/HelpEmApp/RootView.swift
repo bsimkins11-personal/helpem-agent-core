@@ -35,10 +35,17 @@ struct RootView: View {
             print("🔔 iOS: Triggering feedback modal")
             let js = """
             (function() {
-                console.log('📱 iOS JavaScript: Dispatching showFeedbackModal event');
-                const event = new CustomEvent('showFeedbackModal');
-                window.dispatchEvent(event);
-                console.log('📱 iOS JavaScript: Event dispatched');
+                console.log('📱 iOS JavaScript: Calling window.showFeedbackModal()');
+                if (typeof window.showFeedbackModal === 'function') {
+                    window.showFeedbackModal();
+                    console.log('✅ iOS JavaScript: showFeedbackModal() called');
+                } else {
+                    console.error('❌ iOS JavaScript: window.showFeedbackModal is not a function');
+                    // Fallback to event
+                    const event = new CustomEvent('showFeedbackModal');
+                    window.dispatchEvent(event);
+                    console.log('📱 iOS JavaScript: Fallback event dispatched');
+                }
             })();
             """
             webView?.evaluateJavaScript(js) { result, error in
@@ -54,10 +61,17 @@ struct RootView: View {
             print("📊 iOS: Triggering usage modal")
             let js = """
             (function() {
-                console.log('📱 iOS JavaScript: Dispatching showUsageModal event');
-                const event = new CustomEvent('showUsageModal');
-                window.dispatchEvent(event);
-                console.log('📱 iOS JavaScript: Event dispatched');
+                console.log('📱 iOS JavaScript: Calling window.showUsageModal()');
+                if (typeof window.showUsageModal === 'function') {
+                    window.showUsageModal();
+                    console.log('✅ iOS JavaScript: showUsageModal() called');
+                } else {
+                    console.error('❌ iOS JavaScript: window.showUsageModal is not a function');
+                    // Fallback to event
+                    const event = new CustomEvent('showUsageModal');
+                    window.dispatchEvent(event);
+                    console.log('📱 iOS JavaScript: Fallback event dispatched');
+                }
             })();
             """
             webView?.evaluateJavaScript(js) { result, error in
