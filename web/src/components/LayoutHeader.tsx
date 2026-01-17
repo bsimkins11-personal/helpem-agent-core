@@ -121,9 +121,10 @@ export function LayoutHeader() {
           </div>
         </div>
       </header>
+      )}
 
       {/* Demo App Navigation - Desktop (only for app routes in demo mode) */}
-      {showDemoNav && (
+      {!isFromiOSApp && showDemoNav && (
         <div className="hidden md:block bg-purple-50 border-b border-purple-200">
           <div className="max-w-7xl mx-auto px-4 lg:px-6 py-2">
             <div className="flex items-center justify-between">
