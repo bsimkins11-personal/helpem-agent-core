@@ -18,10 +18,10 @@ export default function SupportPage() {
   const suggestedQuestions = [
     "How does HelpEm work?",
     "What are the pricing plans?",
-    "How do I create a todo?",
-    "What's the difference between Free and Premium?",
-    "Can I use HelpEm on my phone?",
-    "How do smart notifications work?",
+    "How do I create a todo or appointment?",
+    "What's the difference between Basic and Premium?",
+    "Can I use voice input on the web app?",
+    "How does team collaboration work?",
   ];
 
   const scrollToBottom = () => {
