@@ -125,7 +125,8 @@ export function LayoutHeader() {
         </div>
       )}
 
-      {/* Global Header - Mobile */}
+      {/* Global Header - Mobile (hidden for iOS) */}
+      {!isFromiOSApp && (
       <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-4 py-2">
           <div className="flex items-center justify-between">
