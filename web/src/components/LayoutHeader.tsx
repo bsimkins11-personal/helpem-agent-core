@@ -164,13 +164,30 @@ export function LayoutHeader() {
               >
                 About
               </Link>
-              <Link
-                href="/support"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-4 py-3 text-brandText hover:bg-gray-50 rounded-lg transition-colors font-medium"
-              >
-                Support
-              </Link>
+              {!isAppRoute ? (
+                <Link
+                  href="/support"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-3 text-brandText hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                >
+                  Support
+                </Link>
+              ) : (
+                <button
+                  onClick={() => {
+                    // Clear session
+                    document.cookie = "session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                    document.cookie = "session_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                    localStorage.clear();
+                    setMobileMenuOpen(false);
+                    // Redirect to home
+                    window.location.href = "/";
+                  }}
+                  className="px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                >
+                  Logout
+                </button>
+              )}
             </nav>
           </div>
         )}
