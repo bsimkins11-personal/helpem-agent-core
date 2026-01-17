@@ -212,8 +212,10 @@ export function LayoutHeader() {
                   </button>
                   <button
                     onClick={() => {
+                      console.log("View Usage clicked");
                       setMobileMenuOpen(false);
                       setShowUsageModal(true);
+                      console.log("showUsageModal set to true");
                     }}
                     className="px-4 py-3 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
                   >

@@ -13,6 +13,7 @@ export function UsageModal({ isOpen, onClose }: UsageModalProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log("UsageModal isOpen:", isOpen);
     if (isOpen) {
       loadUsageData();
     }
@@ -41,7 +42,7 @@ export function UsageModal({ isOpen, onClose }: UsageModalProps) {
     : "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50">
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative max-h-[80vh] overflow-y-auto">
         {/* Close button */}
         <button
