@@ -48,7 +48,7 @@ export async function getUsageStatus(): Promise<UsageData> {
   const daysRemaining = daysInMonth - daysElapsed;
   
   // Mock usage data (Alpha tier - 1000 messages per month, $2 API limit)
-  const used = 15;
+  const used = 15; // TESTING: Change to 550 for 50% alert, 900 for 90% alert
   const limit = 1000;
   const projectedTotal = daysElapsed > 3 ? Math.round((used / daysElapsed) * daysInMonth) : null;
   

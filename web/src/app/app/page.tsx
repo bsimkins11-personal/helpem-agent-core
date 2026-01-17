@@ -6,6 +6,7 @@ import { HabitCard } from "@/components/HabitCard";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
+import { UsageAlertBanner } from "@/components/UsageAlertBanner";
 import { useLife } from "@/state/LifeStore";
 import { useState } from "react";
 
@@ -149,6 +150,7 @@ export default function AppPage() {
 
   return (
     <>
+      <UsageAlertBanner />
       <AlphaFeedbackBanner />
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4">
         <div className="space-y-2 md:space-y-4">
