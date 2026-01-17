@@ -38,84 +38,95 @@ struct RootView: View {
                     }
                 } else {
                     // Main app view with custom header
-                    ZStack {
-                        VStack(spacing: 0) {
-                            // Custom header bar
-                            HStack {
-                                // Logo + Tagline
-                                HStack(spacing: 12) {
-                                    if let uiImage = UIImage(named: "HelpEm_Logo") {
-                                        Image(uiImage: uiImage)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(height: 50)
-                                    }
+                    GeometryReader { geometry in
+                        ZStack {
+                            VStack(spacing: 0) {
+                                // Custom header bar
+                                VStack(spacing: 0) {
+                                    // Status bar spacer
+                                    Color.white
+                                        .frame(height: geometry.safeAreaInsets.top)
                                     
-                                    Text("Built for you.")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.gray)
+                                    // Header content
+                                    HStack(alignment: .center) {
+                                        // Logo + Tagline
+                                        HStack(spacing: 12) {
+                                            if let uiImage = UIImage(named: "HelpEm_Logo") {
+                                                Image(uiImage: uiImage)
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(height: 40)
+                                            }
+                                            
+                                            Text("Built for you.")
+                                                .font(.system(size: 13))
+                                                .foregroundColor(.gray)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        // Menu button
+                                        Menu {
+                                            Button(action: {
+                                                openFeedbackURL()
+                                            }) {
+                                                Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
+                                            }
+                                            
+                                            Divider()
+                                            
+                                            Button(role: .destructive, action: {
+                                                authManager.logout()
+                                            }) {
+                                                Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
+                                            }
+                                        } label: {
+                                            Image(systemName: "ellipsis.circle")
+                                                .font(.system(size: 22))
+                                                .foregroundColor(.primary)
+                                                .padding(.vertical, 8)
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.white)
                                 }
+                                .overlay(
+                                    Rectangle()
+                                        .frame(height: 0.5)
+                                        .foregroundColor(Color.gray.opacity(0.3)),
+                                    alignment: .bottom
+                                )
                                 
+                                // WebView
+                                WebViewContainer(authManager: authManager)
+                            }
+                            
+                            // Floating buttons
+                            VStack {
                                 Spacer()
                                 
-                                // Menu button
-                                Menu {
+                                HStack {
+                                    Spacer()
+                                    // Database test button (bottom right)
                                     Button(action: {
-                                        openFeedbackURL()
+                                        showDatabaseTest = true
                                     }) {
-                                        Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
+                                        Image(systemName: "cylinder.split.1x2")
+                                            .font(.title2)
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .background(Color.blue)
+                                            .clipShape(Circle())
+                                            .shadow(radius: 4)
                                     }
-                                    
-                                    Divider()
-                                    
-                                    Button(role: .destructive, action: {
-                                        authManager.logout()
-                                    }) {
-                                        Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
-                                    }
-                                } label: {
-                                    Image(systemName: "ellipsis.circle")
-                                        .font(.system(size: 24))
-                                        .foregroundColor(.primary)
+                                    .padding()
+                                    .padding(.bottom, geometry.safeAreaInsets.bottom)
                                 }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(Color.white)
-                            .overlay(
-                                Rectangle()
-                                    .frame(height: 0.5)
-                                    .foregroundColor(Color.gray.opacity(0.3)),
-                                alignment: .bottom
-                            )
-                            
-                            // WebView
-                            WebViewContainer(authManager: authManager)
                         }
-                        
-                        // Floating buttons
-                        VStack {
-                            Spacer()
-                            
-                            HStack {
-                                Spacer()
-                                // Database test button (bottom right)
-                                Button(action: {
-                                    showDatabaseTest = true
-                                }) {
-                                    Image(systemName: "cylinder.split.1x2")
-                                        .font(.title2)
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .background(Color.blue)
-                                        .clipShape(Circle())
-                                        .shadow(radius: 4)
-                                }
-                                .padding()
-                            }
-                        }
+                        .ignoresSafeArea()
                     }
-                    .ignoresSafeArea(edges: .top)
                 }
             } else {
                 SignInView(authManager: authManager)
