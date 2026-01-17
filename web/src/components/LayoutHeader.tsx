@@ -17,13 +17,15 @@ export function LayoutHeader() {
   const [isDemo, setIsDemo] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [isFromiOSApp, setIsFromiOSApp] = useState(false);
   
-  // Check if user is in demo mode
+  // Check if user is in demo mode or iOS app
   useEffect(() => {
     const hasSessionToken = document.cookie.includes("session_token");
-    const isFromiOSApp = navigator.userAgent.includes("HelpEm");
-    const isDemoMode = !hasSessionToken && !isFromiOSApp;
+    const fromiOSApp = navigator.userAgent.includes("HelpEm");
+    const isDemoMode = !hasSessionToken && !fromiOSApp;
     setIsDemo(isDemoMode);
+    setIsFromiOSApp(fromiOSApp);
   }, []);
 
   const isAppRoute = pathname?.startsWith('/app') || 
@@ -32,6 +34,11 @@ export function LayoutHeader() {
                      pathname?.startsWith('/habits');
   
   const showDemoNav = isDemo && isAppRoute;
+
+  // Don't render header at all in iOS WebView
+  if (isFromiOSApp) {
+    return null;
+  }
 
   return (
     <>
