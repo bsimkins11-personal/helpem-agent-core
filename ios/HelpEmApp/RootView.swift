@@ -37,53 +37,28 @@ struct RootView: View {
                             }
                     }
                 } else {
-                    // Main app view with navigation
-                    NavigationView {
-                        ZStack {
-                            WebViewContainer(authManager: authManager)
-                            
-                            // Floating buttons
-                            VStack {
-                                Spacer()
-                                
-                                HStack {
-                                    Spacer()
-                                    // Database test button (bottom right)
-                                    Button(action: {
-                                        showDatabaseTest = true
-                                    }) {
-                                        Image(systemName: "cylinder.split.1x2")
-                                            .font(.title2)
-                                            .foregroundColor(.white)
-                                            .padding()
-                                            .background(Color.blue)
-                                            .clipShape(Circle())
-                                            .shadow(radius: 4)
-                                    }
-                                    .padding()
-                                }
-                            }
-                        }
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbarBackground(.visible, for: .navigationBar)
-                        .toolbarBackground(Color.white, for: .navigationBar)
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarLeading) {
-                                HStack(spacing: 10) {
+                    // Main app view with custom header
+                    ZStack {
+                        VStack(spacing: 0) {
+                            // Custom header bar
+                            HStack {
+                                // Logo + Tagline
+                                HStack(spacing: 12) {
                                     if let uiImage = UIImage(named: "HelpEm_Logo") {
                                         Image(uiImage: uiImage)
                                             .resizable()
                                             .scaledToFit()
-                                            .frame(height: 40)
+                                            .frame(height: 50)
                                     }
                                     
                                     Text("Built for you.")
-                                        .font(.system(size: 13))
+                                        .font(.system(size: 14))
                                         .foregroundColor(.gray)
                                 }
-                            }
-                            
-                            ToolbarItem(placement: .navigationBarTrailing) {
+                                
+                                Spacer()
+                                
+                                // Menu button
                                 Menu {
                                     Button(action: {
                                         openFeedbackURL()
@@ -100,13 +75,47 @@ struct RootView: View {
                                     }
                                 } label: {
                                     Image(systemName: "ellipsis.circle")
-                                        .font(.title2)
+                                        .font(.system(size: 24))
                                         .foregroundColor(.primary)
                                 }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color.white)
+                            .overlay(
+                                Rectangle()
+                                    .frame(height: 0.5)
+                                    .foregroundColor(Color.gray.opacity(0.3)),
+                                alignment: .bottom
+                            )
+                            
+                            // WebView
+                            WebViewContainer(authManager: authManager)
+                        }
+                        
+                        // Floating buttons
+                        VStack {
+                            Spacer()
+                            
+                            HStack {
+                                Spacer()
+                                // Database test button (bottom right)
+                                Button(action: {
+                                    showDatabaseTest = true
+                                }) {
+                                    Image(systemName: "cylinder.split.1x2")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.blue)
+                                        .clipShape(Circle())
+                                        .shadow(radius: 4)
+                                }
+                                .padding()
+                            }
                         }
                     }
-                    .navigationViewStyle(.stack)
+                    .ignoresSafeArea(edges: .top)
                 }
             } else {
                 SignInView(authManager: authManager)
