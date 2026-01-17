@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AlphaFeedbackModal } from './AlphaFeedbackModal';
 import { UsageModal } from './UsageModal';
+import { useLife } from '@/state/LifeStore';
 
 const navItems = [
   { href: '/app', label: 'Today', icon: '◐' },
@@ -20,6 +21,7 @@ export function LayoutHeader() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [isFromiOSApp, setIsFromiOSApp] = useState(false);
+  const { clearAllData } = useLife();
 
   // Debug state changes
   useEffect(() => {
@@ -35,18 +37,17 @@ export function LayoutHeader() {
     setIsFromiOSApp(fromiOSApp);
 
     // Expose functions globally for iOS to call
-    if (fromiOSApp) {
-      console.log('📱 Web: Exposing modal functions for iOS');
-      (window as any).showFeedbackModal = () => {
-        console.log('🌐 Web: showFeedbackModal called from iOS');
-        setShowFeedbackModal(true);
-      };
-      (window as any).showUsageModal = () => {
-        console.log('🌐 Web: showUsageModal called from iOS');
-        setShowUsageModal(true);
-      };
-      console.log('✅ Web: Modal functions exposed');
-    }
+    console.log('📱 Web: Exposing functions for iOS and web');
+    (window as any).showFeedbackModal = () => {
+      console.log('🌐 Web: showFeedbackModal called');
+      setShowFeedbackModal(true);
+    };
+    (window as any).showUsageModal = () => {
+      console.log('🌐 Web: showUsageModal called');
+      setShowUsageModal(true);
+    };
+    (window as any).__clearAllData = clearAllData;
+    console.log('✅ Web: Functions exposed globally');
 
     // Listen for iOS native triggers (backup method)
     const handleShowFeedback = () => {
@@ -66,12 +67,11 @@ export function LayoutHeader() {
       console.log('🧹 Web: Cleaning up');
       window.removeEventListener('showFeedbackModal', handleShowFeedback);
       window.removeEventListener('showUsageModal', handleShowUsage);
-      if (fromiOSApp) {
-        delete (window as any).showFeedbackModal;
-        delete (window as any).showUsageModal;
-      }
+      delete (window as any).showFeedbackModal;
+      delete (window as any).showUsageModal;
+      delete (window as any).__clearAllData;
     };
-  }, []);
+  }, [clearAllData]);
 
   const isAppRoute = pathname?.startsWith('/app') || 
                      pathname?.startsWith('/appointments') || 
@@ -249,6 +249,21 @@ export function LayoutHeader() {
                     className="px-4 py-3 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
                   >
                     View Usage
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm("⚠️ Are you sure you want to clear all app data? This will delete all your todos, habits, appointments, and routines. This action cannot be undone.")) {
+                        // Call the global clear function
+                        if ((window as any).__clearAllData) {
+                          (window as any).__clearAllData();
+                          alert("✅ All app data has been cleared.");
+                        }
+                      }
+                      setMobileMenuOpen(false);
+                    }}
+                    className="px-4 py-3 text-left text-orange-600 hover:bg-orange-50 rounded-lg transition-colors font-medium"
+                  >
+                    Clear All Data
                   </button>
                   <button
                     onClick={() => {

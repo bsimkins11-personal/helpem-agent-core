@@ -3,6 +3,7 @@
 
 import SwiftUI
 import WebKit
+import UIKit
 
 struct RootView: View {
     
@@ -26,6 +27,32 @@ struct RootView: View {
             print("⚠️ iOS: webViewHandler is nil!")
         }
         webViewHandler?.triggerUsage()
+    }
+    
+    private func showClearDataAlert() {
+        // Show native confirmation alert
+        print("⚠️ iOS: Showing clear data confirmation")
+        
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootViewController = window.rootViewController else {
+            print("❌ Could not get root view controller")
+            return
+        }
+        
+        let alert = UIAlertController(
+            title: "Clear All Data",
+            message: "Are you sure you want to clear all app data? This will delete all your todos, habits, appointments, and routines. This action cannot be undone.",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Clear All", style: .destructive) { _ in
+            print("🗑️ User confirmed: clearing all data")
+            self.webViewHandler?.clearData()
+        })
+        
+        rootViewController.present(alert, animated: true)
     }
     
     class WebViewHandler {
@@ -79,6 +106,30 @@ struct RootView: View {
                     print("❌ Error triggering usage: \(error)")
                 } else {
                     print("✅ Usage JavaScript executed successfully")
+                }
+            }
+        }
+        
+        func clearData() {
+            print("🗑️ iOS: Clearing all app data")
+            let js = """
+            (function() {
+                console.log('📱 iOS JavaScript: Calling window.__clearAllData()');
+                if (typeof window.__clearAllData === 'function') {
+                    window.__clearAllData();
+                    console.log('✅ iOS JavaScript: __clearAllData() called');
+                    alert('✅ All app data has been cleared.');
+                } else {
+                    console.error('❌ iOS JavaScript: window.__clearAllData is not a function');
+                    alert('❌ Error: Clear function not available');
+                }
+            })();
+            """
+            webView?.evaluateJavaScript(js) { result, error in
+                if let error = error {
+                    print("❌ Error clearing data: \(error)")
+                } else {
+                    print("✅ Clear data JavaScript executed successfully")
                 }
             }
         }
@@ -149,6 +200,12 @@ struct RootView: View {
                                             }
                                             
                                             Divider()
+                                            
+                                            Button(action: {
+                                                showClearDataAlert()
+                                            }) {
+                                                Label("Clear All Data", systemImage: "trash")
+                                            }
                                             
                                             Button(role: .destructive, action: {
                                                 authManager.logout()

@@ -125,6 +125,7 @@ export type LifeContextType = {
   completeRoutineItem: (routineId: string, itemId: string) => void;
   clearCompletedRoutineItems: (routineId: string) => void;
   moveRoutineItemToTodos: (routineId: string, itemId: string, title: string) => void;
+  clearAllData: () => void;
 };
 
 const LifeContext = createContext<LifeContextType | null>(null);
@@ -351,6 +352,15 @@ export function LifeProvider({ children }: LifeProviderProps) {
     sendFeedback(title, "todo", "grocery");
   }, [sendFeedback]);
 
+  const clearAllData = useCallback(() => {
+    console.log('🗑️ Clearing all app data...');
+    setTodos([]);
+    setHabits([]);
+    setAppointments([]);
+    setRoutines([]);
+    console.log('✅ All data cleared');
+  }, []);
+
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo<LifeContextType>(() => ({
     todos,
@@ -370,7 +380,8 @@ export function LifeProvider({ children }: LifeProviderProps) {
     completeRoutineItem,
     clearCompletedRoutineItems,
     moveRoutineItemToTodos,
-  }), [todos, habits, appointments, routines, addTodo, completeTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, addAppointment, deleteAppointment, addRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos]);
+    clearAllData,
+  }), [todos, habits, appointments, routines, addTodo, completeTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, addAppointment, deleteAppointment, addRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, clearAllData]);
 
   return (
     <LifeContext.Provider value={value}>
