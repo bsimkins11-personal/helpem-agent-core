@@ -68,10 +68,12 @@ struct RootView: View {
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
                                 HStack(spacing: 8) {
-                                    Image("HelpEm_Logo")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(height: 32)
+                                    if let uiImage = UIImage(named: "HelpEm_Logo") {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(height: 32)
+                                    }
                                     
                                     Text("Built for you.")
                                         .font(.caption)
