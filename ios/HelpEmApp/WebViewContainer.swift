@@ -104,14 +104,19 @@ struct WebViewContainer: UIViewRepresentable {
             const apiHost = "\(apiHost)";
             
             if (!token) {
-                console.warn('No session token available');
+                console.warn('❌ iOS: No session token available to inject');
                 return;
             }
             
-            console.log('✅ Session token injected');
+            console.log('✅ iOS: Session token injected successfully');
+            console.log('📱 iOS: Token length:', token.length);
+            console.log('📱 iOS: Token preview:', token.substring(0, 20) + '...');
             
             // Store token globally for web app access
             window.__nativeSessionToken = token;
+            
+            console.log('✅ iOS: window.__nativeSessionToken set');
+            console.log('🔍 iOS: Verify - window.__nativeSessionToken exists:', !!window.__nativeSessionToken);
             
             // Check if URL should receive auth token
             const shouldAttach = (url) => {

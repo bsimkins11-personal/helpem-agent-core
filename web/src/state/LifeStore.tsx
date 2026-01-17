@@ -148,22 +148,37 @@ export function LifeProvider({ children }: LifeProviderProps) {
     
     const loadData = async () => {
       // Check authentication status (allow time for iOS to inject token)
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Try multiple times with increasing delays
+      let isAuthenticated = false;
+      let attempts = 0;
+      const maxAttempts = 5;
       
-      const isAuthenticated = typeof window !== 'undefined' && (
-        document.cookie.includes("session_token") || 
-        !!(window as any).__nativeSessionToken
-      );
-      
-      console.log('🔐 Authentication check:', { 
-        isAuthenticated,
-        hasCookie: document.cookie.includes("session_token"),
-        hasNativeToken: !!(window as any).__nativeSessionToken
-      });
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, attempts === 0 ? 50 : 100));
+        
+        const hasCookie = typeof document !== 'undefined' && document.cookie.includes("session_token");
+        const hasNativeToken = typeof window !== 'undefined' && !!(window as any).__nativeSessionToken;
+        isAuthenticated = hasCookie || hasNativeToken;
+        
+        console.log(`🔐 Authentication check (attempt ${attempts + 1}/${maxAttempts}):`, { 
+          isAuthenticated,
+          hasCookie,
+          hasNativeToken,
+          cookies: typeof document !== 'undefined' ? document.cookie : 'N/A',
+          nativeToken: typeof window !== 'undefined' ? (window as any).__nativeSessionToken?.substring(0, 20) + '...' : 'N/A'
+        });
+        
+        if (isAuthenticated) {
+          console.log('✅ Authenticated user detected!');
+          break;
+        }
+        
+        attempts++;
+      }
       
       if (!isAuthenticated) {
         // Demo mode - load seed data
-        console.log('📋 Loading seed data for demo mode');
+        console.log('📋 No authentication found after all attempts - loading seed data for demo mode');
         setTodos(seedTodos);
         setHabits(seedHabits);
         setAppointments(seedAppointments);
