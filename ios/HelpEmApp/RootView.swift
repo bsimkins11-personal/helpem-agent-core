@@ -2,6 +2,7 @@
 // Main app entry point with auth routing
 
 import SwiftUI
+import WebKit
 
 struct RootView: View {
     
@@ -29,7 +30,11 @@ struct RootView: View {
                 window.dispatchEvent(event);
             })();
             """
-            webView?.evaluateJavaScript(js, completionHandler: nil)
+            webView?.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("Error triggering feedback: \(error)")
+                }
+            }
         }
         
         func triggerUsage() {
@@ -39,7 +44,11 @@ struct RootView: View {
                 window.dispatchEvent(event);
             })();
             """
-            webView?.evaluateJavaScript(js, completionHandler: nil)
+            webView?.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("Error triggering usage: \(error)")
+                }
+            }
         }
     }
     
