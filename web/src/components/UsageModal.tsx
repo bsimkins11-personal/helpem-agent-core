@@ -31,8 +31,6 @@ export function UsageModal({ isOpen, onClose }: UsageModalProps) {
     }
   }
 
-  if (!isOpen) return null;
-
   const percentage = usageData ? Math.round((usageData.used / usageData.limit) * 100) : 0;
   const resetDate = usageData
     ? new Date(usageData.resetAt).toLocaleDateString("en-US", {
@@ -41,8 +39,14 @@ export function UsageModal({ isOpen, onClose }: UsageModalProps) {
       })
     : "";
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50" onClick={(e) => {
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
+    }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative max-h-[80vh] overflow-y-auto">
         {/* Close button */}
         <button
