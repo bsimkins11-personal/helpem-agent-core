@@ -34,7 +34,7 @@ export function LayoutHeader() {
     <>
       {/* Global Header - Desktop */}
       <header className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
@@ -106,7 +106,7 @@ export function LayoutHeader() {
 
       {/* Global Header - Mobile */}
       <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-4 py-3">
+        <div className="px-4 py-2">
           <div className="flex items-center justify-between">
             <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-3">
               <img src="/helpem-logo.png" alt="HelpEm" className="h-24 w-auto" />
