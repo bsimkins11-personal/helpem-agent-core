@@ -28,6 +28,18 @@ export function LayoutHeader() {
     const isDemoMode = !hasSessionToken && !fromiOSApp;
     setIsDemo(isDemoMode);
     setIsFromiOSApp(fromiOSApp);
+
+    // Listen for iOS native triggers
+    const handleShowFeedback = () => setShowFeedbackModal(true);
+    const handleShowUsage = () => setShowUsageModal(true);
+    
+    window.addEventListener('showFeedbackModal', handleShowFeedback);
+    window.addEventListener('showUsageModal', handleShowUsage);
+    
+    return () => {
+      window.removeEventListener('showFeedbackModal', handleShowFeedback);
+      window.removeEventListener('showUsageModal', handleShowUsage);
+    };
   }, []);
 
   const isAppRoute = pathname?.startsWith('/app') || 

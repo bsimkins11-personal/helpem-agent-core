@@ -13,6 +13,7 @@ import UIKit
 struct WebViewContainer: UIViewRepresentable {
     
     @ObservedObject var authManager: AuthManager
+    @Binding var webViewHandler: RootView.WebViewHandler?
     private let userAgentSuffix = "HelpEm-iOS"
     
     func makeCoordinator() -> Coordinator {
@@ -53,6 +54,13 @@ struct WebViewContainer: UIViewRepresentable {
         webView.allowsBackForwardNavigationGestures = false
         
         context.coordinator.webView = webView
+        
+        // Set up WebView handler for RootView
+        DispatchQueue.main.async {
+            let handler = RootView.WebViewHandler()
+            handler.webView = webView
+            self.webViewHandler = handler
+        }
         
         // 🚨 Setup memory warning observer
         context.coordinator.setupMemoryWarningObserver()

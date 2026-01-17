@@ -7,18 +7,39 @@ struct RootView: View {
     
     @StateObject private var authManager = AuthManager.shared
     @State private var showDatabaseTest = false
+    @State private var webViewHandler: WebViewHandler?
     
     private func openFeedbackURL() {
-        // Open feedback form in default browser to avoid navigation issues
-        if let url = URL(string: "\(AppEnvironment.webAppURL)?feedback=true") {
-            UIApplication.shared.open(url)
-        }
+        // Trigger feedback modal in WebView
+        webViewHandler?.triggerFeedback()
     }
     
-    private func openUsageURL() {
-        // Open usage modal in default browser
-        if let url = URL(string: "\(AppEnvironment.webAppURL)?usage=true") {
-            UIApplication.shared.open(url)
+    private func openUsageModal() {
+        // Trigger usage modal in WebView
+        webViewHandler?.triggerUsage()
+    }
+    
+    class WebViewHandler {
+        weak var webView: WKWebView?
+        
+        func triggerFeedback() {
+            let js = """
+            (function() {
+                const event = new CustomEvent('showFeedbackModal');
+                window.dispatchEvent(event);
+            })();
+            """
+            webView?.evaluateJavaScript(js, completionHandler: nil)
+        }
+        
+        func triggerUsage() {
+            let js = """
+            (function() {
+                const event = new CustomEvent('showUsageModal');
+                window.dispatchEvent(event);
+            })();
+            """
+            webView?.evaluateJavaScript(js, completionHandler: nil)
         }
     }
     
@@ -81,7 +102,7 @@ struct RootView: View {
                                             }
                                             
                                             Button(action: {
-                                                openUsageURL()
+                                                openUsageModal()
                                             }) {
                                                 Label("View Usage", systemImage: "chart.bar.fill")
                                             }
@@ -118,7 +139,7 @@ struct RootView: View {
                                 )
                                 
                                 // WebView
-                                WebViewContainer(authManager: authManager)
+                                WebViewContainer(authManager: authManager, webViewHandler: $webViewHandler)
                             }
                             
                             // Floating buttons
