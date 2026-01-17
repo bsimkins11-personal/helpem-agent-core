@@ -210,8 +210,12 @@ final class AuthManager: NSObject, ObservableObject {
 
 #if DEBUG
     /// Debug-only helper to inject a test session without Apple Sign In.
+    /// ⚠️ WARNING: This function contains a hardcoded test token for DEBUG builds only.
+    /// This token is ONLY valid for the test user and will be rejected in production.
+    /// REMOVE THIS FUNCTION before submitting to App Store.
     func setDebugTestSession() {
         // REAL TEST TOKEN - Generated from Railway JWT_SECRET
+        // This is safe in DEBUG builds but should never be in production code
         let mockSessionToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LTE3Njg0NTI4MTQ2NDEiLCJhcHBsZVVzZXJJZCI6ImFwcGxlLXRlc3QtMTc2ODQ1MjgxNDY0MSIsImlhdCI6MTc2ODQ1MjgxNCwiZXhwIjoxNzcxMDQ0ODE0fQ.Ua0d1sOU_5GCwNwXE2pjHqGG3MH_gRVo_7extL8EVE0"
         let mockAppleUserId = "apple-test-1768452814641"
         let mockUserId = "test-1768452814641"

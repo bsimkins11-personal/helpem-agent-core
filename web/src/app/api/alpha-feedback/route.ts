@@ -1,8 +1,28 @@
 import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/auth";
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rateLimiter";
 
 export async function POST(request: NextRequest) {
   try {
+    // 🛡️ Rate limiting - Prevent feedback spam
+    const clientIp = getClientIdentifier(request);
+    const rateLimit = await checkRateLimit({
+      identifier: `feedback:${clientIp}`,
+      maxRequests: 5, // 5 feedback submissions per hour
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many feedback submissions. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    // 🔐 Authentication - Optional but track user if authenticated
+    const user = await getAuthUser(request);
+    
     const body = await request.json();
     const { category, feedback, pageUrl } = body;
 
@@ -20,6 +40,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    
+    // Input sanitization - Remove potential script tags
+    const sanitizedFeedback = feedback
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .trim();
 
     // Get credentials from environment
     const credentialsJson = process.env.GOOGLE_SHEETS_CREDENTIALS;
@@ -43,8 +68,8 @@ export async function POST(request: NextRequest) {
 
     const sheets = google.sheets({ version: "v4", auth });
 
-    // Get user info from cookies/headers
-    const userId = request.cookies.get("session_token")?.value?.slice(0, 10) || "demo_user";
+    // Get user info - prefer authenticated user ID
+    const userId = user?.userId || "anonymous";
     const userAgent = request.headers.get("user-agent") || "Unknown";
     const sessionId = request.cookies.get("session_id")?.value || "unknown_session";
 
@@ -55,7 +80,7 @@ export async function POST(request: NextRequest) {
       userId,
       "", // Email (not collected for privacy)
       category || "general",
-      feedback,
+      sanitizedFeedback, // Use sanitized feedback
       pageUrl || "",
       userAgent,
       sessionId,

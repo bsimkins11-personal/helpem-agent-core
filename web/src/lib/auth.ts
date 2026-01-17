@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import { auditLog } from './auditLog';
 
 export interface AuthUser {
   userId: string;
@@ -26,6 +27,7 @@ export async function getAuthUser(req?: Request): Promise<AuthUser | null> {
     
     if (!token) {
       console.log('❌ No session token found');
+      auditLog("UNAUTHORIZED_ACCESS", { reason: "No token provided" }, req);
       return null;
     }
     
@@ -40,8 +42,12 @@ export async function getAuthUser(req?: Request): Promise<AuthUser | null> {
     
     if (!decoded.userId || !decoded.appleUserId) {
       console.error('❌ Invalid token payload');
+      auditLog("AUTH_FAILED", { reason: "Invalid token payload" }, req);
       return null;
     }
+    
+    // Successful authentication
+    auditLog("AUTH_SUCCESS", { userId: decoded.userId }, req);
     
     return {
       userId: decoded.userId,
@@ -49,6 +55,9 @@ export async function getAuthUser(req?: Request): Promise<AuthUser | null> {
     };
   } catch (error) {
     console.error('❌ Auth error:', error);
+    auditLog("AUTH_FAILED", { 
+      reason: error instanceof Error ? error.message : "Unknown error" 
+    }, req);
     return null;
   }
 }

@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import rateLimit from "express-rate-limit";
 import { verifyAppleIdentityToken } from "./src/lib/appleAuth.js";
 import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js";
 import { prisma } from "./src/lib/prisma.js";
@@ -10,9 +11,57 @@ const port = process.env.PORT || 8080;
 const MAX_BIAS_ENTRIES = 200;
 const GLOBAL_RULE_KEY = "classification_biases_v1";
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
+// Middleware - Secure CORS configuration
+const allowedOrigins = [
+  "https://helpem.ai",
+  "https://www.helpem.ai",
+  "http://localhost:3000", // Local development
+  "http://localhost:3001", // Alternative dev port
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+app.use(bodyParser.json({ limit: "10mb" })); // Limit payload size
+
+// Rate limiters - Protect against abuse
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 auth attempts per IP
+  message: "Too many authentication attempts. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // 200 requests per 15 minutes per IP
+  message: "Too many requests. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 requests per hour (for sensitive operations)
+  message: "Rate limit exceeded. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // =============================================================================
 // AUTH ENDPOINTS
@@ -24,7 +73,7 @@ app.use(bodyParser.json());
  * Authenticates a user via Sign in with Apple.
  * Issues an app-owned session token.
  */
-app.post("/auth/apple", async (req, res) => {
+app.post("/auth/apple", authLimiter, async (req, res) => {
   console.log("ROUTE HIT: POST /auth/apple");
 
   try {
@@ -103,7 +152,7 @@ app.get("/auth/apple", (_req, res) => {
 });
 
 // --- TEST ROUTE (PRODUCTION-STYLE) ---
-app.post("/test-db", async (req, res) => {
+app.post("/test-db", apiLimiter, async (req, res) => {
   console.log("ROUTE HIT: POST /test-db");
 
   try {
@@ -177,7 +226,7 @@ app.get("/health", async (_req, res) => {
 // =============================================================================
 
 // Record a user correction/feedback event to make personal bias smarter.
-app.post("/feedback", async (req, res) => {
+app.post("/feedback", apiLimiter, async (req, res) => {
   try {
     const session = await verifySessionToken(req);
     if (!session.success) {
@@ -233,7 +282,7 @@ app.post("/feedback", async (req, res) => {
 });
 
 // Fetch the current user instruction doc (for client-side biasing).
-app.get("/instructions/me", async (req, res) => {
+app.get("/instructions/me", apiLimiter, async (req, res) => {
   try {
     const session = await verifySessionToken(req);
     if (!session.success) {
@@ -253,7 +302,7 @@ app.get("/instructions/me", async (req, res) => {
 });
 
 // Debug: fetch current global rules snapshot.
-app.get("/rules/global", async (req, res) => {
+app.get("/rules/global", apiLimiter, async (req, res) => {
   try {
     const session = await verifySessionToken(req);
     if (!session.success) {
