@@ -113,12 +113,17 @@ struct RootView: View {
         func clearData() {
             print("🗑️ iOS: Clearing all app data")
             let js = """
-            (function() {
+            (async function() {
                 console.log('📱 iOS JavaScript: Calling window.__clearAllData()');
                 if (typeof window.__clearAllData === 'function') {
-                    window.__clearAllData();
-                    console.log('✅ iOS JavaScript: __clearAllData() called');
-                    alert('✅ All app data has been cleared.');
+                    try {
+                        await window.__clearAllData();
+                        console.log('✅ iOS JavaScript: __clearAllData() completed');
+                        alert('✅ All app data has been cleared from database and app.');
+                    } catch (error) {
+                        console.error('❌ iOS JavaScript: Error clearing data:', error);
+                        alert('⚠️ Error clearing data. Please try again.');
+                    }
                 } else {
                     console.error('❌ iOS JavaScript: window.__clearAllData is not a function');
                     alert('❌ Error: Clear function not available');

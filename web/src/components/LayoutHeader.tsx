@@ -254,12 +254,17 @@ export function LayoutHeader() {
                     View Usage
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm("⚠️ Are you sure you want to clear all app data? This will delete all your todos, habits, appointments, and routines. This action cannot be undone.")) {
+                    onClick={async () => {
+                      if (confirm("⚠️ Are you sure you want to clear all app data? This will permanently delete all your todos, habits, appointments, and routines from the database. This action cannot be undone.")) {
                         console.log('🗑️ Web: User confirmed clear all data');
-                        clearAllData();
-                        alert("✅ All app data has been cleared.");
-                        console.log('✅ Web: Data cleared successfully');
+                        try {
+                          await clearAllData();
+                          alert("✅ All app data has been cleared from database and app.");
+                          console.log('✅ Web: Data cleared successfully');
+                        } catch (error) {
+                          console.error('❌ Web: Error clearing data:', error);
+                          alert("⚠️ Error clearing data. Please try again.");
+                        }
                       }
                       setMobileMenuOpen(false);
                     }}

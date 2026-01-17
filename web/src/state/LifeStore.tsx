@@ -283,13 +283,32 @@ export function LifeProvider({ children }: LifeProviderProps) {
     sendFeedback(title, "todo", "grocery");
   }, [sendFeedback]);
 
-  const clearAllData = useCallback(() => {
-    console.log('🗑️ Clearing all app data...');
+  const clearAllData = useCallback(async () => {
+    console.log('🗑️ Clearing all app data (database + local state)...');
+    
+    try {
+      // Clear from database first
+      const response = await fetch('/api/clear-all-data', {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Database cleared:', result.deleted);
+      } else {
+        console.warn('⚠️ Database clear failed, clearing local state only');
+      }
+    } catch (error) {
+      console.error('❌ Error clearing database:', error);
+      console.log('⚠️ Continuing to clear local state...');
+    }
+    
+    // Clear local state
     setTodos([]);
     setHabits([]);
     setAppointments([]);
     setRoutines([]);
-    console.log('✅ All data cleared');
+    console.log('✅ All data cleared from app');
   }, []);
 
   // Memoize context value to prevent unnecessary re-renders
