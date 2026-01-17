@@ -81,10 +81,10 @@ struct RootView: View {
                                                 Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
                                             }
                                         } label: {
-                                            Image(systemName: "ellipsis.circle")
-                                                .font(.system(size: 22))
-                                                .foregroundColor(.primary)
-                                                .padding(.vertical, 8)
+                                            Image(systemName: "ellipsis.circle.fill")
+                                                .font(.system(size: 28))
+                                                .foregroundColor(.blue)
+                                                .frame(width: 44, height: 44)
                                         }
                                     }
                                     .padding(.horizontal, 16)
