@@ -110,7 +110,7 @@ struct RootView: View {
                                                 Image(uiImage: uiImage)
                                                     .resizable()
                                                     .scaledToFit()
-                                                    .frame(height: 52)
+                                                    .frame(height: 65)
                                             }
                                             
                                             Text("Built for you.")
