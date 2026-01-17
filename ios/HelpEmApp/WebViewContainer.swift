@@ -27,7 +27,8 @@ struct WebViewContainer: UIViewRepresentable {
         
         // 🛡️ Memory Management Configuration
         config.suppressesIncrementalRendering = true
-        config.websiteDataStore = .nonPersistent() // Use non-persistent store to reduce memory
+        // Use default persistent store but clear it first for fresh start
+        config.websiteDataStore = .default()
         
         // Limit media playback to reduce memory usage
         if #available(iOS 15.0, *) {
@@ -67,6 +68,16 @@ struct WebViewContainer: UIViewRepresentable {
         // 🚨 Setup memory warning observer
         context.coordinator.setupMemoryWarningObserver()
         
+        // Clear ALL cached data before loading (for fresh deployments)
+        print("🧹 Clearing WebView cache...")
+        let dataStore = WKWebsiteDataStore.default()
+        dataStore.removeData(
+            ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+            modifiedSince: Date.distantPast
+        ) {
+            print("✅ Cache cleared completely")
+        }
+        
         // Load web app
         guard let url = URL(string: AppEnvironment.webAppURL) else {
             print("❌ Invalid web app URL")
@@ -74,12 +85,12 @@ struct WebViewContainer: UIViewRepresentable {
         }
         
         var request = URLRequest(url: url)
-        request.cachePolicy = .reloadIgnoringLocalCacheData // Prevent cache buildup
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData // Force fresh load
         if !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        print("🌐 Loading web app: \(AppEnvironment.webAppURL)")
+        print("🌐 Loading web app (no cache): \(AppEnvironment.webAppURL)")
         webView.load(request)
         
         return webView
