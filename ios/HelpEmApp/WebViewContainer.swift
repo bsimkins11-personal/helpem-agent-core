@@ -57,9 +57,11 @@ struct WebViewContainer: UIViewRepresentable {
         
         // Set up WebView handler for RootView
         DispatchQueue.main.async {
+            print("🔗 WebViewContainer: Setting up WebViewHandler")
             let handler = RootView.WebViewHandler()
             handler.webView = webView
             self.webViewHandler = handler
+            print("✅ WebViewContainer: WebViewHandler set up complete")
         }
         
         // 🚨 Setup memory warning observer

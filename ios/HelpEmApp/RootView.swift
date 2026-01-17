@@ -12,11 +12,19 @@ struct RootView: View {
     
     private func openFeedbackURL() {
         // Trigger feedback modal in WebView
+        print("📱 iOS: openFeedbackURL called")
+        if webViewHandler == nil {
+            print("⚠️ iOS: webViewHandler is nil!")
+        }
         webViewHandler?.triggerFeedback()
     }
     
     private func openUsageModal() {
         // Trigger usage modal in WebView
+        print("📱 iOS: openUsageModal called")
+        if webViewHandler == nil {
+            print("⚠️ iOS: webViewHandler is nil!")
+        }
         webViewHandler?.triggerUsage()
     }
     
