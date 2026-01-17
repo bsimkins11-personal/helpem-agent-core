@@ -134,18 +134,27 @@ interface LifeProviderProps {
 }
 
 export function LifeProvider({ children }: LifeProviderProps) {
-  const [todos, setTodos] = useState<Todo[]>(seedTodos);
-  const [habits, setHabits] = useState<Habit[]>(seedHabits);
-  const [appointments, setAppointments] = useState<Appointment[]>(seedAppointments);
-  const [routines, setRoutines] = useState<Routine[]>(seedRoutines);
+  // Check if user is authenticated (has session token)
+  const isAuthenticated = typeof document !== 'undefined' && document.cookie.includes("session_token");
+  
+  // Authenticated users start with empty arrays, demo users get seed data
+  const [todos, setTodos] = useState<Todo[]>(isAuthenticated ? [] : seedTodos);
+  const [habits, setHabits] = useState<Habit[]>(isAuthenticated ? [] : seedHabits);
+  const [appointments, setAppointments] = useState<Appointment[]>(isAuthenticated ? [] : seedAppointments);
+  const [routines, setRoutines] = useState<Routine[]>(isAuthenticated ? [] : seedRoutines);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Load data from database on mount
+  // Load data from database on mount (only for authenticated users)
   useEffect(() => {
-    if (dataLoaded) return;
+    if (dataLoaded || !isAuthenticated) {
+      setDataLoaded(true);
+      return;
+    }
     
     const loadData = async () => {
       try {
+        console.log('🔄 Loading user data from database...');
+        
         // Load todos from database
         const todosRes = await fetch('/api/todos');
         if (todosRes.ok) {
@@ -161,6 +170,9 @@ export function LifeProvider({ children }: LifeProviderProps) {
               createdAt: new Date(t.created_at),
             }));
             setTodos(dbTodos);
+            console.log(`✅ Loaded ${dbTodos.length} todos from database`);
+          } else {
+            console.log('✅ No todos in database - starting fresh');
           }
         }
 
@@ -176,19 +188,21 @@ export function LifeProvider({ children }: LifeProviderProps) {
               createdAt: new Date(a.created_at),
             }));
             setAppointments(dbAppointments);
+            console.log(`✅ Loaded ${dbAppointments.length} appointments from database`);
+          } else {
+            console.log('✅ No appointments in database - starting fresh');
           }
         }
 
         setDataLoaded(true);
       } catch (error) {
-        console.error("Failed to load data from database:", error);
-        // Continue with seed data if load fails
+        console.error("❌ Failed to load data from database:", error);
         setDataLoaded(true);
       }
     };
 
     loadData();
-  }, [dataLoaded]);
+  }, [dataLoaded, isAuthenticated]);
 
   const addTodo = useCallback((todo: Todo) => {
     setTodos(prev => [...prev, todo]);
