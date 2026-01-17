@@ -35,7 +35,7 @@ Basic Plan ($4.99/month or $50/year): 500 tasks per month, unlimited appointment
 Premium Plan ($9.99/month or $100/year): Unlimited everything, team collaboration (up to 5 people), shared lists, advanced analytics, API access, priority chat and phone support, early access to new features
 
 PLATFORMS:
-Web app available now at helpem-poc.vercel.app/app
+Web app available now at helpem.ai/app
 iOS app coming soon (request beta access)
 More platforms planned
 

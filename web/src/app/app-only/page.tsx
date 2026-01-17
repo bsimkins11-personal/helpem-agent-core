@@ -41,7 +41,7 @@ export default function AppOnlyPage() {
           </button>
           
           <p className="text-slate-500 text-sm">
-            Desktop users can access helpem at helpem.vercel.app
+            Desktop users can access helpem at helpem.ai
           </p>
         </div>
 
