@@ -20,6 +20,11 @@ export function LayoutHeader() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [isFromiOSApp, setIsFromiOSApp] = useState(false);
+
+  // Debug state changes
+  useEffect(() => {
+    console.log("showUsageModal state changed:", showUsageModal);
+  }, [showUsageModal]);
   
   // Check if user is in demo mode or iOS app
   useEffect(() => {
