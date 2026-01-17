@@ -4,7 +4,6 @@ import { LifeProvider } from '@/state/LifeStore';
 import { ReminderProvider } from '@/components/ReminderProvider';
 import { CryptoUUIDShim } from '@/components/CryptoUUIDShim';
 import { LayoutHeader } from '@/components/LayoutHeader';
-import { UsageDrawer } from '@/components/UsageDrawer';
 import './globals.css';
 
 const outfit = Outfit({
@@ -36,16 +35,13 @@ export default function RootLayout({
         <CryptoUUIDShim />
         <LifeProvider>
           <ReminderProvider>
-            <div className="min-h-screen pb-24 md:pb-16">
+            <div className="min-h-screen">
               <LayoutHeader />
               
               {/* Main content - no container constraints to allow pages full control */}
               <main>
                 {children}
               </main>
-              
-              {/* Usage Drawer - Fixed to bottom */}
-              <UsageDrawer />
             </div>
           </ReminderProvider>
         </LifeProvider>

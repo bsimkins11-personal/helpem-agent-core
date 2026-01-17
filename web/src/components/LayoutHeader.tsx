@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AlphaFeedbackModal } from './AlphaFeedbackModal';
+import { UsageModal } from './UsageModal';
 
 const navItems = [
   { href: '/app', label: 'Today', icon: '◐' },
@@ -17,6 +18,7 @@ export function LayoutHeader() {
   const [isDemo, setIsDemo] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showUsageModal, setShowUsageModal] = useState(false);
   const [isFromiOSApp, setIsFromiOSApp] = useState(false);
   
   // Check if user is in demo mode or iOS app
@@ -198,6 +200,15 @@ export function LayoutHeader() {
                   </button>
                   <button
                     onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowUsageModal(true);
+                    }}
+                    className="px-4 py-3 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                  >
+                    View Usage
+                  </button>
+                  <button
+                    onClick={() => {
                       // Clear session
                       document.cookie = "session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                       document.cookie = "session_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -255,6 +266,14 @@ export function LayoutHeader() {
         <AlphaFeedbackModal
           isOpen={showFeedbackModal}
           onClose={() => setShowFeedbackModal(false)}
+        />
+      )}
+
+      {/* Usage Modal */}
+      {showUsageModal && (
+        <UsageModal
+          isOpen={showUsageModal}
+          onClose={() => setShowUsageModal(false)}
         />
       )}
     </>
