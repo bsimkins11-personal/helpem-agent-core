@@ -65,19 +65,21 @@ struct RootView: View {
                             }
                         }
                         .navigationBarTitleDisplayMode(.inline)
+                        .toolbarBackground(.visible, for: .navigationBar)
+                        .toolbarBackground(Color.white, for: .navigationBar)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
-                                HStack(spacing: 8) {
+                                HStack(spacing: 10) {
                                     if let uiImage = UIImage(named: "HelpEm_Logo") {
                                         Image(uiImage: uiImage)
                                             .resizable()
                                             .scaledToFit()
-                                            .frame(height: 32)
+                                            .frame(height: 40)
                                     }
                                     
                                     Text("Built for you.")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.gray)
                                 }
                             }
                             
@@ -98,7 +100,7 @@ struct RootView: View {
                                     }
                                 } label: {
                                     Image(systemName: "ellipsis.circle")
-                                        .font(.title3)
+                                        .font(.title2)
                                         .foregroundColor(.primary)
                                 }
                             }
