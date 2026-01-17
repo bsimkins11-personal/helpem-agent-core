@@ -9,21 +9,21 @@ export default function PricingPage() {
   const plans = [
     {
       name: "Free",
-      tagline: "Perfect for trying HelpEm",
+      tagline: "Perfect for getting started",
       price: { monthly: 0, annual: 0 },
       features: [
         "50 tasks per month",
         "10 appointments per month",
         "5 routines",
         "Basic grocery lists",
-        "Voice input (iOS app)",
-        "Web access",
+        "Voice + text input",
+        "Web app access",
+        "Smart categorization",
         "Email support"
       ],
       limitations: [
         "No priority support",
-        "Standard response time",
-        "Single device sync"
+        "Standard response time"
       ],
       cta: "Start Free",
       href: "/app",
@@ -39,12 +39,13 @@ export default function PricingPage() {
         "Unlimited appointments",
         "Unlimited routines",
         "Advanced grocery lists",
-        "Voice input (iOS app)",
+        "Voice + text input",
         "Web + mobile sync",
         "Calendar integration",
         "Smart notifications",
+        "Reminders & alerts",
         "Priority email support",
-        "Export data"
+        "Export your data"
       ],
       limitations: [],
       cta: "Start Basic",
@@ -249,23 +250,23 @@ export default function PricingPage() {
                 Can I switch plans anytime?
               </h3>
               <p className="text-brandTextLight">
-                Yes! Upgrade or downgrade at any time. Changes take effect immediately, and we'll prorate any charges.
+                Yes! Upgrade or downgrade at any time. Changes take effect immediately, and we'll prorate any charges. Start with Free, upgrade when you're ready.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-brandText mb-2">
-                What happens if I exceed my limits on Free?
+                What happens if I reach my monthly limits?
               </h3>
               <p className="text-brandTextLight">
-                We'll notify you when you're approaching your limits. You can upgrade to continue using HelpEm or wait until next month when limits reset.
+                We'll notify you when you're approaching your limits with a clear usage indicator. You can upgrade anytime or wait until next month when limits automatically reset.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-brandText mb-2">
-                Is there a team discount?
+                How does team collaboration work?
               </h3>
               <p className="text-brandTextLight">
-                Premium includes team features for up to 5 people. Need more? Contact us for custom enterprise pricing.
+                Premium includes team features for up to 5 people with shared grocery lists and appointments. Perfect for families, roommates, or small teams. Need more seats? Contact hello@helpem.ai for custom pricing.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -273,7 +274,7 @@ export default function PricingPage() {
                 What payment methods do you accept?
               </h3>
               <p className="text-brandTextLight">
-                We accept all major credit cards (Visa, Mastercard, Amex) and Apple Pay.
+                We accept all major credit cards (Visa, Mastercard, Amex) and Apple Pay. Billing is automatic and secure through Stripe.
               </p>
             </div>
           </div>
