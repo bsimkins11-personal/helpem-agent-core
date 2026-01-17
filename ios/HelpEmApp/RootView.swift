@@ -67,10 +67,16 @@ struct RootView: View {
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
-                                Image("HelpEm_Logo")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(height: 32)
+                                HStack(spacing: 8) {
+                                    Image("HelpEm_Logo")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(height: 32)
+                                    
+                                    Text("Built for you.")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             
                             ToolbarItem(placement: .navigationBarTrailing) {
