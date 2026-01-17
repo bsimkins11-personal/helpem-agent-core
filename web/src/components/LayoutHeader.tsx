@@ -37,18 +37,9 @@ export function LayoutHeader() {
       <header className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-3">
           <div className="flex items-center justify-between">
-            {/* Logo */}
+            {/* Logo - Icon Only (Clean & Consistent) */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="flex items-center gap-4">
-                <img src="/helpem-logo.png" alt="HelpEm" className="h-32 w-auto" />
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight leading-tight">
-                    <span className="text-brandBlue">help</span>
-                    <span className="text-brandGreen">em</span>
-                  </h1>
-                  <p className="text-sm text-brandTextLight leading-tight">Built for you.</p>
-                </div>
-              </div>
+              <img src="/helpem-logo.png" alt="HelpEm" className="h-12 w-auto" />
             </Link>
 
             {/* Global Navigation - ALWAYS SHOW ON ALL PAGES */}
