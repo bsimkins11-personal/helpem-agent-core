@@ -28,7 +28,7 @@ export function LayoutHeader() {
   
   // Check if user is in demo mode or iOS app
   useEffect(() => {
-    const hasSessionToken = document.cookie.includes("session_token");
+    const hasSessionToken = document.cookie.includes("session_token") || !!(window as any).__nativeSessionToken;
     const fromiOSApp = navigator.userAgent.includes("HelpEm");
     const isDemoMode = !hasSessionToken && !fromiOSApp;
     setIsDemo(isDemoMode);

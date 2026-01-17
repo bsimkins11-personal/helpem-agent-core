@@ -134,8 +134,11 @@ interface LifeProviderProps {
 }
 
 export function LifeProvider({ children }: LifeProviderProps) {
-  // Check if user is authenticated (has session token)
-  const isAuthenticated = typeof document !== 'undefined' && document.cookie.includes("session_token");
+  // Check if user is authenticated (has session token from cookie OR iOS native)
+  const isAuthenticated = typeof window !== 'undefined' && (
+    document.cookie.includes("session_token") || 
+    !!(window as any).__nativeSessionToken
+  );
   
   // Authenticated users start with empty arrays, demo users get seed data
   const [todos, setTodos] = useState<Todo[]>(isAuthenticated ? [] : seedTodos);
