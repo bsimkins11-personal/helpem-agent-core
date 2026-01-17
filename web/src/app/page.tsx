@@ -61,23 +61,23 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "How does HelpEm work?",
-      a: "Simply talk or type to HelpEm. It captures your todos, appointments, and reminders, organizing them automatically. No complex setup—just natural conversation."
+      a: "Simply talk or type to HelpEm. It captures your todos, appointments, routines, and groceries, organizing them automatically. No complex setup—just natural conversation. HelpEm creates tasks immediately with smart defaults, so you can get back to your life."
     },
     {
       q: "Is my data private and secure?",
-      a: "Absolutely. Your data is encrypted and stored securely. We never share your information with third parties."
+      a: "Absolutely. Your data is encrypted and stored securely. We never share your information with third parties. Your tasks, appointments, and routines are yours alone."
     },
     {
       q: "What platforms does HelpEm support?",
-      a: "HelpEm is available as a native iOS app (coming soon) and web app. More platforms coming soon."
+      a: "HelpEm is available now as a web app at helpem.ai. Native iOS app is in active development—request beta access to be first in line. Android and desktop apps are on the roadmap."
     },
     {
       q: "How much does it cost?",
-      a: "HelpEm will be free during beta testing. We'll announce pricing details before general availability."
+      a: "HelpEm offers three plans: Free (50 tasks/month, perfect for trying it out), Basic at $4.99/month (500 tasks, unlimited appointments), and Premium at $9.99/month (unlimited everything plus team features). All plans include smart organization and voice input."
     },
     {
       q: "Can I use HelpEm with my team?",
-      a: "Currently HelpEm is designed for personal use. Team features are on our roadmap!"
+      a: "Yes! Premium plans include team collaboration for up to 5 people with shared grocery lists and appointments. Perfect for families, roommates, or small teams staying organized together."
     }
   ];
 
@@ -185,10 +185,11 @@ export default function LandingPage() {
       <section className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-6xl font-bold text-brandText leading-tight mb-6">
-            Life's busy enough.<br />Let HelpEm handle the details.
+            Life's busy enough.<br />Let HelpEm remember everything.
           </h1>
           <p className="text-lg sm:text-2xl text-brandTextLight leading-relaxed max-w-3xl mx-auto">
-            Built for you.
+            Just say it. HelpEm captures todos, appointments, routines, and groceries instantly. 
+            No typing, no friction, no forgetting.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
             <Link
@@ -273,11 +274,12 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-5xl font-bold mb-6">Built by People Who Get It</h2>
           <p className="text-lg sm:text-xl leading-relaxed mb-8 text-white/90">
-            We built HelpEm because we were tired of complicated productivity apps that required more management than the tasks themselves. 
+            We built HelpEm because we were tired of productivity apps that felt like another job. 
+            You shouldn't need a manual to capture a todo. You shouldn't need three taps to add milk to your grocery list.
             Life's busy—you need an assistant that just works.
           </p>
           <p className="text-lg sm:text-xl leading-relaxed text-white/90">
-            Our mission: Make organization effortless, so you can focus on what truly matters.
+            Our mission: Make organization so effortless, you forget you're even doing it.
           </p>
         </div>
       </section>
@@ -341,7 +343,7 @@ export default function LandingPage() {
           <div className="bg-gradient-to-br from-brandBlue to-brandGreen rounded-3xl p-8 sm:p-16 text-center text-white">
             <h2 className="text-3xl sm:text-5xl font-bold mb-6">Ready to Get Organized?</h2>
             <p className="text-lg sm:text-xl mb-10 text-white/90 max-w-2xl mx-auto">
-              Join the beta and experience effortless organization. Available soon on iOS.
+              Start with a free account. No credit card required. Upgrade anytime.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -351,7 +353,7 @@ export default function LandingPage() {
                 Try Web App Now
               </Link>
               <a
-                href="mailto:hello@helpem.app?subject=iOS%20Beta%20Access"
+                href="mailto:hello@helpem.ai?subject=iOS%20Beta%20Access"
                 className="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white text-white font-semibold text-lg hover:bg-white hover:text-brandBlue transition-all"
               >
                 Request iOS Beta
@@ -369,7 +371,7 @@ export default function LandingPage() {
             Have questions, feedback, or partnership ideas? We'd love to hear from you.
           </p>
           <a
-            href="mailto:hello@helpem.app"
+            href="mailto:hello@helpem.ai"
             className="inline-flex items-center justify-center px-8 py-4 rounded-xl border-2 border-brandBlue text-brandBlue font-semibold text-lg hover:bg-brandBlue hover:text-white transition-all"
           >
             Contact Us
