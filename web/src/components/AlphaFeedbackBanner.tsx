@@ -32,7 +32,7 @@ export function AlphaFeedbackBanner() {
         <div className="flex items-center gap-3 flex-1">
           <span className="text-xl">⚠️</span>
           <p className="text-sm font-medium">
-            <span className="font-bold">HelpEm is in alpha.</span> Click to provide feedback and help us improve!
+            <span className="font-bold">HelpEm is in alpha.</span> Click to provide feedback and help us improve! You can also access feedback later via the menu.
           </p>
         </div>
         <div className="flex items-center gap-2">

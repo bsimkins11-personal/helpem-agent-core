@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { AlphaFeedbackModal } from './AlphaFeedbackModal';
 
 const navItems = [
   { href: '/app', label: 'Today', icon: '◐' },
@@ -15,6 +16,7 @@ export function LayoutHeader() {
   const pathname = usePathname();
   const [isDemo, setIsDemo] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   
   // Check if user is in demo mode
   useEffect(() => {
@@ -173,20 +175,31 @@ export function LayoutHeader() {
                   Support
                 </Link>
               ) : (
-                <button
-                  onClick={() => {
-                    // Clear session
-                    document.cookie = "session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-                    document.cookie = "session_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-                    localStorage.clear();
-                    setMobileMenuOpen(false);
-                    // Redirect to home
-                    window.location.href = "/";
-                  }}
-                  className="px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
-                >
-                  Logout
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowFeedbackModal(true);
+                    }}
+                    className="px-4 py-3 text-left text-purple-600 hover:bg-purple-50 rounded-lg transition-colors font-medium"
+                  >
+                    Give Feedback
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Clear session
+                      document.cookie = "session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                      document.cookie = "session_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                      localStorage.clear();
+                      setMobileMenuOpen(false);
+                      // Redirect to home
+                      window.location.href = "/";
+                    }}
+                    className="px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                  >
+                    Logout
+                  </button>
+                </>
               )}
             </nav>
           </div>
@@ -224,6 +237,14 @@ export function LayoutHeader() {
             ))}
           </div>
         </nav>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <AlphaFeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+        />
       )}
     </>
   );
