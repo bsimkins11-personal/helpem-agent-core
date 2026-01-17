@@ -47,9 +47,9 @@ export async function getUsageStatus(): Promise<UsageData> {
   const daysElapsed = now.getDate();
   const daysRemaining = daysInMonth - daysElapsed;
   
-  // Mock usage data (Free tier nearing limit for demo)
-  const used = 42;
-  const limit = 50;
+  // Mock usage data (Alpha tier - 1000 messages per month, $2 API limit)
+  const used = 15;
+  const limit = 1000;
   const projectedTotal = daysElapsed > 3 ? Math.round((used / daysElapsed) * daysInMonth) : null;
   
   return {
@@ -64,12 +64,9 @@ export async function getUsageStatus(): Promise<UsageData> {
       daysRemaining,
     } : null,
     actions: {
-      canUpgrade: true,
-      canAddUsage: true,
-      addUsageOptions: [
-        { amount: 500, price: 10 },
-        { amount: 1000, price: 18 },
-      ],
+      canUpgrade: false, // No upgrades during alpha
+      canAddUsage: false, // No add-ons during alpha
+      addUsageOptions: [],
     },
   };
 }

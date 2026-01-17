@@ -9,8 +9,8 @@ const COSTS = {
   CHAT_PER_REQUEST: 0.001,        // Estimated average
 };
 
-// Monthly limit in USD
-const MONTHLY_LIMIT_USD = parseFloat(process.env.MONTHLY_USAGE_LIMIT || "20");
+// Monthly limit in USD (Alpha: $2 per user per month)
+const MONTHLY_LIMIT_USD = parseFloat(process.env.MONTHLY_USAGE_LIMIT || "2");
 
 // In-memory storage (resets on deploy - for demos only)
 // For production, replace with Redis/KV storage
