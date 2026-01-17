@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AlphaFeedbackModal } from './AlphaFeedbackModal';
 import { UsageModal } from './UsageModal';
+import SupportModal from './SupportModal';
 import { useLife } from '@/state/LifeStore';
 
 const navItems = [
@@ -20,6 +21,7 @@ export function LayoutHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showUsageModal, setShowUsageModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [isFromiOSApp, setIsFromiOSApp] = useState(false);
   const { clearAllData } = useLife();
 
@@ -45,6 +47,10 @@ export function LayoutHeader() {
     (window as any).showUsageModal = () => {
       console.log('🌐 Web: showUsageModal called');
       setShowUsageModal(true);
+    };
+    (window as any).showSupportModal = () => {
+      console.log('🌐 Web: showSupportModal called');
+      setShowSupportModal(true);
     };
     (window as any).__clearAllData = () => {
       console.log('🌐 Web: __clearAllData called from window');
@@ -72,6 +78,7 @@ export function LayoutHeader() {
       window.removeEventListener('showUsageModal', handleShowUsage);
       delete (window as any).showFeedbackModal;
       delete (window as any).showUsageModal;
+      delete (window as any).showSupportModal;
       delete (window as any).__clearAllData;
     };
   }, [clearAllData]);
@@ -254,6 +261,16 @@ export function LayoutHeader() {
                     View Usage
                   </button>
                   <button
+                    onClick={() => {
+                      console.log("Get Support clicked");
+                      setMobileMenuOpen(false);
+                      setShowSupportModal(true);
+                    }}
+                    className="px-4 py-3 text-left text-green-600 hover:bg-green-50 rounded-lg transition-colors font-medium"
+                  >
+                    Get Support
+                  </button>
+                  <button
                     onClick={async () => {
                       if (confirm("⚠️ Are you sure you want to clear all app data? This will permanently delete all your todos, habits, appointments, and routines from the database. This action cannot be undone.")) {
                         console.log('🗑️ Web: User confirmed clear all data');
@@ -342,6 +359,12 @@ export function LayoutHeader() {
           onClose={() => setShowUsageModal(false)}
         />
       )}
+
+      {/* Support Modal */}
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
     </>
   );
 }

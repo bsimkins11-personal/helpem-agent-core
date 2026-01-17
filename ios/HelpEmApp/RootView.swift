@@ -29,6 +29,15 @@ struct RootView: View {
         webViewHandler?.triggerUsage()
     }
     
+    private func openSupportModal() {
+        // Trigger support modal in WebView
+        print("📱 iOS: openSupportModal called")
+        if webViewHandler == nil {
+            print("⚠️ iOS: webViewHandler is nil!")
+        }
+        webViewHandler?.triggerSupport()
+    }
+    
     private func showClearDataAlert() {
         // Show native confirmation alert
         print("⚠️ iOS: Showing clear data confirmation")
@@ -106,6 +115,28 @@ struct RootView: View {
                     print("❌ Error triggering usage: \(error)")
                 } else {
                     print("✅ Usage JavaScript executed successfully")
+                }
+            }
+        }
+        
+        func triggerSupport() {
+            print("💬 iOS: Triggering support modal")
+            let js = """
+            (function() {
+                console.log('📱 iOS JavaScript: Calling window.showSupportModal()');
+                if (typeof window.showSupportModal === 'function') {
+                    window.showSupportModal();
+                    console.log('✅ iOS JavaScript: showSupportModal() called');
+                } else {
+                    console.error('❌ iOS JavaScript: window.showSupportModal is not a function');
+                }
+            })();
+            """
+            webView?.evaluateJavaScript(js) { result, error in
+                if let error = error {
+                    print("❌ Error triggering support: \(error)")
+                } else {
+                    print("✅ Support JavaScript executed successfully")
                 }
             }
         }
@@ -202,6 +233,12 @@ struct RootView: View {
                                                 openUsageModal()
                                             }) {
                                                 Label("View Usage", systemImage: "chart.bar.fill")
+                                            }
+                                            
+                                            Button(action: {
+                                                openSupportModal()
+                                            }) {
+                                                Label("Get Support", systemImage: "questionmark.circle")
                                             }
                                             
                                             Divider()
