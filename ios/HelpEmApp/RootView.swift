@@ -24,29 +24,39 @@ struct RootView: View {
         weak var webView: WKWebView?
         
         func triggerFeedback() {
+            print("🔔 iOS: Triggering feedback modal")
             let js = """
             (function() {
+                console.log('📱 iOS JavaScript: Dispatching showFeedbackModal event');
                 const event = new CustomEvent('showFeedbackModal');
                 window.dispatchEvent(event);
+                console.log('📱 iOS JavaScript: Event dispatched');
             })();
             """
-            webView?.evaluateJavaScript(js) { _, error in
+            webView?.evaluateJavaScript(js) { result, error in
                 if let error = error {
-                    print("Error triggering feedback: \(error)")
+                    print("❌ Error triggering feedback: \(error)")
+                } else {
+                    print("✅ Feedback JavaScript executed successfully")
                 }
             }
         }
         
         func triggerUsage() {
+            print("📊 iOS: Triggering usage modal")
             let js = """
             (function() {
+                console.log('📱 iOS JavaScript: Dispatching showUsageModal event');
                 const event = new CustomEvent('showUsageModal');
                 window.dispatchEvent(event);
+                console.log('📱 iOS JavaScript: Event dispatched');
             })();
             """
-            webView?.evaluateJavaScript(js) { _, error in
+            webView?.evaluateJavaScript(js) { result, error in
                 if let error = error {
-                    print("Error triggering usage: \(error)")
+                    print("❌ Error triggering usage: \(error)")
+                } else {
+                    print("✅ Usage JavaScript executed successfully")
                 }
             }
         }

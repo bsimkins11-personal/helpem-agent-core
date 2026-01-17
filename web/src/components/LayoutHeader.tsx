@@ -35,13 +35,21 @@ export function LayoutHeader() {
     setIsFromiOSApp(fromiOSApp);
 
     // Listen for iOS native triggers
-    const handleShowFeedback = () => setShowFeedbackModal(true);
-    const handleShowUsage = () => setShowUsageModal(true);
+    const handleShowFeedback = () => {
+      console.log('🌐 Web: showFeedbackModal event received');
+      setShowFeedbackModal(true);
+    };
+    const handleShowUsage = () => {
+      console.log('🌐 Web: showUsageModal event received');
+      setShowUsageModal(true);
+    };
     
+    console.log('🎧 Web: Setting up event listeners for iOS');
     window.addEventListener('showFeedbackModal', handleShowFeedback);
     window.addEventListener('showUsageModal', handleShowUsage);
     
     return () => {
+      console.log('🧹 Web: Cleaning up event listeners');
       window.removeEventListener('showFeedbackModal', handleShowFeedback);
       window.removeEventListener('showUsageModal', handleShowUsage);
     };
