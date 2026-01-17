@@ -11,7 +11,7 @@ async function clearDatabase() {
   try {
     console.log('🗑️  Clearing ALL test data from database...\n');
 
-    const tables = ['habits', 'appointments', 'todos', 'user_inputs', 'user_instructions'];
+    const tables = ['habits', 'appointments', 'todos', 'user_inputs', 'user_instructions', 'chat_messages'];
     
     for (const table of tables) {
       const result = await pool.query(`DELETE FROM ${table}`);

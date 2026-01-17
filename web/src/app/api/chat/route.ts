@@ -4,6 +4,7 @@ import { AGENT_INSTRUCTIONS } from "@/lib/agentInstructions";
 import { checkUsageLimit, trackUsage, usageLimitError } from "@/lib/usageTracker";
 import { query } from "@/lib/db";
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rateLimiter";
+import { getAuthUser } from "@/lib/auth";
 
 let openai: OpenAI | null = null;
 function getOpenAIClient() {
@@ -613,6 +614,9 @@ type ConversationMessage = {
 };
 
 export async function POST(req: Request) {
+  // Get authenticated user (for user-specific chat history)
+  const user = await getAuthUser(req);
+  
   // 🛡️ RATE LIMITING - First line of defense against API abuse
   const clientIp = getClientIdentifier(req);
   const rateLimit = await checkRateLimit({
@@ -656,15 +660,24 @@ export async function POST(req: Request) {
     );
   }
 
-  // Record user input to database
+  // Record user input to database (user-specific if authenticated)
   try {
-    await query(
-      'INSERT INTO user_inputs (content) VALUES ($1)',
-      [message]
-    );
-    console.log("Successfully recorded to Postgres");
+    if (user) {
+      await query(
+        'INSERT INTO user_inputs (content, user_id) VALUES ($1, $2)',
+        [message, user.userId]
+      );
+      console.log(`✅ Recorded chat input for user: ${user.userId}`);
+    } else {
+      // Anonymous user - save without user_id (legacy behavior)
+      await query(
+        'INSERT INTO user_inputs (content) VALUES ($1)',
+        [message]
+      );
+      console.log("✅ Recorded anonymous chat input");
+    }
   } catch (dbError) {
-    console.error("Database save failed:", dbError);
+    console.error("❌ Database save failed:", dbError);
     // We don't crash the app if recording fails, we just log it
   }
 

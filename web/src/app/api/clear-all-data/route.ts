@@ -39,12 +39,18 @@ export async function DELETE(req: Request) {
       [user.userId]
     );
     
+    const deletedChatMessages = await query(
+      'DELETE FROM chat_messages WHERE user_id = $1',
+      [user.userId]
+    );
+    
     console.log(`✅ Cleared data for user ${user.userId}:`);
     console.log(`   - ${deletedTodos.rowCount} todos`);
     console.log(`   - ${deletedAppointments.rowCount} appointments`);
     console.log(`   - ${deletedHabits.rowCount} habits`);
     console.log(`   - ${deletedInputs.rowCount} user inputs`);
     console.log(`   - ${deletedInstructions.rowCount} user instructions`);
+    console.log(`   - ${deletedChatMessages.rowCount} chat messages`);
     
     return NextResponse.json({ 
       success: true,
@@ -54,6 +60,7 @@ export async function DELETE(req: Request) {
         habits: deletedHabits.rowCount,
         userInputs: deletedInputs.rowCount,
         userInstructions: deletedInstructions.rowCount,
+        chatMessages: deletedChatMessages.rowCount,
       }
     });
     
