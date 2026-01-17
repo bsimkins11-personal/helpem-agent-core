@@ -46,8 +46,11 @@ export function LayoutHeader() {
       console.log('🌐 Web: showUsageModal called');
       setShowUsageModal(true);
     };
-    (window as any).__clearAllData = clearAllData;
-    console.log('✅ Web: Functions exposed globally');
+    (window as any).__clearAllData = () => {
+      console.log('🌐 Web: __clearAllData called from window');
+      clearAllData();
+    };
+    console.log('✅ Web: Functions exposed globally (clearAllData type:', typeof clearAllData, ')');
 
     // Listen for iOS native triggers (backup method)
     const handleShowFeedback = () => {
@@ -253,11 +256,10 @@ export function LayoutHeader() {
                   <button
                     onClick={() => {
                       if (confirm("⚠️ Are you sure you want to clear all app data? This will delete all your todos, habits, appointments, and routines. This action cannot be undone.")) {
-                        // Call the global clear function
-                        if ((window as any).__clearAllData) {
-                          (window as any).__clearAllData();
-                          alert("✅ All app data has been cleared.");
-                        }
+                        console.log('🗑️ Web: User confirmed clear all data');
+                        clearAllData();
+                        alert("✅ All app data has been cleared.");
+                        console.log('✅ Web: Data cleared successfully');
                       }
                       setMobileMenuOpen(false);
                     }}
