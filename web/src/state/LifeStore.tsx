@@ -544,8 +544,14 @@ export function LifeProvider({ children }: LifeProviderProps) {
   }, []);
 
   const deleteAppointment = useCallback(async (id: string) => {
+    console.log(`🗑️ deleteAppointment called with ID: ${id}`);
+    
     // Optimistic update - remove from UI immediately
-    setAppointments(prev => prev.filter(a => a.id !== id));
+    setAppointments(prev => {
+      const appointmentToDelete = prev.find(a => a.id === id);
+      console.log(`📍 Appointment in local state:`, appointmentToDelete);
+      return prev.filter(a => a.id !== id);
+    });
     
     // Cancel notification when appointment is deleted (iOS only)
     if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
@@ -558,8 +564,14 @@ export function LifeProvider({ children }: LifeProviderProps) {
     // Persist to database
     try {
       const response = await fetch(`/api/appointments?id=${id}`, { method: 'DELETE' });
-      if (!response.ok) {
-        console.error('❌ Failed to delete appointment from database');
+      
+      if (response.status === 404) {
+        // 404 means item doesn't exist - this is actually fine for a delete operation
+        console.log(`⚠️ Appointment ${id} not found in database (already deleted or never saved)`);
+        console.log('✅ Treating 404 as successful deletion');
+      } else if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Failed to delete appointment from database: ${response.status} ${errorText}`);
       } else {
         console.log('✅ Appointment deleted from database');
       }
