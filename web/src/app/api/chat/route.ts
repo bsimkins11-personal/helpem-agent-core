@@ -88,8 +88,11 @@ Examples of ALWAYS CREATE:
 🚨 IMPORTANT: Generic action words (meeting, call, appointment) are VALID task titles. Don't ask for more details!
 
 🚨 MULTI-ITEM DETECTION:
-When user lists multiple items with "and" or commas → CREATE for FIRST item, mention ALL in message
-- "Add eggs, bread, and butter to grocery list" → {"action": "add", "type": "grocery", "content": "Eggs", "message": "I'll add eggs, bread, and butter to your grocery list."}
+For GROCERIES: When user lists multiple items → return items array with ALL items
+- "Add eggs, bread, and butter to grocery list" → {"action": "add", "type": "grocery", "items": ["eggs", "bread", "butter"], "message": "I'll add eggs, bread, and butter to your grocery list."}
+- "Put milk and cheese on shopping list" → {"action": "add", "type": "grocery", "items": ["milk", "cheese"], "message": "Added milk and cheese to your grocery list."}
+
+For TODOS: When multiple tasks listed → CREATE for FIRST item, mention ALL in message
 - "Add workout and meal prep" → {"action": "add", "type": "todo", "title": "Workout", "message": "Got it. I'll add both workout and meal prep."}
 - Create one JSON action but acknowledge all items in the message field
 
@@ -576,6 +579,8 @@ ACTION GATING - WHEN TO EMIT JSON:
   * User must say "add X to grocery list" or "put X on shopping list"
   * If user says this, ALWAYS use type "grocery" (never "todo")
   * "Remind me to pick up X" = TODO, NOT grocery
+  * For SINGLE item: {"action": "add", "type": "grocery", "content": "milk", "message": "Added milk to your grocery list."}
+  * For MULTIPLE items: {"action": "add", "type": "grocery", "items": ["eggs", "bread", "butter"], "message": "Added eggs, bread, and butter to your grocery list."}
   * RETURN JSON with message field immediately
 
 🚨🚨🚨 DUPLICATE DETECTION - CRITICAL CHECK BEFORE CREATING! 🚨🚨🚨
@@ -1050,8 +1055,17 @@ FULFILLED_INTENTS: None yet
           if (isGroceryListRequest && parsed.type === "todo") {
             parsed.type = "grocery";
           }
-          if (parsed.type === "grocery" && !parsed.content && parsed.title) {
-            parsed.content = parsed.title;
+          if (parsed.type === "grocery") {
+            // Handle single item: coerce title to content if needed
+            if (!parsed.content && !parsed.items && parsed.title) {
+              parsed.content = parsed.title;
+            }
+            // If items array exists but some items are objects with title, extract content
+            if (parsed.items && Array.isArray(parsed.items)) {
+              parsed.items = parsed.items.map((item: any) => 
+                typeof item === 'string' ? item : (item.content || item.title || '')
+              ).filter((item: string) => item.trim());
+            }
           }
         }
 

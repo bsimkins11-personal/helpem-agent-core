@@ -552,40 +552,42 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             });
           }
         } else if (internalType === "grocery") {
-          const id = uuidv4();
-          const content = data.title || data.content;
+          // Support both single item and multiple items (array)
+          const items = data.items || [data.title || data.content];
           
-          console.log("🛒 Creating grocery item:", {
-            id,
-            content,
-          });
+          console.log("🛒 Creating grocery items:", { items });
           
-          // Add to local state first
-          addGrocery({
-            id,
-            content,
-            completed: false,
-            createdAt: now,
-          });
-          
-          // Try to save to database (non-blocking)
-          try {
-            const apiResponse = await fetch("/api/groceries", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ content }),
-            });
-            
-            if (!apiResponse.ok) {
-              console.warn("⚠️ Failed to save grocery to database (but added locally)");
-            } else {
-              console.log("✅ Grocery saved to database successfully");
+          // Add all items to local state
+          for (const itemContent of items) {
+            if (itemContent && itemContent.trim()) {
+              const id = uuidv4();
+              addGrocery({
+                id,
+                content: itemContent.trim(),
+                completed: false,
+                createdAt: now,
+              });
+              
+              // Try to save each item to database (non-blocking)
+              try {
+                const apiResponse = await fetch("/api/groceries", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ content: itemContent.trim() }),
+                });
+                
+                if (!apiResponse.ok) {
+                  console.warn(`⚠️ Failed to save "${itemContent}" to database (but added locally)`);
+                } else {
+                  console.log(`✅ "${itemContent}" saved to database successfully`);
+                }
+              } catch (err) {
+                console.error(`❌ Database save failed for "${itemContent}" (saved locally):`, err);
+              }
             }
-          } catch (err) {
-            console.error("❌ Database save failed (grocery saved locally):", err);
           }
           
-          const responseText = data.message || `Added "${content}" to your grocery list.`;
+          const responseText = data.message || `Added ${items.length} item${items.length > 1 ? 's' : ''} to your grocery list.`;
           addMessage({ id: uuidv4(), role: "assistant", content: responseText });
 
           if (isNativeApp) {
