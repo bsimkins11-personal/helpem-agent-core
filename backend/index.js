@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { verifyAppleIdentityToken } from "./src/lib/appleAuth.js";
 import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js";
 import { prisma } from "./src/lib/prisma.js";
+import { migrateFeedbackTable } from "./src/migrate-feedback.js";
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -342,6 +343,16 @@ function pruneBiases(biases) {
     .slice(MAX_BIAS_ENTRIES)
     .forEach((key) => delete biases[key]);
 }
+
+// Migration endpoint (one-time use to create feedback table)
+app.get("/migrate-feedback", async (req, res) => {
+  try {
+    const result = await migrateFeedbackTable();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Start server
 app.listen(port, () => {

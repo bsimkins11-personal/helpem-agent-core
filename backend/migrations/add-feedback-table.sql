@@ -11,15 +11,15 @@ CREATE TABLE IF NOT EXISTS feedback (
     action_type VARCHAR(50),
     action_data JSONB,
     correction TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Indexes for analysis
-    INDEX idx_feedback_user (user_id),
-    INDEX idx_feedback_type (feedback),
-    INDEX idx_feedback_action (action_type),
-    INDEX idx_feedback_created (created_at DESC),
-    INDEX idx_feedback_has_correction ((correction IS NOT NULL))
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create indexes separately
+CREATE INDEX IF NOT EXISTS idx_feedback_user ON feedback(user_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_type ON feedback(feedback);
+CREATE INDEX IF NOT EXISTS idx_feedback_action ON feedback(action_type);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedback_has_correction ON feedback((correction IS NOT NULL));
 
 COMMENT ON TABLE feedback IS 'User feedback on AI responses for reinforcement learning';
 COMMENT ON COLUMN feedback.feedback IS 'User rating: up (good) or down (bad)';
