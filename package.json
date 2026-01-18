@@ -12,7 +12,8 @@
     "lint:web": "npm --prefix web run lint",
     "start:web": "npm --prefix web run start",
     "start:backend": "npm --prefix backend run start",
-    "install:all": "npm install --workspaces"
+    "install:all": "npm install --workspaces",
+    "deploy:prod": "bash scripts/guard-vercel-prod.sh"
   },
   "engines": {
     "node": ">=22.12.0"
