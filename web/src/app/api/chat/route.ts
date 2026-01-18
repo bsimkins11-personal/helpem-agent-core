@@ -865,6 +865,12 @@ export async function POST(req: Request) {
   const now = currentDateTimeISO ? new Date(currentDateTimeISO) : 
               currentDateTime ? new Date(currentDateTime) : new Date();
   const formattedNow = formatCurrentDateTime(now);
+  
+  console.log('🕐 TIMEZONE DEBUG:');
+  console.log('   Client sent currentDateTimeISO:', currentDateTimeISO);
+  console.log('   Parsed to Date object:', now.toISOString());
+  console.log('   Formatted for AI:', formattedNow);
+  console.log('   AI will see this as "RIGHT NOW"');
 
   // Format appointments with readable dates for the AI
   const formattedAppointments = (userData.appointments || []).map((apt: { title: string; datetime: string | Date }) => ({
