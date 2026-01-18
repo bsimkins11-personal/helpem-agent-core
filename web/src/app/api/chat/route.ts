@@ -844,6 +844,11 @@ type ConversationMessage = {
   content: string;
 };
 
+function shouldUseLowTemperature(message: string): boolean {
+  const text = message.toLowerCase();
+  return /\\b(add|create|schedule|book|remind|todo|task|appointment|meeting|event|habit|routine|grocery|list|update|change|reschedule|move|edit|rename|delete|remove|cancel|clear|complete|mark)\\b/.test(text);
+}
+
 export async function POST(req: Request) {
   // Get authenticated user (for user-specific chat history)
   const user = await getAuthUser(req);
@@ -1020,10 +1025,11 @@ FULFILLED_INTENTS: None yet
     // Add the current message
     chatMessages.push({ role: "user", content: message });
 
+    const temperature = shouldUseLowTemperature(message) ? 0.3 : 0.9;
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: chatMessages,
-      temperature: 0.9, // Higher temperature for natural, friendly conversations
+      temperature,
     });
 
     const content = response.choices[0].message.content || "";
