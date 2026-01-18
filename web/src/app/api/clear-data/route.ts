@@ -49,11 +49,16 @@ export async function POST(req: Request) {
     }
     
     if (dataTypes.includes('groceries')) {
-      const result = await query(
-        'DELETE FROM todos WHERE user_id = $1 AND category = $2',
-        [user.userId, 'grocery']
-      );
-      deletedCounts.groceries = result.rowCount || 0;
+      try {
+        const result = await query(
+          'DELETE FROM groceries WHERE user_id = $1',
+          [user.userId]
+        );
+        deletedCounts.groceries = result.rowCount || 0;
+      } catch (error) {
+        console.error('❌ Failed to clear groceries:', error);
+        deletedCounts.groceries = 0;
+      }
     }
     
     if (dataTypes.includes('appointments')) {

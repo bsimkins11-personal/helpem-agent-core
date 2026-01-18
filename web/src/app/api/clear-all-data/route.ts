@@ -40,6 +40,17 @@ export async function DELETE(req: Request) {
       'DELETE FROM appointments WHERE user_id = $1',
       [user.userId]
     );
+
+    let deletedGroceriesCount = 0;
+    try {
+      const deletedGroceries = await query(
+        'DELETE FROM groceries WHERE user_id = $1',
+        [user.userId]
+      );
+      deletedGroceriesCount = deletedGroceries.rowCount || 0;
+    } catch (error) {
+      console.error('❌ Failed to clear groceries:', error);
+    }
     
     const deletedHabits = await query(
       'DELETE FROM habits WHERE user_id = $1',
@@ -64,6 +75,7 @@ export async function DELETE(req: Request) {
       userInputs: deletedInputs.rowCount,
       userInstructions: deletedInstructions.rowCount,
       chatMessages: 0,
+      groceries: deletedGroceriesCount,
     };
     
     console.log(`✅ Cleared data for user ${user.userId}:`);

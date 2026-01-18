@@ -47,11 +47,15 @@ export async function POST(request: NextRequest) {
       .trim();
 
     // Get credentials from environment
-    const credentialsJson = process.env.GOOGLE_SHEETS_CREDENTIALS;
+    const credentialsJson =
+      process.env.GOOGLE_SHEETS_CREDENTIALS || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
     const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 
     if (!credentialsJson || !spreadsheetId) {
-      console.error("Google Sheets credentials not configured");
+      console.error("Google Sheets credentials not configured", {
+        hasCredentials: !!credentialsJson,
+        hasSheetId: !!spreadsheetId,
+      });
       return NextResponse.json(
         { error: "Feedback system not configured. Please email support@helpem.ai" },
         { status: 500 }

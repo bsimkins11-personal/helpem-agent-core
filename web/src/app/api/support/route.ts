@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rateLimiter";
 
 function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY_SUPPORT;
+  const apiKey = process.env.OPENAI_API_KEY_SUPPORT || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY_SUPPORT is not configured");
   }
