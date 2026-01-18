@@ -102,6 +102,11 @@ export default function AppPage() {
   console.log('🔍 ========================================');
   console.log('🔍 DATE FILTERING');
   console.log('🔍 ========================================');
+  console.log('📅 selectedDate (raw):', selectedDate);
+  console.log('📅 selectedDate ISO:', selectedDate.toISOString());
+  console.log('📅 selectedDate local:', selectedDate.toLocaleString());
+  console.log('📅 viewDate ISO:', viewDate.toISOString());
+  console.log('📅 viewDate local:', viewDate.toLocaleString());
   console.log('📅 Date range for filtering:');
   console.log('   Start:', rangeStart.toISOString());
   console.log('   End:', rangeEnd.toISOString());
