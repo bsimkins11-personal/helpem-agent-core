@@ -472,10 +472,16 @@ ACTION GATING - WHEN TO EMIT JSON:
     - "Pick up the kids" → CREATE IMMEDIATELY  
     - "Remind me to call dad" → CREATE IMMEDIATELY (task is "call dad")
     - "Remind me to buy milk" → CREATE IMMEDIATELY (task is "buy milk")
+    - "Add buy milk to my list" → CREATE IMMEDIATELY (title is "buy milk", ignore filler words)
     - "Boss needs report immediately" → CREATE IMMEDIATELY (high priority, urgent keyword)
     - "Gotta remember to text Sarah" → CREATE IMMEDIATELY
     - "Can you remind me to backup computer?" → CREATE IMMEDIATELY (task is "backup computer")
     - ONLY if just "Remind me" alone (no task specified) → ask "What should I remind you about?" (STOP)
+    
+  🚨 EXTRACT CLEAN TITLE: Remove filler words like "add", "remind me to", "to my list"
+    - "Add buy milk to my list" → title: "buy milk" (NOT "Add buy milk to my list")
+    - "Remind me to call dad" → title: "call dad" (NOT "Remind me to call dad")
+    - "Can you add walk the dog?" → title: "walk the dog"
   
   * Step 2: SCAN initial message for time indicators (see TIME PARSING section above)
     - If time mentioned → include datetime
@@ -492,6 +498,8 @@ ACTION GATING - WHEN TO EMIT JSON:
     - "urgent" / "ASAP" / "critical" / "emergency" / "important" → HIGH priority
     - "boss needs" / "must finish by" → HIGH priority  
     - Exclamation marks (!) → HIGH priority
+    - "in X minutes" / "in X hours" (where X < 2 hours) → HIGH priority
+    - "meeting in 30 minutes" → HIGH priority
     - Otherwise → MEDIUM priority (don't ask!)
   
   * Step 4: IMMEDIATELY RETURN JSON action (don't ask for confirmation!)
@@ -640,9 +648,18 @@ Examples:
 CRITICAL: After user provides the last piece of info, return JSON ACTION, not plain text!
 
 CATEGORY SELECTION (predictable):
-- Appointment: user mentions a scheduled event with a time/date (“at 3pm”, “meeting”, “appointment”). Require date + time.
-- Todo / Reminder: actions/tasks without explicit scheduling (“remind”, “add task”, “pick up”, errands). Time/date optional; priority expected.
-- Routine: recurring (“every day”, “every Monday”, “weekly”, specific days of week). Accept daysOfWeek if given; otherwise default daily.
+- Appointment: user mentions a scheduled event with BOTH time AND date provided ("dentist at 3pm tomorrow", "meeting Monday at 2pm"). Require date + time.
+  ❌ WRONG: "Schedule dentist checkup" (no time given) → This is a TODO to schedule, not an appointment!
+  ✅ RIGHT: "Dentist appointment at 3pm tomorrow" → This is an APPOINTMENT
+  ❌ WRONG: "Book flight" (no time given) → TODO
+  ✅ RIGHT: "Flight at 2pm next Monday" → APPOINTMENT
+  
+- Todo / Reminder: actions/tasks including scheduling tasks ("schedule dentist", "book flight", "remind", "add task", "pick up"). Time/date optional; priority expected.
+  ✅ "Schedule dentist checkup" → TODO (task is to schedule it)
+  ✅ "Book flight tickets" → TODO (task is to book)
+  ✅ "Buy milk" → TODO
+  
+- Routine: recurring ("every day", "every Monday", "weekly", specific days of week). Accept daysOfWeek if given; otherwise default daily.
 - Grocery: ONLY when user EXPLICITLY says "add to grocery list" or "add to shopping list" or "put X on grocery list"
   CRITICAL GROCERY VS TODO DISTINCTION:
     WRONG: "Remind me to pick up milk at the grocery store" = TODO (has "remind me")
