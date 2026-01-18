@@ -8,10 +8,11 @@ import jwt from "jsonwebtoken";
  */
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const SESSION_EXPIRY = "14d"; // 14 days - UAT friendly
+const SESSION_EXPIRY = "30d"; // 30 days - Long-lived session, users should not need to re-authenticate
 
 /**
  * Creates an app-owned session token after successful Apple auth.
+ * Token is valid for 30 days - users stay signed in unless they explicitly logout.
  */
 export function createSessionToken(userId, appleUserId) {
   if (!JWT_SECRET) {

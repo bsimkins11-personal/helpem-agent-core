@@ -44,13 +44,19 @@ final class AuthManager: NSObject, ObservableObject {
         
         isAuthenticated = true
         
-        // Verify Apple credential state if available
-        if let appleUserId = KeychainHelper.shared.appleUserId {
-            checkAppleCredentialState(userId: appleUserId)
-        }
+        // ⚠️ DISABLED: Apple credential check can cause unnecessary logouts
+        // Session tokens are long-lived (30 days) and sufficient for authentication
+        // Only require re-login if session token actually expires
+        print("✅ Session restored from keychain - user is authenticated")
+        
+        // Don't check Apple credential state on every launch
+        // This can cause false positives and unnecessary logouts
+        // Users will only need to re-auth if session token truly expires (30 days)
     }
     
     /// Verify Apple credential hasn't been revoked
+    /// ⚠️ NOTE: This check can cause false positives and is NOT called on app launch
+    /// Only use this for explicit security checks, not routine authentication
     private func checkAppleCredentialState(userId: String) {
         let provider = ASAuthorizationAppleIDProvider()
         provider.getCredentialState(forUserID: userId) { [weak self] state, error in
@@ -58,18 +64,23 @@ final class AuthManager: NSObject, ObservableObject {
                 guard let self = self else { return }
                 
                 if let error = error {
-                    print("⚠️ Credential check error:", error)
+                    print("⚠️ Credential check error (non-fatal):", error)
+                    // Don't logout on network errors or temporary issues
                     return
                 }
                 
                 switch state {
                 case .authorized:
                     print("✅ Apple credentials still valid")
-                case .revoked, .notFound:
-                    print("❌ Apple credentials revoked")
+                case .revoked:
+                    // Only logout if credentials are explicitly revoked by user
+                    print("❌ Apple credentials explicitly revoked by user")
                     self.logout()
+                case .notFound:
+                    // notFound can be a false positive - don't auto-logout
+                    print("⚠️ Apple credentials not found (may be temporary issue)")
                 case .transferred:
-                    print("⚠️ Apple credentials transferred")
+                    print("ℹ️ Apple credentials transferred to another device")
                 @unknown default:
                     print("⚠️ Unknown credential state")
                 }
