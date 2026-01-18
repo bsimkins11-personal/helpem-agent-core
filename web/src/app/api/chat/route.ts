@@ -860,17 +860,16 @@ export async function POST(req: Request) {
 
   const client = getOpenAIClient();
 
-  // Use client's datetime if provided, otherwise use server time
-  // Prefer ISO format for parsing, fall back to readable format or server time
-  const now = currentDateTimeISO ? new Date(currentDateTimeISO) : 
-              currentDateTime ? new Date(currentDateTime) : new Date();
-  const formattedNow = formatCurrentDateTime(now);
+  // Use client's FORMATTED datetime directly (already in their local timezone)
+  // The client sends a pre-formatted string like "Saturday, January 17th, 2026 at 10:08 PM"
+  // which is in THEIR local timezone - use it as-is!
+  const formattedNow = currentDateTime || formatCurrentDateTime(new Date());
   
   console.log('🕐 TIMEZONE DEBUG:');
+  console.log('   Client sent currentDateTime:', currentDateTime);
   console.log('   Client sent currentDateTimeISO:', currentDateTimeISO);
-  console.log('   Parsed to Date object:', now.toISOString());
-  console.log('   Formatted for AI:', formattedNow);
-  console.log('   AI will see this as "RIGHT NOW"');
+  console.log('   Using for AI (in client timezone):', formattedNow);
+  console.log('   AI will see this as "RIGHT NOW" in user local time');
 
   // Format appointments with readable dates for the AI
   const formattedAppointments = (userData.appointments || []).map((apt: { title: string; datetime: string | Date }) => ({
