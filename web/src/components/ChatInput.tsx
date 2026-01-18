@@ -603,13 +603,17 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         setSelectedPriority(data.priority || "medium");
 
       } else if (data.action === "update_priority") {
+        // Fuzzy match: find todo by partial title match
+        const searchTitle = data.todoTitle?.toLowerCase() || "";
         const todoToUpdate = todos.find(t => 
-          t.title.toLowerCase() === data.todoTitle?.toLowerCase()
+          t.title.toLowerCase().includes(searchTitle) || 
+          searchTitle.includes(t.title.toLowerCase())
         );
         
         if (todoToUpdate) {
+          console.log(`🎯 Updating todo priority: "${todoToUpdate.title}" → ${data.newPriority}`);
           updateTodoPriority(todoToUpdate.id, data.newPriority);
-          const responseText = `Updated "${data.todoTitle}" to ${data.newPriority} priority.`;
+          const responseText = data.message || `Updated "${todoToUpdate.title}" to ${data.newPriority} priority.`;
           addMessage({
             id: uuidv4(),
             role: "assistant",
@@ -622,6 +626,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             });
           }
         } else {
+          console.warn(`❌ Could not find todo matching: "${data.todoTitle}"`);
+          console.log(`Available todos: ${todos.map(t => t.title).join(', ')}`);
           const responseText = `I couldn't find a todo called "${data.todoTitle}".`;
           addMessage({
             id: uuidv4(),
@@ -710,14 +716,22 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           try {
             if (actualType === "todo") {
               // Update TODO using context function
-              const todoUpdates: Partial<Todo> = {};
               
+              // Handle priority separately with dedicated function for consistency
+              if (updates.priority) {
+                console.log(`🎯 Updating todo priority via update action: "${itemToUpdate.title}" → ${updates.priority}`);
+                updateTodoPriority(itemToUpdate.id, updates.priority);
+              }
+              
+              // Handle other updates
+              const todoUpdates: Partial<Todo> = {};
               if (updates.newTitle) todoUpdates.title = updates.newTitle;
-              if (updates.priority) todoUpdates.priority = updates.priority;
               if (updates.dueDate) todoUpdates.dueDate = parseAiDatetime(updates.dueDate);
               if (updates.markComplete) todoUpdates.completedAt = new Date();
               
-              updateTodo(itemToUpdate.id, todoUpdates);
+              if (Object.keys(todoUpdates).length > 0) {
+                updateTodo(itemToUpdate.id, todoUpdates);
+              }
               
             } else if (actualType === "appointment") {
               // Update APPOINTMENT using context function

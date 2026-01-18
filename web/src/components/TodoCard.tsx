@@ -71,15 +71,18 @@ export function TodoCard({ todo }: TodoCardProps) {
   }, [todo.reminderTime]);
 
   const handlePriorityChange = useCallback((priority: Priority) => {
+    console.log(`📝 TodoCard: Changing priority for "${todo.title}" from ${todo.priority} to ${priority}`);
     updateTodoPriority(todo.id, priority);
     setShowPriorityPicker(false);
-  }, [todo.id, updateTodoPriority]);
+  }, [todo.id, todo.title, todo.priority, updateTodoPriority]);
 
-  const togglePriorityPicker = useCallback(() => {
+  const togglePriorityPicker = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!isCompleted) {
+      console.log(`🎯 TodoCard: Toggling priority picker for "${todo.title}", current: ${showPriorityPicker}`);
       setShowPriorityPicker(prev => !prev);
     }
-  }, [isCompleted]);
+  }, [isCompleted, todo.title, showPriorityPicker]);
 
   return (
     <div
