@@ -56,6 +56,20 @@ function setDefaultTime(date: Date, hour = 9, minute = 0) {
   return d;
 }
 
+// Parse AI-provided datetime strings as local time when they end with "Z".
+// The model often returns "Z" even though the time is intended to be local.
+function parseAiDatetime(value: string): Date {
+  const raw = value.trim();
+  if (/Z$/i.test(raw) && !/[+-]\d{2}:\d{2}$/.test(raw)) {
+    const localCandidate = raw.replace(/Z$/i, "");
+    const localDate = new Date(localCandidate);
+    if (!isNaN(localDate.getTime())) {
+      return localDate;
+    }
+  }
+  return new Date(raw);
+}
+
 // Detect iOS native environment - single source of truth
 function isIOSNativeEnvironment(): boolean {
   if (typeof window === "undefined") return false;
@@ -319,7 +333,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
         if (internalType === "todo") {
           const hasDate = !!data.datetime;
-          const rawDate = hasDate ? new Date(data.datetime) : null;
+          const rawDate = hasDate ? parseAiDatetime(data.datetime) : null;
           const hasExplicitTime = hasDate && rawDate && !isMidnight(rawDate);
           const baseDate = hasDate && rawDate ? rawDate : null;
           const reminderDate: Date | undefined = hasExplicitTime ? baseDate! : undefined;
@@ -427,7 +441,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           // Parse datetime with fallback logic
           let datetime: Date;
           if (data.datetime) {
-            datetime = new Date(data.datetime);
+            datetime = parseAiDatetime(data.datetime);
             // Check if datetime is valid
             if (isNaN(datetime.getTime())) {
               console.error("❌ Invalid datetime from AI:", data.datetime);
@@ -698,7 +712,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               
               if (updates.newTitle) todoUpdates.title = updates.newTitle;
               if (updates.priority) todoUpdates.priority = updates.priority;
-              if (updates.dueDate) todoUpdates.dueDate = new Date(updates.dueDate);
+              if (updates.dueDate) todoUpdates.dueDate = parseAiDatetime(updates.dueDate);
               if (updates.markComplete) todoUpdates.completedAt = new Date();
               
               updateTodo(itemToUpdate.id, todoUpdates);
@@ -708,7 +722,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               const appointmentUpdates: Partial<Appointment> = {};
               
               if (updates.newTitle) appointmentUpdates.title = updates.newTitle;
-              if (updates.datetime) appointmentUpdates.datetime = new Date(updates.datetime);
+              if (updates.datetime) appointmentUpdates.datetime = parseAiDatetime(updates.datetime);
               
               updateAppointment(itemToUpdate.id, appointmentUpdates);
               
@@ -1143,13 +1157,13 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
     switch (pendingAction.type) {
       case "todo":
-        addTodo({ id, title: pendingAction.title, priority: selectedPriority, dueDate: pendingAction.datetime ? new Date(pendingAction.datetime) : undefined, createdAt: now });
+        addTodo({ id, title: pendingAction.title, priority: selectedPriority, dueDate: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : undefined, createdAt: now });
         break;
       case "habit":
         addHabit({ id, title: pendingAction.title, frequency: pendingAction.frequency || "daily", createdAt: now, completions: [] });
         break;
       case "appointment":
-        addAppointment({ id, title: pendingAction.title, datetime: pendingAction.datetime ? new Date(pendingAction.datetime) : now, createdAt: now });
+        addAppointment({ id, title: pendingAction.title, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, createdAt: now });
         break;
     }
 

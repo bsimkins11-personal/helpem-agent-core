@@ -642,7 +642,7 @@ JSON for adding items:
   "type": "todo" | "routine" | "appointment",
   "title": "string",
   "priority": "low" | "medium" | "high" (for todos),
-  "datetime": "ISO string" (for appointments),
+  "datetime": "ISO string in user's local time, NO timezone or Z (e.g., 2026-01-19T10:00:00)",
   "frequency": "daily" | "weekly" (for routines),
   "daysOfWeek": ["monday","wednesday"] (optional for routines),
   "message": "REQUIRED - verbal confirmation to speak to user (e.g., 'Got it. I'll remind you to pick up eggs at Publix tomorrow before noon.')"
@@ -657,12 +657,12 @@ JSON for updating items:
     // For TODOS:
     "newTitle": "string (optional)",
     "priority": "low" | "medium" | "high" (optional)",
-    "dueDate": "ISO string (optional)",
+    "dueDate": "ISO string in user's local time, NO timezone or Z (optional)",
     "markComplete": true (optional - marks todo as done),
     
     // For APPOINTMENTS:
     "newTitle": "string (optional)",
-    "datetime": "ISO string (optional - to reschedule)",
+    "datetime": "ISO string in user's local time, NO timezone or Z (optional - to reschedule)",
     
     // For HABITS/ROUTINES:
     "newTitle": "string (optional)",
