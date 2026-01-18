@@ -115,9 +115,14 @@ export function LifeProvider({ children }: LifeProviderProps) {
         }
 
         // Load appointments from database
+        console.log('🔄 Fetching appointments from /api/appointments...');
         const apptsRes = await fetch('/api/appointments');
+        console.log('📡 Appointments API response status:', apptsRes.status, apptsRes.statusText);
+        
         if (apptsRes.ok) {
           const apptsData = await apptsRes.json();
+          console.log('📡 Appointments API response data:', apptsData);
+          
           if (apptsData.appointments && apptsData.appointments.length > 0) {
             const dbAppointments: Appointment[] = apptsData.appointments.map((a: any) => ({
               id: a.id,
@@ -127,9 +132,14 @@ export function LifeProvider({ children }: LifeProviderProps) {
             }));
             setAppointments(dbAppointments);
             console.log(`✅ Loaded ${dbAppointments.length} appointments from database`);
+            dbAppointments.forEach((apt, idx) => {
+              console.log(`   [${idx}] ${apt.title} at ${new Date(apt.datetime).toISOString()}`);
+            });
           } else {
             console.log('✅ No appointments in database - starting fresh with empty state');
           }
+        } else {
+          console.error('❌ Failed to load appointments, status:', apptsRes.status);
         }
 
         setDataLoaded(true);
@@ -232,7 +242,21 @@ export function LifeProvider({ children }: LifeProviderProps) {
   }, []);
 
   const addAppointment = useCallback((appt: Appointment) => {
-    setAppointments(prev => [...prev, appt]);
+    console.log('📅 LifeStore: addAppointment called with:', {
+      id: appt.id,
+      title: appt.title,
+      datetime: appt.datetime,
+      datetimeISO: new Date(appt.datetime).toISOString(),
+      isValidDate: !isNaN(new Date(appt.datetime).getTime()),
+    });
+    
+    setAppointments(prev => {
+      console.log('📅 LifeStore: Previous appointments count:', prev.length);
+      const newAppointments = [...prev, appt];
+      console.log('📅 LifeStore: New appointments count:', newAppointments.length);
+      console.log('📅 LifeStore: New appointment added:', appt.title);
+      return newAppointments;
+    });
   }, []);
 
   const deleteAppointment = useCallback((id: string) => {

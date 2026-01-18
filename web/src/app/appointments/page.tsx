@@ -6,6 +6,15 @@ import { useLife } from '@/state/LifeStore';
 
 export default function AppointmentsPage() {
   const { appointments } = useLife();
+  
+  console.log('📅 AppointmentsPage: Rendering with', appointments.length, 'appointments');
+  appointments.forEach((apt, index) => {
+    console.log(`   [${index}]`, {
+      id: apt.id,
+      title: apt.title,
+      datetime: new Date(apt.datetime).toISOString(),
+    });
+  });
 
   const groupedAppointments = useMemo(() => {
     const groups: Record<string, typeof appointments> = {};

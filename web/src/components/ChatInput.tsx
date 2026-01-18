@@ -426,6 +426,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           }
           
           console.log("📅 Creating appointment:", {
+            id,
             title: data.title,
             datetime: datetime.toISOString(),
             originalDatetime: data.datetime,
@@ -436,6 +437,13 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           const responseText = data.message || `Added appointment "${data.title}" for ${formatDateTimeForSpeech(datetime)}.`;
           
           // Always add to local state first (works even offline)
+          console.log("📅 ChatInput: Calling addAppointment with:", {
+            id,
+            title: data.title,
+            datetime: datetime.toISOString(),
+            createdAt: now.toISOString(),
+          });
+          
           addAppointment({
             id,
             title: data.title,
@@ -443,7 +451,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             createdAt: now,
           });
           
-          console.log("✅ Appointment added to local state");
+          console.log("✅ ChatInput: addAppointment call completed");
           
           // Try to save to database (non-blocking)
           try {

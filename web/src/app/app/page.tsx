@@ -26,6 +26,8 @@ export default function AppPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
   
+  console.log('📅 AppPage: Rendering with', appointments.length, 'appointments');
+  
   // Expand/collapse states for each module
   const [expandedModules, setExpandedModules] = useState({
     today: true,
