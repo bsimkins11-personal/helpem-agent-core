@@ -264,20 +264,27 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       });
       console.log(`✅ Feedback with correction recorded for message ${messageId}`);
 
-      // Thank the user
+      // Clear pending state first
+      setPendingFeedback(null);
+      setCorrectionInput("");
+
+      // AI acknowledges and tries again
       addMessage({
         id: uuidv4(),
         role: "assistant",
-        content: "Thank you for helping me improve! I'll learn from this feedback.",
+        content: "I understand. Let me try again with your correction...",
       });
 
-      // Clear pending state
-      setPendingFeedback(null);
-      setCorrectionInput("");
+      // Attempt to apply the correction by re-processing with the correction context
+      const retryPrompt = `${message.userMessage}\n\n[Previous attempt was wrong. User correction: "${correctionInput}"]`;
+      
+      // Send to AI to try again
+      await sendMessageWithText(retryPrompt, false);
+
     } catch (error) {
       console.error("❌ Failed to send feedback:", error);
     }
-  }, [pendingFeedback, correctionInput, messages, addMessage]);
+  }, [pendingFeedback, correctionInput, messages, addMessage, sendMessageWithText]);
 
   const clearChat = useCallback(() => {
     setMessages([]);

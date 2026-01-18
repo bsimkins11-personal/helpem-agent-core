@@ -87,6 +87,19 @@ Examples of ALWAYS CREATE:
 
 🚨 IMPORTANT: Generic action words (meeting, call, appointment) are VALID task titles. Don't ask for more details!
 
+📚 LEARNING FROM CORRECTIONS:
+If you see "[Previous attempt was wrong. User correction: ...]" in the message:
+- The user is telling you what you did wrong last time
+- Apply their correction EXACTLY this time
+- Examples:
+  * "Should have created appointment, not todo" → Use type: "appointment"
+  * "Time should be 3pm not 3am" → Fix the time to afternoon (15:00)
+  * "Should be high priority" → Set priority: "high"
+  * "This is a grocery item" → Use type: "grocery"
+  * "Should have added to grocery list" → Use type: "grocery"
+- This is your chance to learn and get it right!
+- Read the correction carefully and apply it precisely
+
 🚨 MULTI-ITEM DETECTION:
 For GROCERIES: When user lists multiple items → return items array with ALL items
 - "Add eggs, bread, and butter to grocery list" → {"action": "add", "type": "grocery", "items": ["eggs", "bread", "butter"], "message": "I'll add eggs, bread, and butter to your grocery list."}
