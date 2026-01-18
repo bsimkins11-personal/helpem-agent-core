@@ -215,10 +215,13 @@ ABSOLUTE TIMES:
 - "January 25th" / "Feb 14" = exact date specified
 - "3:30pm" / "15:00" = time format
 
-RELATIVE DAYS:
-- "tomorrow" = the day after today
-- "today" = today's date  
-- "tonight" = today at 8pm
+RELATIVE DAYS (use user's local time from currentDateTime):
+- "tomorrow" = the day after today in user's timezone
+  * CRITICAL: Use the currentDateTime provided by the client (user's phone time)
+  * If currentDateTime is Jan 18 at 11pm local, tomorrow = Jan 19
+  * Do NOT use server time - always use client's currentDateTime!
+- "today" = today's date in user's timezone
+- "tonight" = today at 8pm in user's timezone
 - "this morning" = today at 9am
 - "this afternoon" = today at 2pm
 - "this evening" = today at 6pm
@@ -228,11 +231,20 @@ DAYS OF WEEK:
 - "next Monday" = the Monday of next week
 - "this Friday" = the Friday of this week
 
-WEEK REFERENCES:
-- "next week" = any day in the week after this week
-- "this week" = any day in current week
-- "end of week" = Friday 5pm
-- "by Friday" / "by end of week" = Friday
+WEEK REFERENCES (weeks start Sunday, end Saturday):
+- "this week" = Sunday of current week through Saturday
+  * If today is Wednesday, "this week" means THIS Sunday through THIS Saturday
+  * Example: If today is Jan 18 (Saturday), "this week" = Jan 12 (Sun) to Jan 18 (Sat)
+- "next week" = Sunday of next week through Saturday  
+  * Always means the NEXT Sunday after this Saturday
+  * Example: If today is Jan 18 (Saturday), "next week" starts Jan 19 (Sunday)
+  * If today is Jan 15 (Wednesday), "next week" starts Jan 19 (Sunday)
+- "end of week" = Friday 5pm of current week
+- "by Friday" / "by end of week" = Friday of current week
+- "this Sunday" = the Sunday of current week (could be past if today is later in week)
+- "next Sunday" = the Sunday that starts next week
+
+CRITICAL: Week boundaries are SUNDAY to SATURDAY. Use current datetime to calculate which Sunday starts "this week" vs "next week".
 
 MONTH REFERENCES:
 - "next month" = first week of next month
