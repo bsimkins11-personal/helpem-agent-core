@@ -226,10 +226,28 @@ RELATIVE DAYS (use user's local time from currentDateTime):
 - "this afternoon" = today at 2pm
 - "this evening" = today at 6pm
 
-DAYS OF WEEK:
-- "Monday" / "Tuesday" / "Wednesday" etc = NEXT occurrence of that day
-- "next Monday" = the Monday of next week
-- "this Friday" = the Friday of this week
+DAYS OF WEEK (always forward-looking, never past):
+- "Monday" / "Tuesday" / "Wednesday" etc (bare) = NEXT occurrence (0-6 days from today)
+  * If today is Saturday and user says "Tuesday", that's 3 days away (this upcoming Tuesday)
+  * If today is Tuesday and user says "Tuesday", that's 7 days away (next Tuesday)
+- "this Monday" / "this Tuesday" etc = SAME as bare day name (next occurrence, 0-6 days forward)
+  * "this Tuesday" = the upcoming Tuesday within the next 7 days
+  * Never refers to a past day - always forward-looking
+- "next Monday" / "next Tuesday" etc = The occurrence AFTER "this Monday" (7-13 days from today)
+  * If today is Saturday Jan 18 and user says "next Tuesday", that's Tuesday Jan 28 (10 days away)
+  * "next Tuesday" = "this Tuesday" + 7 days
+
+CRITICAL ALGORITHM:
+1. Find next occurrence of that day of week (0-6 days forward)
+2. If user said "this [day]" → use that next occurrence
+3. If user said "next [day]" → add 7 days to that occurrence
+
+EXAMPLES (if today is Saturday Jan 18):
+- "Tuesday" → Jan 21 (3 days, upcoming)
+- "this Tuesday" → Jan 21 (same, upcoming)  
+- "next Tuesday" → Jan 28 (10 days, the one after)
+- "Monday" → Jan 20 (2 days, tomorrow)
+- "next Monday" → Jan 27 (9 days)
 
 WEEK REFERENCES (weeks start Sunday, end Saturday):
 - "this week" = Sunday of current week through Saturday
