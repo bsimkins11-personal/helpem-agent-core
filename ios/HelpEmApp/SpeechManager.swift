@@ -21,9 +21,6 @@ final class SpeechManager {
     // Cache authorization status for efficiency
     private(set) var isAuthorized = false
     
-    // App lifecycle observer
-    private var backgroundObserver: NSObjectProtocol?
-    
     init() {
         // Try device locale first, fall back to en-US
         if let deviceRecognizer = SFSpeechRecognizer(locale: Locale.current) {
@@ -47,15 +44,10 @@ final class SpeechManager {
         }
         
         checkAuthorization()
-        setupBackgroundObserver()
     }
     
     deinit {
-        // Clean up observer
-        if let observer = backgroundObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
-        // Force cleanup
+        // Force cleanup on deallocation
         forceCleanup()
     }
     
@@ -285,19 +277,7 @@ final class SpeechManager {
         }
     }
     
-    // MARK: - Background Handling
-    
-    /// Setup observer to cleanup when app goes to background
-    private func setupBackgroundObserver() {
-        backgroundObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            print("📱 App entering background - forcing microphone cleanup")
-            self?.forceCleanup()
-        }
-    }
+    // MARK: - Cleanup
     
     /// Force immediate cleanup of audio resources
     func forceCleanup() {
