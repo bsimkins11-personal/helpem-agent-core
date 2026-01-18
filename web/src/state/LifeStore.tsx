@@ -328,38 +328,6 @@ export function LifeProvider({ children }: LifeProviderProps) {
     });
   }, [addItemsToGroceryRoutine, sendFeedback]);
 
-  const moveTodoToAppointment = useCallback((id: string) => {
-    const todo = todos.find(t => t.id === id);
-    if (!todo) return;
-
-    const now = new Date();
-    const fallback = new Date(now);
-    fallback.setHours(fallback.getHours() + 1, 0, 0, 0);
-
-    const datetime = todo.dueDate || todo.reminderTime || fallback;
-    const appointmentId = uuidv4();
-
-    addAppointment({
-      id: appointmentId,
-      title: todo.title,
-      datetime,
-      createdAt: now,
-    });
-
-    fetch("/api/appointments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: todo.title,
-        datetime: datetime.toISOString(),
-      }),
-    }).catch((error) => {
-      console.error("❌ Error creating appointment from todo:", error);
-    });
-
-    deleteTodo(id);
-  }, [todos, addAppointment, deleteTodo]);
-
   const addHabit = useCallback((habit: Habit) => {
     setHabits(prev => [...prev, habit]);
   }, []);
@@ -462,6 +430,38 @@ export function LifeProvider({ children }: LifeProviderProps) {
       console.log('⏰ 1 second later - checking if state persisted...');
     }, 1000);
   }, []);
+
+  const moveTodoToAppointment = useCallback((id: string) => {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+
+    const now = new Date();
+    const fallback = new Date(now);
+    fallback.setHours(fallback.getHours() + 1, 0, 0, 0);
+
+    const datetime = todo.dueDate || todo.reminderTime || fallback;
+    const appointmentId = uuidv4();
+
+    addAppointment({
+      id: appointmentId,
+      title: todo.title,
+      datetime,
+      createdAt: now,
+    });
+
+    fetch("/api/appointments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: todo.title,
+        datetime: datetime.toISOString(),
+      }),
+    }).catch((error) => {
+      console.error("❌ Error creating appointment from todo:", error);
+    });
+
+    deleteTodo(id);
+  }, [todos, addAppointment, deleteTodo]);
 
   const updateAppointment = useCallback(async (id: string, updates: Partial<Appointment>) => {
     // Optimistic update
