@@ -4,11 +4,13 @@
 import SwiftUI
 import WebKit
 import UIKit
+import AVFoundation
 
 struct RootView: View {
     
     @StateObject private var authManager = AuthManager.shared
     @State private var webViewHandler: WebViewHandler?
+    @Environment(\.scenePhase) private var scenePhase
     
     private func openFeedbackURL() {
         // Trigger feedback modal in WebView
@@ -305,5 +307,21 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .background {
+                print("📱 App entering background - force audio cleanup")
+                forceCleanupAllAudio()
+            }
+        }
+    }
+    
+    private func forceCleanupAllAudio() {
+        // Stop all audio sessions when app backgrounds
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            print("✅ Audio session deactivated on background")
+        } catch {
+            print("⚠️ Error deactivating audio session:", error)
+        }
     }
 }
