@@ -178,7 +178,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
   const clearChat = useCallback(() => {
     setMessages([]);
-    sessionStorage.removeItem(CHAT_STORAGE_KEY);
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
     fulfilledIntentsRef.current.clear();
     console.log("🗑️ Chat history cleared");
   }, []);
