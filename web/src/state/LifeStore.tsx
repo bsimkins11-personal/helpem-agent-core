@@ -17,13 +17,16 @@ export type LifeContextType = {
   routines: Routine[];
   addTodo: (todo: Todo) => void;
   completeTodo: (id: string) => void;
+  deleteTodo: (id: string) => void;
   updateTodoPriority: (id: string, priority: Priority) => void;
   moveTodoToGroceries: (id: string) => void;
   addHabit: (habit: Habit) => void;
   logHabit: (id: string) => void;
+  deleteHabit: (id: string) => void;
   addAppointment: (appt: Appointment) => void;
   deleteAppointment: (id: string) => void;
   addRoutine: (routine: Routine) => void;
+  deleteRoutine: (id: string) => void;
   addRoutineItem: (routineId: string, item: RoutineItem) => void;
   completeRoutineItem: (routineId: string, itemId: string) => void;
   clearCompletedRoutineItems: (routineId: string) => void;
@@ -147,6 +150,10 @@ export function LifeProvider({ children }: LifeProviderProps) {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completedAt: new Date() } : t));
   }, []);
 
+  const deleteTodo = useCallback((id: string) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   const updateTodoPriority = useCallback((id: string, priority: Priority) => {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, priority } : t));
   }, []);
@@ -220,6 +227,10 @@ export function LifeProvider({ children }: LifeProviderProps) {
     ));
   }, []);
 
+  const deleteHabit = useCallback((id: string) => {
+    setHabits(prev => prev.filter(h => h.id !== id));
+  }, []);
+
   const addAppointment = useCallback((appt: Appointment) => {
     setAppointments(prev => [...prev, appt]);
   }, []);
@@ -230,6 +241,10 @@ export function LifeProvider({ children }: LifeProviderProps) {
 
   const addRoutine = useCallback((routine: Routine) => {
     setRoutines(prev => [...prev, routine]);
+  }, []);
+
+  const deleteRoutine = useCallback((id: string) => {
+    setRoutines(prev => prev.filter(r => r.id !== id));
   }, []);
 
   const addRoutineItem = useCallback((routineId: string, item: RoutineItem) => {
@@ -319,19 +334,22 @@ export function LifeProvider({ children }: LifeProviderProps) {
     routines,
     addTodo,
     completeTodo,
+    deleteTodo,
     updateTodoPriority,
     moveTodoToGroceries,
     addHabit,
     logHabit,
+    deleteHabit,
     addAppointment,
     deleteAppointment,
     addRoutine,
+    deleteRoutine,
     addRoutineItem,
     completeRoutineItem,
     clearCompletedRoutineItems,
     moveRoutineItemToTodos,
     clearAllData,
-  }), [todos, habits, appointments, routines, addTodo, completeTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, addAppointment, deleteAppointment, addRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, clearAllData]);
+  }), [todos, habits, appointments, routines, addTodo, completeTodo, deleteTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, deleteHabit, addAppointment, deleteAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, clearAllData]);
 
   return (
     <LifeContext.Provider value={value}>

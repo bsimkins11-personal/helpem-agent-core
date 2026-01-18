@@ -70,6 +70,17 @@ When user lists multiple items with "and" or commas → CREATE for FIRST item, m
 - "Add workout and meal prep" → {"action": "add", "type": "todo", "title": "Workout", "message": "Got it. I'll add both workout and meal prep."}
 - Create one JSON action but acknowledge all items in the message field
 
+🚨 DELETION DETECTION:
+When user wants to delete/remove/cancel something → RETURN DELETE ACTION
+- Deletion keywords: delete, remove, cancel, get rid of, clear, erase
+- Examples:
+  * "Delete buy milk" → {"action": "delete", "title": "buy milk", "type": "todo", "message": "Removed buy milk."}
+  * "Remove my dentist appointment" → {"action": "delete", "title": "dentist", "type": "appointment", "message": "Removed dentist appointment."}
+  * "Cancel the workout routine" → {"action": "delete", "title": "workout", "type": "routine", "message": "Removed workout routine."}
+  * "Get rid of that reminder about mom" → {"action": "delete", "title": "mom", "type": "todo", "message": "Removed reminder about mom."}
+- User will see confirmation dialog before deletion (system handles this)
+- Don't ask "Are you sure?" - just return the delete action
+
 ONLY ask clarification if:
 - Single word: "milk" (unclear if task or grocery)
 - "Remind me" alone with no task OR action
@@ -487,13 +498,22 @@ JSON for changing todo priority:
   "message": "REQUIRED - confirmation like 'I've updated... to [priority] priority.'"
 }
 
-JSON for deleting items:
+JSON for deleting items (use title to find item, confirmation will be shown to user):
 {
   "action": "delete",
-  "id": "item id",
-  "type": "todo" | "appointment" | "routine",
-  "message": "REQUIRED - confirmation like 'I've removed...'"
+  "title": "title of item to delete",
+  "type": "todo" | "appointment" | "routine" | "habit",
+  "message": "REQUIRED - confirmation like 'Removed [title] from your [type]s.'"
 }
+
+CRITICAL DELETION RULES:
+- User will ALWAYS see a confirmation dialog before deletion
+- You don't need to ask "Are you sure?" - the system handles that
+- Just return the delete action when user requests deletion
+- Examples:
+  * "Delete buy milk" → {"action": "delete", "title": "buy milk", "type": "todo", "message": "Removed buy milk from your todos."}
+  * "Remove my dentist appointment" → {"action": "delete", "title": "dentist", "type": "appointment", "message": "Removed dentist appointment."}
+  * "Cancel workout routine" → {"action": "delete", "title": "workout", "type": "routine", "message": "Removed workout routine."}
 
 JSON for updating appointments:
 {

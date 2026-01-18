@@ -143,7 +143,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   // Track fulfilled intents to avoid repetitive suggestions
   const fulfilledIntentsRef = useRef<Set<string>>(new Set());
 
-  const { todos, habits, appointments, addTodo, addHabit, addAppointment, updateTodoPriority } = useLife();
+  const { todos, habits, appointments, addTodo, addHabit, addAppointment, updateTodoPriority, deleteTodo, deleteHabit, deleteAppointment, deleteRoutine } = useLife();
   
   // Native audio hook for iOS app
   const nativeAudio = useNativeAudio();
@@ -468,6 +468,91 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             action: "speak",
             text: responseText,
           });
+        }
+        
+      } else if (data.action === "delete") {
+        // Handle deletion requests with confirmation
+        const itemType = data.type; // "todo", "appointment", "routine", "habit"
+        let itemToDelete: any = null;
+        let itemTitle = "";
+        
+        // Find the item by title (fuzzy match)
+        if (itemType === "todo") {
+          itemToDelete = todos.find(t => 
+            t.title.toLowerCase().includes(data.title?.toLowerCase()) ||
+            data.title?.toLowerCase().includes(t.title.toLowerCase())
+          );
+          itemTitle = itemToDelete?.title;
+        } else if (itemType === "appointment") {
+          itemToDelete = appointments.find(a => 
+            a.title.toLowerCase().includes(data.title?.toLowerCase()) ||
+            data.title?.toLowerCase().includes(a.title.toLowerCase())
+          );
+          itemTitle = itemToDelete?.title;
+        } else if (itemType === "routine" || itemType === "habit") {
+          itemToDelete = habits.find(h => 
+            h.title.toLowerCase().includes(data.title?.toLowerCase()) ||
+            data.title?.toLowerCase().includes(h.title.toLowerCase())
+          );
+          itemTitle = itemToDelete?.title;
+        }
+        
+        if (!itemToDelete) {
+          const responseText = `I couldn't find a ${itemType} called "${data.title}".`;
+          addMessage({
+            id: uuidv4(),
+            role: "assistant",
+            content: responseText,
+          });
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: responseText,
+            });
+          }
+        } else {
+          // Show confirmation dialog
+          const confirmed = confirm(`Are you sure you want to delete "${itemTitle}"?`);
+          
+          if (confirmed) {
+            // Delete the item
+            if (itemType === "todo") {
+              deleteTodo(itemToDelete.id);
+            } else if (itemType === "appointment") {
+              deleteAppointment(itemToDelete.id);
+            } else if (itemType === "routine" || itemType === "habit") {
+              deleteHabit(itemToDelete.id);
+            }
+            
+            const responseText = data.message || `Removed "${itemTitle}" from your ${itemType}s.`;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: responseText,
+            });
+            
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: responseText,
+              });
+            }
+          } else {
+            // User cancelled
+            const responseText = `Okay, I won't delete "${itemTitle}".`;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: responseText,
+            });
+            
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: responseText,
+              });
+            }
+          }
         }
         
       } else {
