@@ -28,26 +28,26 @@ export function AlphaFeedbackBanner() {
 
   return (
     <>
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3 flex-1">
-          <span className="text-xl">⚠️</span>
-          <p className="text-sm font-medium">
-            <span className="font-bold">HelpEm is in alpha.</span> Click to provide feedback and help us improve! You can also access feedback later via the menu.
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-1.5 px-3 flex items-center justify-between shadow-md">
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-base">⚠️</span>
+          <p className="text-xs font-medium">
+            <span className="font-bold">HelpEm is in alpha.</span> Click to provide feedback and help us improve!
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={handleFeedbackClick}
-            className="px-4 py-1.5 bg-white text-purple-600 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors"
+            className="px-3 py-1 bg-white text-purple-600 rounded-lg text-xs font-semibold hover:bg-purple-50 transition-colors"
           >
             Give Feedback
           </button>
           <button
             onClick={handleDismiss}
-            className="p-1 hover:bg-white/20 rounded transition-colors"
+            className="p-0.5 hover:bg-white/20 rounded transition-colors"
             aria-label="Dismiss banner"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

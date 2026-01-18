@@ -82,20 +82,20 @@ export function UsageAlertBanner() {
   const alert = alertStyles[alertLevel];
 
   return (
-    <div className={`${alert.bg} text-white py-3 px-4 flex items-center justify-between shadow-lg`}>
-      <div className="flex items-center gap-3 flex-1">
-        <span className="text-2xl">{alert.icon}</span>
+    <div className={`${alert.bg} text-white py-2 px-3 flex items-center justify-between shadow-lg`}>
+      <div className="flex items-center gap-2 flex-1">
+        <span className="text-lg">{alert.icon}</span>
         <div>
-          <p className="text-sm font-bold">{alert.title}</p>
-          <p className="text-sm">{alert.message}</p>
+          <p className="text-xs font-bold">{alert.title}</p>
+          <p className="text-xs">{alert.message}</p>
         </div>
       </div>
       <button
         onClick={handleDismiss}
-        className="p-1 hover:bg-white/20 rounded transition-colors ml-4 flex-shrink-0"
+        className="p-0.5 hover:bg-white/20 rounded transition-colors ml-3 flex-shrink-0"
         aria-label="Dismiss alert"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
