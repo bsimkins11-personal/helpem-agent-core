@@ -1,4 +1,4 @@
-# HelpEm Monorepo
+# helpem Monorepo
 
 Single monorepo for iOS, web, and backend.
 
@@ -27,7 +27,7 @@ npm start
 ```
 
 ### iOS
-Open `ios/HelpEmApp.xcodeproj` in Xcode.
+Open `ios/helpemApp.xcodeproj` in Xcode.
 
 ## Deployment
 

@@ -21,7 +21,7 @@ struct SignInView: View {
                 Spacer()
 
                 VStack(spacing: 24) {
-                    // HelpEm text logo
+                    // helpem text logo
                     HStack(spacing: 0) {
                         Text("help")
                             .foregroundColor(.white)

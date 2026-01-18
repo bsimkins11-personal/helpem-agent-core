@@ -1,6 +1,6 @@
-# HelpEm iOS Native Shell
+# helpem iOS Native Shell
 
-A thin iOS wrapper around the HelpEm web app for native audio capabilities.
+A thin iOS wrapper around the helpem web app for native audio capabilities.
 
 ## Architecture
 
@@ -39,7 +39,7 @@ A thin iOS wrapper around the HelpEm web app for native audio capabilities.
 2. File → New → Project
 3. Choose "App" under iOS
 4. Settings:
-   - Product Name: `HelpEmApp`
+   - Product Name: `helpemApp`
    - Team: Your development team
    - Organization Identifier: `com.yourcompany`
    - Interface: SwiftUI
@@ -49,7 +49,7 @@ A thin iOS wrapper around the HelpEm web app for native audio capabilities.
 ### 2. Add Source Files
 
 Copy these files into your Xcode project:
-- `HelpEmApp.swift` (replace the generated one)
+- `helpemApp.swift` (replace the generated one)
 - `ContentView.swift` (replace the generated one)
 - `WebViewContainer.swift`
 - `NativeBridge.swift`
@@ -149,7 +149,7 @@ private func sendAudioToBackend(audioData: Data) {
 
 | File | Purpose |
 |------|---------|
-| `HelpEmApp.swift` | App entry point |
+| `helpemApp.swift` | App entry point |
 | `ContentView.swift` | Main view with WebView |
 | `WebViewContainer.swift` | WKWebView setup + bridge coordinator |
 | `NativeBridge.swift` | Message types + injected JavaScript |

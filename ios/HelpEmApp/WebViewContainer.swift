@@ -14,7 +14,7 @@ struct WebViewContainer: UIViewRepresentable {
     
     @ObservedObject var authManager: AuthManager
     @Binding var webViewHandler: RootView.WebViewHandler?
-    private let userAgentSuffix = "HelpEm-iOS"
+    private let userAgentSuffix = "helpem-iOS"
     
     func makeCoordinator() -> Coordinator {
         Coordinator(authManager: authManager)

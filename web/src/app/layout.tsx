@@ -12,7 +12,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'HelpEm - Life Management',
+  title: 'helpem - Life Management',
   description: 'Capture, classify, and conquer your day',
 };
 

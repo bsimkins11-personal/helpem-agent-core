@@ -35,7 +35,7 @@ export function LayoutHeader() {
   // Check if user is in demo mode or iOS app
   useEffect(() => {
     const hasSessionToken = document.cookie.includes("session_token") || !!(window as any).__nativeSessionToken;
-    const fromiOSApp = navigator.userAgent.includes("HelpEm");
+    const fromiOSApp = navigator.userAgent.includes("helpem");
     const isDemoMode = !hasSessionToken && !fromiOSApp;
     setIsDemo(isDemoMode);
     setIsFromiOSApp(fromiOSApp);
@@ -120,7 +120,7 @@ export function LayoutHeader() {
             {/* Logo + Tagline */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center gap-3">
-                <img src="/helpem-logo.png" alt="HelpEm" className="h-24 w-auto" />
+                <img src="/helpem-logo.png" alt="helpem" className="h-24 w-auto" />
                 <p className="text-sm text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>
@@ -190,7 +190,7 @@ export function LayoutHeader() {
             {/* Logo + Tagline */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center gap-2">
-                <img src="/helpem-logo.png" alt="HelpEm" className="h-20 w-auto" />
+                <img src="/helpem-logo.png" alt="helpem" className="h-20 w-auto" />
                 <p className="text-xs text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>

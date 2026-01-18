@@ -11,25 +11,25 @@ export default function LandingPage() {
   const slides = [
     {
       title: "Busy Parent",
-      description: "Juggling kids, work, and life—HelpEm keeps it all organized",
+      description: "Juggling kids, work, and life—helpem keeps it all organized",
       video: "/videos/busy-parent.mp4",
       bgGradient: "from-brandBlue/70 via-brandBlue/50 to-brandGreen/70"
     },
     {
       title: "Entrepreneur", 
-      description: "Managing multiple projects—HelpEm never lets anything slip",
+      description: "Managing multiple projects—helpem never lets anything slip",
       video: "/videos/entrepreneur.mp4",
       bgGradient: "from-purple-600/70 via-brandBlue/50 to-brandGreen/70"
     },
     {
       title: "Student",
-      description: "Balancing classes and deadlines—HelpEm keeps you on track",
+      description: "Balancing classes and deadlines—helpem keeps you on track",
       video: "/videos/student.mp4",
       bgGradient: "from-brandGreen/70 via-brandBlue/50 to-purple-600/70"
     },
     {
       title: "Active Senior",
-      description: "Living life fully—HelpEm helps you never miss a moment",
+      description: "Living life fully—helpem helps you never miss a moment",
       video: "/videos/active-senior.mp4",
       bgGradient: "from-orange-500/70 via-brandBlue/50 to-brandGreen/70"
     }
@@ -39,7 +39,7 @@ export default function LandingPage() {
     {
       icon: "⚡",
       title: "Instant Capture",
-      description: "Just say it. HelpEm captures todos, appointments, and reminders instantly—no typing, no friction."
+      description: "Just say it. helpem captures todos, appointments, and reminders instantly—no typing, no friction."
     },
     {
       icon: "🧠",
@@ -49,34 +49,34 @@ export default function LandingPage() {
     {
       icon: "🗣️",
       title: "Voice-First",
-      description: "Optimized for natural conversation. Talk to HelpEm like you'd talk to a friend."
+      description: "Optimized for natural conversation. Talk to helpem like you'd talk to a friend."
     },
     {
       icon: "🎯",
       title: "Zero Friction",
-      description: "No back-and-forth. HelpEm asks only what's necessary, then gets out of your way."
+      description: "No back-and-forth. helpem asks only what's necessary, then gets out of your way."
     }
   ];
 
   const faqs = [
     {
-      q: "How does HelpEm work?",
-      a: "Simply talk or type to HelpEm. It captures your todos, appointments, routines, and groceries, organizing them automatically. No complex setup—just natural conversation. HelpEm creates tasks immediately with smart defaults, so you can get back to your life."
+      q: "How does helpem work?",
+      a: "Simply talk or type to helpem. It captures your todos, appointments, routines, and groceries, organizing them automatically. No complex setup—just natural conversation. helpem creates tasks immediately with smart defaults, so you can get back to your life."
     },
     {
       q: "Is my data private and secure?",
       a: "Absolutely. Your data is encrypted and stored securely. We never share your information with third parties. Your tasks, appointments, and routines are yours alone."
     },
     {
-      q: "What platforms does HelpEm support?",
-      a: "HelpEm is available now as a web app at helpem.ai. Native iOS app is in active development—request beta access to be first in line. Android and desktop apps are on the roadmap."
+      q: "What platforms does helpem support?",
+      a: "helpem is available now as a web app at helpem.ai. Native iOS app is in active development—request beta access to be first in line. Android and desktop apps are on the roadmap."
     },
     {
       q: "How much does it cost?",
-      a: "HelpEm offers three plans: Free (50 tasks/month, perfect for trying it out), Basic at $4.99/month (500 tasks, unlimited appointments), and Premium at $9.99/month (unlimited everything plus team features). All plans include smart organization and voice input."
+      a: "helpem offers three plans: Free (50 tasks/month, perfect for trying it out), Basic at $4.99/month (500 tasks, unlimited appointments), and Premium at $9.99/month (unlimited everything plus team features). All plans include smart organization and voice input."
     },
     {
-      q: "Can I use HelpEm with my team?",
+      q: "Can I use helpem with my team?",
       a: "Yes! Premium plans include team collaboration for up to 5 people with shared grocery lists and appointments. Perfect for families, roommates, or small teams staying organized together."
     }
   ];
@@ -185,10 +185,10 @@ export default function LandingPage() {
       <section className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-6xl font-bold text-brandText leading-tight mb-6">
-            Life's busy enough.<br />Let HelpEm remember everything.
+            Life's busy enough.<br />Let helpem remember everything.
           </h1>
           <p className="text-lg sm:text-2xl text-brandTextLight leading-relaxed max-w-3xl mx-auto">
-            Just say it. HelpEm captures todos, appointments, routines, and groceries instantly. 
+            Just say it. helpem captures todos, appointments, routines, and groceries instantly. 
             No typing, no friction, no forgetting.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
@@ -196,7 +196,7 @@ export default function LandingPage() {
               href="/app"
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-brandBlue to-brandGreen text-white font-semibold text-lg hover:shadow-2xl transition-all"
             >
-              Try HelpEm Free
+              Try helpem Free
             </Link>
             <a
               href="#how-it-works"
@@ -222,14 +222,14 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-brandText mb-3">Just Say It</h3>
               <p className="text-brandTextLight leading-relaxed">
-                Talk or type to HelpEm like you would to a friend. No special commands or complicated setup.
+                Talk or type to helpem like you would to a friend. No special commands or complicated setup.
               </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brandBlue to-brandGreen flex items-center justify-center text-3xl font-bold text-white mx-auto mb-6">
                 2
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-brandText mb-3">HelpEm Organizes</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-brandText mb-3">helpem Organizes</h3>
               <p className="text-brandTextLight leading-relaxed">
                 Automatically categorizes into todos, appointments, routines, and groceries. Smart defaults, zero friction.
               </p>
@@ -274,7 +274,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-5xl font-bold mb-6">Built by People Who Get It</h2>
           <p className="text-lg sm:text-xl leading-relaxed mb-8 text-white/90">
-            We built HelpEm because we were tired of productivity apps that felt like another job. 
+            We built helpem because we were tired of productivity apps that felt like another job. 
             You shouldn't need a manual to capture a todo. You shouldn't need three taps to add milk to your grocery list.
             Life's busy—you need an assistant that just works.
           </p>
@@ -326,7 +326,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-5xl font-bold text-brandText mb-6">Need Help?</h2>
           <p className="text-lg sm:text-xl text-brandTextLight mb-10">
-            Our AI support agent is here 24/7 to answer questions and help you get the most out of HelpEm.
+            Our AI support agent is here 24/7 to answer questions and help you get the most out of helpem.
           </p>
           <Link
             href="/support"
@@ -417,13 +417,13 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img src="/helpem-logo.png" alt="HelpEm" className="h-10 w-auto" />
+              <img src="/helpem-logo.png" alt="helpem" className="h-10 w-auto" />
               <div>
                 <p className="font-semibold">helpem</p>
                 <p className="text-xs text-white/60">Built for you.</p>
               </div>
             </div>
-            <p className="text-sm text-white/60">© 2026 HelpEm. All rights reserved.</p>
+            <p className="text-sm text-white/60">© 2026 helpem. All rights reserved.</p>
           </div>
         </div>
       </footer>

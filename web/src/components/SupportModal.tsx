@@ -20,7 +20,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const suggestedQuestions = [
-    "How does HelpEm work?",
+    "How does helpem work?",
     "What are the pricing plans?",
     "How do I create a todo or appointment?",
     "What's the difference between Basic and Premium?",
@@ -128,7 +128,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
               💬
             </div>
             <div>
-              <h2 className="text-lg font-bold text-brandText">HelpEm Support</h2>
+              <h2 className="text-lg font-bold text-brandText">helpem Support</h2>
               <p className="text-sm text-brandTextLight">Ask us anything!</p>
             </div>
           </div>

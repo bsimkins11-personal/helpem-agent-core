@@ -80,7 +80,7 @@ export function AlphaFeedbackModal({ isOpen, onClose }: AlphaFeedbackModalProps)
             </div>
             <h3 className="text-2xl font-bold text-brandText mb-2">Thank you!</h3>
             <p className="text-brandTextLight">
-              Your feedback helps us build a better HelpEm.
+              Your feedback helps us build a better helpem.
             </p>
           </div>
         ) : (
@@ -88,7 +88,7 @@ export function AlphaFeedbackModal({ isOpen, onClose }: AlphaFeedbackModalProps)
           <>
             <h2 className="text-2xl font-bold text-brandText mb-2">📝 Alpha Feedback</h2>
             <p className="text-sm text-brandTextLight mb-6">
-              Help us improve HelpEm by sharing your thoughts, bugs, or feature ideas.
+              Help us improve helpem by sharing your thoughts, bugs, or feature ideas.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">

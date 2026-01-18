@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Check if request is from iOS app WebView or authenticated session
-  const isFromiOSApp = userAgent.includes("HelpEm") || userAgent.includes("Mobile/");
+  const isFromiOSApp = userAgent.includes("helpem") || userAgent.includes("Mobile/");
   const hasSessionToken = request.cookies.has("session_token");
 
   // Protect app routes - TEMPORARILY DISABLED FOR UAT

@@ -16,7 +16,7 @@ export default function SupportPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const suggestedQuestions = [
-    "How does HelpEm work?",
+    "How does helpem work?",
     "What are the pricing plans?",
     "How do I create a todo or appointment?",
     "What's the difference between Basic and Premium?",
@@ -117,7 +117,7 @@ export default function SupportPage() {
             How can we help?
           </h1>
           <p className="text-lg text-brandTextLight">
-            Ask our AI support agent anything about HelpEm
+            Ask our AI support agent anything about helpem
           </p>
         </div>
       </section>
