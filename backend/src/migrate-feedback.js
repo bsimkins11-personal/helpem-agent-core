@@ -1,7 +1,7 @@
 // Simple migration endpoint to create feedback table
 // Run this once by visiting: https://your-backend.railway.app/migrate-feedback
 
-import { pool } from './lib/db.js';
+import { prisma } from './lib/prisma.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -13,7 +13,8 @@ export async function migrateFeedbackTable() {
   try {
     console.log('🔍 Checking if feedback table exists...');
     
-    const checkResult = await pool.query(`
+    // Use Prisma's raw query
+    const checkResult = await prisma.$queryRawUnsafe(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
@@ -21,7 +22,7 @@ export async function migrateFeedbackTable() {
       );
     `);
 
-    if (checkResult.rows[0].exists) {
+    if (checkResult[0]?.exists) {
       return {
         success: true,
         message: 'Feedback table already exists',
@@ -35,12 +36,13 @@ export async function migrateFeedbackTable() {
     const migrationPath = join(__dirname, '../migrations/add-feedback-table.sql');
     const migrationSQL = readFileSync(migrationPath, 'utf8');
     
-    await pool.query(migrationSQL);
+    // Execute the migration using Prisma
+    await prisma.$executeRawUnsafe(migrationSQL);
 
     console.log('✅ Feedback table created successfully');
 
     // Verify creation
-    const verifyResult = await pool.query(`
+    const verifyResult = await prisma.$queryRawUnsafe(`
       SELECT column_name, data_type
       FROM information_schema.columns
       WHERE table_name = 'feedback'
@@ -50,7 +52,7 @@ export async function migrateFeedbackTable() {
     return {
       success: true,
       message: 'Feedback table created successfully',
-      columns: verifyResult.rows
+      columns: verifyResult
     };
 
   } catch (error) {
