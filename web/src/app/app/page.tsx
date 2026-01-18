@@ -61,11 +61,18 @@ export default function AppPage() {
     });
   };
 
+  // Get today at midnight in LOCAL timezone (not UTC)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const viewDate = new Date(selectedDate);
-  viewDate.setHours(0, 0, 0, 0);
+  // CRITICAL: Create viewDate in LOCAL timezone to avoid day shifts
+  // Use year/month/date from selectedDate to avoid timezone conversion bugs
+  const viewDate = new Date(
+    selectedDate.getFullYear(),
+    selectedDate.getMonth(),
+    selectedDate.getDate(),
+    0, 0, 0, 0
+  );
 
   // Calculate date range based on view (work in local time to avoid timezone issues)
   const getDateRange = () => {
