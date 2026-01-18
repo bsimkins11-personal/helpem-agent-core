@@ -15,7 +15,7 @@ type Message = {
   content: string;
   action?: {
     type: "todo" | "habit" | "appointment" | "grocery";
-    title: string;
+    title?: string; // Optional for groceries
     priority?: Priority;
     datetime?: string;
     frequency?: "daily" | "weekly";
