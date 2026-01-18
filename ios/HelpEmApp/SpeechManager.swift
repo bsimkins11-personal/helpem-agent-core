@@ -9,7 +9,7 @@ final class SpeechManager {
     
     var onFinalResult: ((String) -> Void)?
     
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    private let recognizer: SFSpeechRecognizer?
     private let audioEngine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
@@ -21,6 +21,27 @@ final class SpeechManager {
     private(set) var isAuthorized = false
     
     init() {
+        // Try device locale first, fall back to en-US
+        if let deviceRecognizer = SFSpeechRecognizer(locale: Locale.current) {
+            print("✅ Using device locale for speech recognition:", Locale.current.identifier)
+            self.recognizer = deviceRecognizer
+        } else if let usRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) {
+            print("⚠️ Device locale not supported, using en-US")
+            self.recognizer = usRecognizer
+        } else {
+            print("❌ CRITICAL: No speech recognizer available!")
+            self.recognizer = nil
+        }
+        
+        // Check if recognizer is available
+        if recognizer == nil {
+            print("❌ Speech recognition not available on this device")
+        } else if recognizer?.isAvailable == false {
+            print("❌ Speech recognizer exists but is NOT available")
+        } else {
+            print("✅ Speech recognizer is available and ready")
+        }
+        
         checkAuthorization()
     }
     
@@ -88,6 +109,26 @@ final class SpeechManager {
     }
     
     private func beginSession() {
+        print("🎤 beginSession() called")
+        
+        // Check if recognizer exists and is available
+        guard let recognizer = recognizer else {
+            print("❌ CRITICAL: No speech recognizer available!")
+            print("❌ Speech recognition may not be supported on this device")
+            return
+        }
+        
+        guard recognizer.isAvailable else {
+            print("❌ CRITICAL: Speech recognizer is not available!")
+            print("❌ This can happen if:")
+            print("   - Device has restrictions (parental controls)")
+            print("   - No network connection (some features need internet)")
+            print("   - Language not supported")
+            return
+        }
+        
+        print("✅ Speech recognizer is ready")
+        
         // Configure audio session
         let session = AVAudioSession.sharedInstance()
         do {
@@ -97,18 +138,25 @@ final class SpeechManager {
                 options: [.defaultToSpeaker, .allowBluetoothHFP]
             )
             try session.setActive(true)
+            print("✅ Audio session configured")
         } catch {
             print("❌ Audio session error:", error)
+            print("❌ This usually means another app is using the microphone")
             return
         }
         
         // Create recognition request
         request = SFSpeechAudioBufferRecognitionRequest()
         request?.shouldReportPartialResults = true
+        print("✅ Recognition request created")
         
         // Set up audio tap
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
+        
+        print("🎤 Audio format: \(format)")
+        print("🎤 Sample rate: \(format.sampleRate)")
+        print("🎤 Channels: \(format.channelCount)")
         
         inputNode.removeTap(onBus: 0)
         inputNode.installTap(
@@ -118,40 +166,73 @@ final class SpeechManager {
         ) { [weak self] buffer, _ in
             self?.request?.append(buffer)
         }
+        print("✅ Audio tap installed")
         
         // Start audio engine
         audioEngine.prepare()
         do {
             try audioEngine.start()
-            print("🎤 Started listening...")
+            print("✅ Audio engine started")
         } catch {
             print("❌ Audio engine error:", error)
+            print("❌ Failed to start audio engine - mic may be in use")
             return
         }
         
         // Start recognition task
-        guard let recognizer = recognizer, let request = request else {
-            print("❌ Recognizer or request not available")
+        guard let request = request else {
+            print("❌ Recognition request is nil!")
             return
         }
         
+        print("🎤 Starting recognition task...")
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self = self else { return }
             
             if let error = error {
-                print("❌ Recognition error:", error)
+                print("❌ Recognition error:", error.localizedDescription)
+                print("❌ Error code:", (error as NSError).code)
+                print("❌ Error domain:", (error as NSError).domain)
+                
+                // Check for specific error codes
+                let nsError = error as NSError
+                if nsError.domain == "kLSRErrorDomain" {
+                    switch nsError.code {
+                    case 1110:
+                        print("❌ Speech recognition service unavailable (need internet?)")
+                    case 203:
+                        print("❌ Speech recognition denied")
+                    case 216:
+                        print("❌ Speech recognition request was cancelled")
+                    default:
+                        print("❌ Unknown speech recognition error")
+                    }
+                }
                 return
             }
             
-            guard let result = result else { return }
+            guard let result = result else {
+                print("⚠️ Recognition result is nil (no error though)")
+                return
+            }
             
             let text = result.bestTranscription.formattedString
             self.latestPartial = text
+            
+            if !text.isEmpty {
+                print("📝 Partial result:", text)
+            }
             
             if result.isFinal {
                 self.finalTranscript = text
                 print("✅ Final transcript:", text)
             }
+        }
+        
+        if task != nil {
+            print("✅ Recognition task started successfully")
+        } else {
+            print("❌ Failed to create recognition task")
         }
     }
     
