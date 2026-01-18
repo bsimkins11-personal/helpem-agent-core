@@ -1041,6 +1041,20 @@ FULFILLED_INTENTS: None yet
     try {
       const parsed = JSON.parse(jsonContent);
       if (parsed && typeof parsed === "object" && "action" in parsed) {
+        const lowerMessage = message.toLowerCase();
+        const isGroceryListRequest =
+          /(grocery list|shopping list|grocery|groceries)/i.test(lowerMessage) &&
+          /(add|put|place|include)/i.test(lowerMessage);
+
+        if (parsed.action === "add") {
+          if (isGroceryListRequest && parsed.type === "todo") {
+            parsed.type = "grocery";
+          }
+          if (parsed.type === "grocery" && !parsed.content && parsed.title) {
+            parsed.content = parsed.title;
+          }
+        }
+
         return NextResponse.json(parsed);
       }
       // If it's JSON but not an action payload, treat as text message
