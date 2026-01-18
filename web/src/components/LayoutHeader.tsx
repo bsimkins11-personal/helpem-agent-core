@@ -115,34 +115,34 @@ export function LayoutHeader() {
       {/* Global Header - Desktop (hidden for iOS) */}
       {!isFromiOSApp && (
       <header className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-1.5">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-1">
           <div className="flex items-center justify-between">
             {/* Logo + Tagline */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="flex items-center gap-2">
-                <img src="/helpem-logo.png" alt="helpem" className="h-20 w-auto" />
-                <p className="text-xs text-brandTextLight font-medium">Built for you.</p>
+              <div className="flex items-center gap-1.5">
+                <img src="/helpem-logo.png" alt="helpem" className="h-16 w-auto" />
+                <p className="text-[10px] text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>
 
             {/* Global Navigation - ALWAYS SHOW ON ALL PAGES */}
-            <div className="flex items-center gap-3 sm:gap-5">
-              <Link href="/#features" className="text-xs text-brandTextLight hover:text-brandBlue transition-colors">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Link href="/#features" className="text-[11px] text-brandTextLight hover:text-brandBlue transition-colors">
                 Features
               </Link>
-              <Link href="/pricing" className="text-xs text-brandTextLight hover:text-brandBlue transition-colors">
+              <Link href="/pricing" className="text-[11px] text-brandTextLight hover:text-brandBlue transition-colors">
                 Pricing
               </Link>
-              <Link href="/#about" className="text-xs text-brandTextLight hover:text-brandBlue transition-colors">
+              <Link href="/#about" className="text-[11px] text-brandTextLight hover:text-brandBlue transition-colors">
                 About
               </Link>
-              <Link href="/support" className="text-xs text-brandTextLight hover:text-brandBlue transition-colors">
+              <Link href="/support" className="text-[11px] text-brandTextLight hover:text-brandBlue transition-colors">
                 Support
               </Link>
               {!isAppRoute && (
                 <Link
                   href="/app"
-                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-xs font-semibold hover:shadow-lg transition-all"
+                  className="px-2.5 py-1 rounded-md bg-gradient-to-r from-brandBlue to-brandGreen text-white text-[11px] font-semibold hover:shadow-lg transition-all"
                 >
                   Try App
                 </Link>
@@ -185,25 +185,25 @@ export function LayoutHeader() {
       {/* Global Header - Mobile (hidden for iOS) */}
       {!isFromiOSApp && (
       <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-4 py-1.5">
+        <div className="px-3 py-1">
           <div className="flex items-center justify-between">
             {/* Logo + Tagline */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="flex items-center gap-1.5">
-                <img src="/helpem-logo.png" alt="helpem" className="h-16 w-auto" />
-                <p className="text-[10px] text-brandTextLight font-medium">Built for you.</p>
+              <div className="flex items-center gap-1">
+                <img src="/helpem-logo.png" alt="helpem" className="h-12 w-auto" />
+                <p className="text-[9px] text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>
 
             {/* Right Side - Menu + CTA */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {/* Hamburger Menu */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
                 aria-label="Menu"
               >
-                <svg className="w-5 h-5 text-brandText" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-brandText" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
@@ -216,7 +216,7 @@ export function LayoutHeader() {
               {!isAppRoute && (
                 <Link
                   href="/app"
-                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-brandBlue to-brandGreen text-white text-xs font-semibold hover:shadow-lg transition-all"
+                  className="px-2.5 py-1 rounded-md bg-gradient-to-r from-brandBlue to-brandGreen text-white text-[10px] font-semibold hover:shadow-lg transition-all"
                 >
                   Try App
                 </Link>
