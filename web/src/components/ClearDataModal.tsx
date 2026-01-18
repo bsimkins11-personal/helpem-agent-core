@@ -108,6 +108,12 @@ export default function ClearDataModal({ isOpen, onClose }: ClearDataModalProps)
         const result = await response.json();
         console.log('✅ Data cleared successfully:', result);
 
+        // Clear chat from sessionStorage if selected
+        if (selectedTypes.has('chat')) {
+          sessionStorage.removeItem('helpem-chat-session');
+          console.log('✅ Cleared chat from sessionStorage');
+        }
+
         // Clear local state for selected data types
         if (selectedTypes.has('todos') || selectedTypes.has('groceries') || 
             selectedTypes.has('appointments') || selectedTypes.has('habits') || 
