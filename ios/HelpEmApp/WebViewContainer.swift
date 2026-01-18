@@ -437,22 +437,15 @@ struct WebViewContainer: UIViewRepresentable {
         private func forceCleanupAllAudio() {
             print("🧹 WebView: Force cleanup all audio")
             
-            // Stop speech recognition
-            speechManager.stopListening()
-            
-            // Stop text-to-speech
+            // Stop text-to-speech immediately
             if synthesizer.isSpeaking {
                 synthesizer.stopSpeaking(at: .immediate)
                 print("✅ TTS stopped")
             }
             
-            // Deactivate audio session
-            do {
-                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-                print("✅ Audio session deactivated")
-            } catch {
-                print("⚠️ Error deactivating audio session:", error)
-            }
+            // Force immediate microphone cleanup (no delays)
+            // Don't use stopListening() - it has async delays that won't execute when backgrounding
+            speechManager.forceCleanup()
         }
         
         /// Called when navigation fails

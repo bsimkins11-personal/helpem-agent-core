@@ -300,7 +300,7 @@ final class SpeechManager {
     }
     
     /// Force immediate cleanup of audio resources
-    private func forceCleanup() {
+    func forceCleanup() {
         print("🧹 Force cleanup: Releasing microphone")
         
         // Stop audio engine immediately
