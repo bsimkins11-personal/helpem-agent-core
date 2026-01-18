@@ -68,14 +68,22 @@ struct WebViewContainer: UIViewRepresentable {
         // 🚨 Setup memory warning observer
         context.coordinator.setupMemoryWarningObserver()
         
-        // Clear ALL cached data before loading (for fresh deployments)
-        print("🧹 Clearing WebView cache...")
-        let dataStore = WKWebsiteDataStore.default()
-        dataStore.removeData(
-            ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
-            modifiedSince: Date.distantPast
-        ) {
-            print("✅ Cache cleared completely")
+        // ⚠️ DISABLED: Aggressive cache clearing was causing re-authentication prompts
+        // The WebView needs cached auth state to work properly
+        // We only clear cache on logout now, not on every load
+        
+        // Only clear cache if this is a fresh install (no session token)
+        if KeychainHelper.shared.sessionToken == nil {
+            print("🧹 First launch - clearing WebView cache...")
+            let dataStore = WKWebsiteDataStore.default()
+            dataStore.removeData(
+                ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+                modifiedSince: Date.distantPast
+            ) {
+                print("✅ Cache cleared for first launch")
+            }
+        } else {
+            print("✅ Preserving WebView cache for authenticated session")
         }
         
         // Load web app
@@ -85,12 +93,14 @@ struct WebViewContainer: UIViewRepresentable {
         }
         
         var request = URLRequest(url: url)
-        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData // Force fresh load
+        // Use normal cache policy - let the browser decide when to refresh
+        // Aggressive cache clearing was causing re-authentication issues
+        request.cachePolicy = .useProtocolCachePolicy
         if !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        print("🌐 Loading web app (no cache): \(AppEnvironment.webAppURL)")
+        print("🌐 Loading web app: \(AppEnvironment.webAppURL)")
         webView.load(request)
         
         return webView
@@ -438,19 +448,15 @@ struct WebViewContainer: UIViewRepresentable {
         
         /// Handle expired session token
         private func handleAuthExpired() {
-            print("⏰ Session expired, attempting silent reauth...")
+            print("⏰ Session expired")
             
-            Task { @MainActor in
-                let success = await authManager.silentReauth()
-                
-                if success {
-                    print("✅ Silent reauth successful, reloading WebView")
-                    reloadWebView()
-                } else {
-                    print("❌ Silent reauth failed, logging out")
-                    handleLogout()
-                }
-            }
+            // ⚠️ DISABLED: Silent reauth shows Apple Sign In UI which is disruptive
+            // Instead, we rely on the session token remaining valid for 30 days
+            // If it truly expires, user will be logged out on next app restart
+            
+            // For now, just log and do nothing - the session token is valid for 30 days
+            // and we don't want to show Apple Sign In prompt while user is using the app
+            print("ℹ️ Ignoring auth expiry - session tokens are long-lived (30 days)")
         }
         
         /// Handle logout request from web

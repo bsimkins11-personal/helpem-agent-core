@@ -339,13 +339,32 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             });
           }
         } else if (internalType === "appointment") {
-          const datetime = data.datetime ? new Date(data.datetime) : now;
+          // Parse datetime with fallback logic
+          let datetime: Date;
+          if (data.datetime) {
+            datetime = new Date(data.datetime);
+            // Check if datetime is valid
+            if (isNaN(datetime.getTime())) {
+              console.error("❌ Invalid datetime from AI:", data.datetime);
+              datetime = getDefaultTomorrowReminder(); // Fallback to tomorrow 9am
+            }
+          } else {
+            console.warn("⚠️ No datetime provided by AI for appointment, using tomorrow 9am");
+            datetime = getDefaultTomorrowReminder(); // Fallback to tomorrow 9am
+          }
+          
+          console.log("📅 Creating appointment:", {
+            title: data.title,
+            datetime: datetime.toISOString(),
+            originalDatetime: data.datetime,
+            isValid: !isNaN(datetime.getTime())
+          });
           
           // Save to database
-          const responseText = data.message || `Added appointment "${data.title}" at ${datetime.toLocaleString()}.`;
+          const responseText = data.message || `Added appointment "${data.title}" for ${formatDateTimeForSpeech(datetime)}.`;
           
           try {
-            await fetch("/api/appointments", {
+            const apiResponse = await fetch("/api/appointments", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -353,8 +372,23 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
                 datetime: datetime.toISOString(),
               }),
             });
+            
+            if (!apiResponse.ok) {
+              const errorData = await apiResponse.json();
+              console.error("❌ Failed to save appointment to database:", errorData);
+              throw new Error(errorData.error || "Failed to save appointment");
+            }
+            
+            console.log("✅ Appointment saved to database successfully");
           } catch (err) {
-            console.error("Failed to save appointment to database:", err);
+            console.error("❌ Failed to save appointment to database:", err);
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: "I had trouble saving the appointment. Please try again.",
+            });
+            setLoading(false);
+            return;
           }
           
           // Also add to local state
@@ -364,6 +398,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             datetime,
             createdAt: now,
           });
+
+          console.log("✅ Appointment added to local state");
 
           addMessage({ id: uuidv4(), role: "assistant", content: responseText });
 
