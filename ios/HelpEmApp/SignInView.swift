@@ -58,17 +58,6 @@ struct SignInView: View {
                                         authManager.signInWithApple()
                                     }
                             )
-#if DEBUG
-                        Button(action: {
-                            authManager.setDebugTestSession()
-                        }) {
-                            Text("Use Debug Session")
-                                .font(.footnote)
-                                .foregroundColor(.white.opacity(0.8))
-                                .underline()
-                        }
-                        .padding(.top, 8)
-#endif
                     }
 
                     if let error = authManager.error {
