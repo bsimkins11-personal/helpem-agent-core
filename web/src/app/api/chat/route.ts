@@ -89,7 +89,7 @@ Examples of ALWAYS CREATE:
 
 🚨 MULTI-ITEM DETECTION:
 When user lists multiple items with "and" or commas → CREATE for FIRST item, mention ALL in message
-- "Add eggs, bread, and butter to grocery list" → {"action": "add", "type": "todo", "title": "Eggs", "message": "I'll add eggs, bread, and butter to your grocery list."}
+- "Add eggs, bread, and butter to grocery list" → {"action": "add", "type": "grocery", "content": "Eggs", "message": "I'll add eggs, bread, and butter to your grocery list."}
 - "Add workout and meal prep" → {"action": "add", "type": "todo", "title": "Workout", "message": "Got it. I'll add both workout and meal prep."}
 - Create one JSON action but acknowledge all items in the message field
 
@@ -574,6 +574,7 @@ ACTION GATING - WHEN TO EMIT JSON:
 
 - Groceries: ONLY when user explicitly says "add to grocery list"
   * User must say "add X to grocery list" or "put X on shopping list"
+  * If user says this, ALWAYS use type "grocery" (never "todo")
   * "Remind me to pick up X" = TODO, NOT grocery
   * RETURN JSON with message field immediately
 
