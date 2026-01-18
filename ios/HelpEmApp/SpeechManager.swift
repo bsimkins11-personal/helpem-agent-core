@@ -20,6 +20,9 @@ final class SpeechManager {
     // Cache authorization status for efficiency
     private(set) var isAuthorized = false
     
+    // App lifecycle observer
+    private var backgroundObserver: NSObjectProtocol?
+    
     init() {
         // Try device locale first, fall back to en-US
         if let deviceRecognizer = SFSpeechRecognizer(locale: Locale.current) {
@@ -43,6 +46,16 @@ final class SpeechManager {
         }
         
         checkAuthorization()
+        setupBackgroundObserver()
+    }
+    
+    deinit {
+        // Clean up observer
+        if let observer = backgroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        // Force cleanup
+        forceCleanup()
     }
     
     // MARK: - Authorization
@@ -250,7 +263,8 @@ final class SpeechManager {
                 self.request = nil
                 
                 do {
-                    try AVAudioSession.sharedInstance().setActive(false)
+                    try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                    print("✅ Audio session deactivated")
                 } catch {
                     print("⚠️ Error deactivating audio session:", error)
                 }
@@ -268,6 +282,52 @@ final class SpeechManager {
                 self.finalTranscript = nil
             }
         }
+    }
+    
+    // MARK: - Background Handling
+    
+    /// Setup observer to cleanup when app goes to background
+    private func setupBackgroundObserver() {
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("📱 App entering background - forcing microphone cleanup")
+            self?.forceCleanup()
+        }
+    }
+    
+    /// Force immediate cleanup of audio resources
+    private func forceCleanup() {
+        print("🧹 Force cleanup: Releasing microphone")
+        
+        // Stop audio engine immediately
+        if audioEngine.isRunning {
+            audioEngine.stop()
+            audioEngine.inputNode.removeTap(onBus: 0)
+            print("✅ Audio engine stopped")
+        }
+        
+        // Cancel recognition task
+        task?.cancel()
+        task = nil
+        
+        // End recognition request
+        request?.endAudio()
+        request = nil
+        
+        // Deactivate audio session
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            print("✅ Audio session force deactivated")
+        } catch {
+            print("⚠️ Error force deactivating audio session:", error)
+        }
+        
+        // Clear state
+        latestPartial = ""
+        finalTranscript = nil
     }
 }
 
