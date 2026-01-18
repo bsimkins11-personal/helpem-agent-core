@@ -425,7 +425,11 @@ export function LifeProvider({ children }: LifeProviderProps) {
     // Persist to database
     try {
       const response = await fetch(`/api/habits?id=${id}`, { method: 'DELETE' });
-      if (!response.ok) {
+      if (response.status === 404) {
+        // 404 means item doesn't exist - treat as successful deletion
+        console.log('⚠️ Habit not found in database (already deleted)');
+        console.log('✅ Treating 404 as successful deletion');
+      } else if (!response.ok) {
         console.error('❌ Failed to delete habit from database');
       } else {
         console.log('✅ Habit deleted from database');
@@ -696,7 +700,11 @@ export function LifeProvider({ children }: LifeProviderProps) {
     // Persist to database
     try {
       const response = await fetch(`/api/groceries?id=${id}`, { method: 'DELETE' });
-      if (!response.ok) {
+      if (response.status === 404) {
+        // 404 means item doesn't exist - treat as successful deletion
+        console.log('⚠️ Grocery not found in database (already deleted)');
+        console.log('✅ Treating 404 as successful deletion');
+      } else if (!response.ok) {
         console.error('❌ Failed to delete grocery from database');
       } else {
         console.log('✅ Grocery deleted from database');
