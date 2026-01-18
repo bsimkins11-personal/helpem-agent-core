@@ -276,7 +276,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       });
 
       // Attempt to apply the correction by re-processing with the correction context
-      const retryPrompt = `${message.userMessage}\n\n[Previous attempt was wrong. User correction: "${correctionInput}"]`;
+      // Include special marker to tell AI to ask for confirmation after
+      const retryPrompt = `${message.userMessage}\n\n[Previous attempt was wrong. User correction: "${correctionInput}"]\n[After completing action, ask user: "Did I get it right this time? 👍 or 👎"]`;
       
       // Send to AI to try again
       await sendMessageWithText(retryPrompt, false);
