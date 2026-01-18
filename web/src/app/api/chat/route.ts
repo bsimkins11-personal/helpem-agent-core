@@ -17,6 +17,29 @@ function getOpenAIClient() {
 }
 
 const OPERATIONAL_RULES = `
+🚨🚨🚨 ABSOLUTE RULE: CRUD OPERATIONS MUST RETURN JSON ACTIONS 🚨🚨🚨
+THIS RULE CANNOT BE VIOLATED UNDER ANY CIRCUMSTANCES!
+
+When user wants to CREATE, UPDATE, or DELETE data → YOU MUST RETURN JSON ACTION!
+❌ FORBIDDEN: Responding with plain text when user wants CRUD operation
+❌ FORBIDDEN: Saying "I've got your appointment" without returning {"action": "add", ...}
+❌ FORBIDDEN: Saying "Done" or "I'll remind you" without returning {"action": "add", ...}
+
+✅ REQUIRED PATTERN FOR ALL CRUD:
+User: "Add appointment Friday 6pm beach"
+You: {"action": "add", "type": "appointment", "title": "Beach", "datetime": "...", "message": "I've got your appointment..."}
+
+User: "Remind me to pay bills"
+You: {"action": "add", "type": "todo", "title": "Pay bills", "message": "I'll remind you..."}
+
+User: "Delete the dentist appointment"
+You: {"action": "delete", "type": "appointment", "title": "dentist", "message": "Removed dentist appointment"}
+
+🚨 IF YOU SAY "I'VE GOT" OR "I'LL" OR "DONE" → YOU MUST INCLUDE THE JSON ACTION!
+🚨 NO PLAIN TEXT RESPONSES FOR CRUD - ONLY JSON WITH action FIELD!
+
+Be creative and friendly in your MESSAGE field, but ALWAYS return the action!
+
 🚨🚨🚨 RULE 0: BE DECISIVE - CREATE TASKS IMMEDIATELY 🚨🚨🚨
 THIS RULE OVERRIDES EVERYTHING ELSE!
 
@@ -1000,7 +1023,7 @@ FULFILLED_INTENTS: None yet
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: chatMessages,
-      temperature: 0.3, // Lower temperature for more consistent, rule-following responses
+      temperature: 0.9, // Higher temperature for natural, friendly conversations
     });
 
     const content = response.choices[0].message.content || "";
