@@ -23,6 +23,7 @@ export type LifeContextType = {
   updateTodo: (id: string, updates: Partial<Todo>) => void;
   updateTodoPriority: (id: string, priority: Priority) => void;
   moveTodoToGroceries: (id: string) => void;
+  moveTodoToAppointment: (id: string) => void;
   addHabit: (habit: Habit) => void;
   logHabit: (id: string) => void;
   deleteHabit: (id: string) => void;
@@ -253,10 +254,11 @@ export function LifeProvider({ children }: LifeProviderProps) {
     // Persist to database
     try {
       const response = await fetch(`/api/todos?id=${id}`, { method: 'DELETE' });
-      if (!response.ok) {
-        console.error('❌ Failed to delete todo from database');
-      } else {
+      if (response.ok || response.status === 404) {
+        // 404 means it was already deleted (likely cleared elsewhere)
         console.log('✅ Todo deleted from database');
+      } else {
+        console.error('❌ Failed to delete todo from database');
       }
     } catch (error) {
       console.error('❌ Error deleting todo:', error);
@@ -325,6 +327,38 @@ export function LifeProvider({ children }: LifeProviderProps) {
       return prev.filter(t => t.id !== id);
     });
   }, [addItemsToGroceryRoutine, sendFeedback]);
+
+  const moveTodoToAppointment = useCallback((id: string) => {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+
+    const now = new Date();
+    const fallback = new Date(now);
+    fallback.setHours(fallback.getHours() + 1, 0, 0, 0);
+
+    const datetime = todo.dueDate || todo.reminderTime || fallback;
+    const appointmentId = uuidv4();
+
+    addAppointment({
+      id: appointmentId,
+      title: todo.title,
+      datetime,
+      createdAt: now,
+    });
+
+    fetch("/api/appointments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: todo.title,
+        datetime: datetime.toISOString(),
+      }),
+    }).catch((error) => {
+      console.error("❌ Error creating appointment from todo:", error);
+    });
+
+    deleteTodo(id);
+  }, [todos, addAppointment, deleteTodo]);
 
   const addHabit = useCallback((habit: Habit) => {
     setHabits(prev => [...prev, habit]);
@@ -656,6 +690,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     updateTodo,
     updateTodoPriority,
     moveTodoToGroceries,
+    moveTodoToAppointment,
     addHabit,
     logHabit,
     deleteHabit,
@@ -675,7 +710,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     updateGrocery,
     clearCompletedGroceries,
     clearAllData,
-  }), [todos, habits, appointments, routines, groceries, addTodo, completeTodo, deleteTodo, updateTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, deleteHabit, updateHabit, addAppointment, deleteAppointment, updateAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, addGrocery, completeGrocery, deleteGrocery, updateGrocery, clearCompletedGroceries, clearAllData]);
+  }), [todos, habits, appointments, routines, groceries, addTodo, completeTodo, deleteTodo, updateTodo, updateTodoPriority, moveTodoToGroceries, moveTodoToAppointment, addHabit, logHabit, deleteHabit, updateHabit, addAppointment, deleteAppointment, updateAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, addGrocery, completeGrocery, deleteGrocery, updateGrocery, clearCompletedGroceries, clearAllData]);
 
   return (
     <LifeContext.Provider value={value}>

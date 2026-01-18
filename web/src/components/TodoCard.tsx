@@ -35,7 +35,7 @@ const PRIORITIES: Priority[] = ["high", "medium", "low"];
 
 export function TodoCard({ todo }: TodoCardProps) {
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
-  const { updateTodoPriority, moveTodoToGroceries } = useLife();
+  const { updateTodoPriority, moveTodoToGroceries, moveTodoToAppointment } = useLife();
   
   const isCompleted = !!todo.completedAt;
   const config = PRIORITY_CONFIG[todo.priority];
@@ -143,14 +143,24 @@ export function TodoCard({ todo }: TodoCardProps) {
             </div>
           )}
 
-          {showMoveToGroceries && (
-            <div className="mt-2">
-              <button
-                onClick={() => moveTodoToGroceries(todo.id)}
-                className="text-xs text-orange-600 hover:text-orange-700 font-medium"
-              >
-                Move to groceries
-              </button>
+          {(showMoveToGroceries || !isCompleted) && (
+            <div className="mt-2 flex flex-wrap gap-3">
+              {showMoveToGroceries && (
+                <button
+                  onClick={() => moveTodoToGroceries(todo.id)}
+                  className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                >
+                  Move to groceries
+                </button>
+              )}
+              {!isCompleted && (
+                <button
+                  onClick={() => moveTodoToAppointment(todo.id)}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Convert to appointment
+                </button>
+              )}
             </div>
           )}
         </div>
