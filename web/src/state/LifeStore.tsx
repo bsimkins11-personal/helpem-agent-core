@@ -265,8 +265,26 @@ export function LifeProvider({ children }: LifeProviderProps) {
     }
   }, []);
 
-  const updateTodoPriority = useCallback((id: string, priority: Priority) => {
+  const updateTodoPriority = useCallback(async (id: string, priority: Priority) => {
+    // Optimistic update
     setTodos(prev => prev.map(t => t.id === id ? { ...t, priority } : t));
+
+    // Persist to database
+    try {
+      const response = await fetch("/api/todos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, priority }),
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to update todo priority in database');
+      } else {
+        console.log('✅ Todo priority updated in database');
+      }
+    } catch (error) {
+      console.error('❌ Error updating todo priority:', error);
+    }
   }, []);
 
   const sendFeedback = useCallback((text: string, to: "todo" | "grocery", from?: "todo" | "grocery") => {

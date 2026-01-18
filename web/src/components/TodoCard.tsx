@@ -93,9 +93,11 @@ export function TodoCard({ todo }: TodoCardProps) {
 
         <div className="flex-1 min-w-0">
           <h3
+            onClick={togglePriorityPicker}
             className={`font-medium text-brandText text-sm ${
-              isCompleted ? 'line-through opacity-60' : ''
+              isCompleted ? 'line-through opacity-60' : 'cursor-pointer'
             }`}
+            aria-label={`Todo: ${todo.title}. Tap to change priority.`}
           >
             {todo.title}
           </h3>
