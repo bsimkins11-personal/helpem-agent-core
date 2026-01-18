@@ -197,10 +197,20 @@ final class AuthManager: NSObject, ObservableObject {
         }
         
         // Store credentials securely in Keychain
+        print("💾 Storing credentials in Keychain...")
+        print("   Session Token length: \(sessionToken.count)")
+        print("   Session Token preview: \(sessionToken.prefix(30))...")
+        print("   Apple User ID: \(appleUserId)")
+        print("   User ID: \(userId)")
+        
         KeychainHelper.shared.sessionToken = sessionToken
         KeychainHelper.shared.appleUserId = appleUserId
         KeychainHelper.shared.userId = userId
         
+        // Verify storage
+        let storedToken = KeychainHelper.shared.sessionToken
+        print("✅ Verification - Token stored successfully:", storedToken != nil)
+        print("✅ Verification - Stored token length:", storedToken?.count ?? 0)
         print("✅ Session established for user: \(userId.prefix(8))...")
     }
 

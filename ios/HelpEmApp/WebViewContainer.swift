@@ -40,6 +40,17 @@ struct WebViewContainer: UIViewRepresentable {
         
         // Inject authentication script
         let token = KeychainHelper.shared.sessionToken ?? ""
+        print("🔑 WebView Creation:")
+        print("   Session Token exists:", !token.isEmpty)
+        print("   Token length:", token.count)
+        print("   Token preview:", token.isEmpty ? "NONE" : String(token.prefix(30)) + "...")
+        print("   Apple User ID:", KeychainHelper.shared.appleUserId ?? "NONE")
+        print("   User ID:", KeychainHelper.shared.userId ?? "NONE")
+        
+        if token.isEmpty {
+            print("❌ CRITICAL: No session token in keychain - user will see auth errors!")
+        }
+        
         controller.addUserScript(Self.makeAuthScript(token: token))
         
         config.userContentController = controller
@@ -120,71 +131,128 @@ struct WebViewContainer: UIViewRepresentable {
         
         let source = """
         (function() {
+            console.log('🔐 iOS Auth Script Starting...');
             const token = "\(safeToken)";
             const webHost = "\(webHost)";
             const apiHost = "\(apiHost)";
             
-            if (!token) {
-                console.warn('❌ iOS: No session token available to inject');
-                return;
+            console.log('📱 iOS: Token exists:', token.length > 0);
+            console.log('📱 iOS: Token length:', token.length);
+            
+            if (!token || token.length === 0) {
+                console.error('❌ iOS: NO SESSION TOKEN - User needs to sign in');
+                console.error('❌ iOS: Fetch requests will FAIL without token');
+                // Still set up fetch interception to show better errors
+            } else {
+                console.log('✅ iOS: Valid session token found');
+                console.log('📱 iOS: Token preview:', token.substring(0, 30) + '...');
             }
             
-            console.log('✅ iOS: Session token injected successfully');
-            console.log('📱 iOS: Token length:', token.length);
-            console.log('📱 iOS: Token preview:', token.substring(0, 20) + '...');
-            
-            // Store token globally for web app access
+            // ALWAYS store token globally (even if empty, for debugging)
             window.__nativeSessionToken = token;
+            window.__authDebug = {
+                hasToken: token.length > 0,
+                tokenLength: token.length,
+                webHost: webHost,
+                apiHost: apiHost
+            };
             
             console.log('✅ iOS: window.__nativeSessionToken set');
-            console.log('🔍 iOS: Verify - window.__nativeSessionToken exists:', !!window.__nativeSessionToken);
+            console.log('✅ iOS: window.__authDebug set');
             
             // Check if URL should receive auth token
             const shouldAttach = (url) => {
                 try {
                     const u = new URL(url, window.location.origin);
-                    return u.host === webHost || 
+                    const shouldAttachResult = u.host === webHost || 
                            u.host === apiHost || 
                            u.pathname.startsWith('/api/');
+                    return shouldAttachResult;
                 } catch (e) {
+                    console.error('❌ iOS: shouldAttach error:', e);
                     return false;
                 }
             };
             
-            // Intercept fetch to add Authorization header
+            // ALWAYS intercept fetch (even without token, for debugging)
             const originalFetch = window.fetch;
+            let fetchCount = 0;
+            
             window.fetch = function(input, init = {}) {
+                fetchCount++;
                 const url = (typeof input === 'string') ? input : (input && input.url) ? input.url : '';
+                const fetchId = fetchCount;
                 
-                if (shouldAttach(url)) {
-                    const headers = new Headers(init.headers || {});
-                    if (!headers.get('Authorization')) {
-                        headers.set('Authorization', 'Bearer ' + token);
+                console.log(`🌐 [${fetchId}] Fetch to:`, url);
+                
+                const willAttachToken = shouldAttach(url);
+                console.log(`🔐 [${fetchId}] Will attach token:`, willAttachToken);
+                
+                if (willAttachToken) {
+                    if (!token || token.length === 0) {
+                        console.error(`❌ [${fetchId}] NO TOKEN to attach - request will likely FAIL with 401`);
+                    } else {
+                        const headers = new Headers(init.headers || {});
+                        if (!headers.get('Authorization')) {
+                            headers.set('Authorization', 'Bearer ' + token);
+                            init.headers = headers;
+                            console.log(`✅ [${fetchId}] Authorization header attached`);
+                        } else {
+                            console.log(`ℹ️ [${fetchId}] Authorization header already present`);
+                        }
                     }
-                    init.headers = headers;
                 }
                 
-                // Handle 401 responses (session expired)
+                // Make the request
                 return originalFetch(input, init).then((response) => {
+                    console.log(`📥 [${fetchId}] Response status:`, response.status);
+                    
                     if (response && response.status === 401) {
-                        console.warn('⚠️ Got 401 response for:', url);
-                        // Don't immediately trigger auth expiry - might be a temporary issue
-                        // Let the app handle it gracefully (data saved locally)
-                        // Only trigger on critical auth endpoints
+                        console.error(`❌ [${fetchId}] 401 UNAUTHORIZED for:`, url);
+                        console.error(`❌ [${fetchId}] Token was:`, token ? 'present' : 'MISSING');
+                        
+                        // Only trigger auth expiry on critical auth endpoints
                         if (url.includes('/auth/')) {
-                            console.error('❌ Critical auth endpoint failed');
+                            console.error('❌ Critical auth endpoint failed - showing login');
                             if (window.webkit?.messageHandlers?.native) {
                                 window.webkit.messageHandlers.native.postMessage({ 
                                     action: 'authExpired' 
                                 });
                             }
                         } else {
-                            console.log('ℹ️ Non-critical 401 - continuing with local data');
+                            console.warn('⚠️ Non-critical 401 - continuing with local data');
                         }
                     }
+                    
                     return response;
+                }).catch((error) => {
+                    console.error(`❌ [${fetchId}] Fetch error:`, error);
+                    throw error;
                 });
             };
+            
+            console.log('✅ iOS: Fetch interception installed');
+            console.log('🔐 iOS Auth Script Complete');
+            
+            // Expose diagnostic function
+            window.__debugAuth = function() {
+                console.log('=== AUTH DEBUG ===');
+                console.log('Has Token:', token.length > 0);
+                console.log('Token Length:', token.length);
+                console.log('Token Preview:', token ? token.substring(0, 40) + '...' : 'NONE');
+                console.log('Web Host:', webHost);
+                console.log('API Host:', apiHost);
+                console.log('window.__nativeSessionToken exists:', !!window.__nativeSessionToken);
+                console.log('window.__authDebug:', window.__authDebug);
+                console.log('=================');
+                return window.__authDebug;
+            };
+            
+            // Auto-run diagnostic
+            setTimeout(() => {
+                console.log('🔍 Running auto-diagnostic after 1 second...');
+                window.__debugAuth();
+            }, 1000);
         })();
         """
         
