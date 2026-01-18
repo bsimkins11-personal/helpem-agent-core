@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useLife } from "@/state/LifeStore";
-import { Priority } from "@/types/todo";
+import { Priority, Todo } from "@/types/todo";
+import { Appointment } from "@/types/appointment";
+import { Habit } from "@/types/habit";
 import { useNativeAudio } from "@/hooks/useNativeAudio";
 
 type Message = {
