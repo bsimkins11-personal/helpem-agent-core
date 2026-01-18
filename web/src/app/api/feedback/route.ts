@@ -16,7 +16,8 @@ export async function POST(req: Request) {
       feedback, 
       userMessage, 
       assistantResponse, 
-      action 
+      action,
+      correction
     } = await req.json();
     
     // Validation
@@ -43,8 +44,9 @@ export async function POST(req: Request) {
         user_message, 
         assistant_response, 
         action_type, 
-        action_data
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        action_data,
+        correction
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         user.userId,
         messageId,
@@ -53,6 +55,7 @@ export async function POST(req: Request) {
         assistantResponse,
         action?.type || null,
         action ? JSON.stringify(action) : null,
+        correction || null,
       ]
     );
     

@@ -10,13 +10,15 @@ CREATE TABLE IF NOT EXISTS feedback (
     assistant_response TEXT NOT NULL,
     action_type VARCHAR(50),
     action_data JSONB,
+    correction TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
     -- Indexes for analysis
     INDEX idx_feedback_user (user_id),
     INDEX idx_feedback_type (feedback),
     INDEX idx_feedback_action (action_type),
-    INDEX idx_feedback_created (created_at DESC)
+    INDEX idx_feedback_created (created_at DESC),
+    INDEX idx_feedback_has_correction ((correction IS NOT NULL))
 );
 
 COMMENT ON TABLE feedback IS 'User feedback on AI responses for reinforcement learning';
@@ -25,3 +27,4 @@ COMMENT ON COLUMN feedback.user_message IS 'Original user input that triggered t
 COMMENT ON COLUMN feedback.assistant_response IS 'AI generated response text';
 COMMENT ON COLUMN feedback.action_type IS 'Type of action taken (todo, appointment, routine, grocery)';
 COMMENT ON COLUMN feedback.action_data IS 'Full action JSON data for analysis';
+COMMENT ON COLUMN feedback.correction IS 'User explanation of what went wrong (for thumbs down)';

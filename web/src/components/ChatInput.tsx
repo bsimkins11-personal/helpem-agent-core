@@ -24,6 +24,7 @@ type Message = {
   };
   feedback?: "up" | "down"; // User feedback for RLHF
   userMessage?: string; // Original user message that triggered this response
+  correction?: string; // User's explanation of what went wrong (for thumbs down)
 };
 
 const MAX_MESSAGES = 50;
@@ -160,6 +161,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>("type");
+  const [pendingFeedback, setPendingFeedback] = useState<{ messageId: string; feedback: "down" } | null>(null);
+  const [correctionInput, setCorrectionInput] = useState("");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -193,12 +196,23 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   }, []);
 
   const handleFeedback = useCallback(async (messageId: string, feedback: "up" | "down") => {
-    // Update local state immediately
+    // For thumbs down, ask for correction first
+    if (feedback === "down") {
+      setPendingFeedback({ messageId, feedback });
+      // Add a prompt asking what went wrong
+      addMessage({
+        id: uuidv4(),
+        role: "assistant",
+        content: "I apologize for that. What should I have done instead? Please explain so I can learn and improve.",
+      });
+      return;
+    }
+
+    // For thumbs up, record immediately
     setMessages(prev => prev.map(msg => 
       msg.id === messageId ? { ...msg, feedback } : msg
     ));
 
-    // Find the message and send feedback to backend
     const message = messages.find(m => m.id === messageId);
     if (!message) return;
 
@@ -219,7 +233,51 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
     } catch (error) {
       console.error("❌ Failed to send feedback:", error);
     }
-  }, [messages]);
+  }, [messages, addMessage]);
+
+  const submitCorrectionFeedback = useCallback(async () => {
+    if (!pendingFeedback || !correctionInput.trim()) return;
+
+    const { messageId, feedback } = pendingFeedback;
+
+    // Update message with feedback and correction
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, feedback, correction: correctionInput } : msg
+    ));
+
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId,
+          feedback,
+          userMessage: message.userMessage,
+          assistantResponse: message.content,
+          action: message.action,
+          correction: correctionInput,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      console.log(`✅ Feedback with correction recorded for message ${messageId}`);
+
+      // Thank the user
+      addMessage({
+        id: uuidv4(),
+        role: "assistant",
+        content: "Thank you for helping me improve! I'll learn from this feedback.",
+      });
+
+      // Clear pending state
+      setPendingFeedback(null);
+      setCorrectionInput("");
+    } catch (error) {
+      console.error("❌ Failed to send feedback:", error);
+    }
+  }, [pendingFeedback, correctionInput, messages, addMessage]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -1389,6 +1447,46 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             )}
           </div>
         ))}
+
+        {/* Correction input for thumbs down */}
+        {pendingFeedback && (
+          <div className="bg-red-50 p-3 md:p-4 rounded-xl border border-red-200">
+            <p className="text-xs md:text-sm text-red-700 font-medium mb-2">
+              What should I have done instead?
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={correctionInput}
+                onChange={(e) => setCorrectionInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && correctionInput.trim()) {
+                    submitCorrectionFeedback();
+                  }
+                }}
+                placeholder="e.g., 'You should have created an appointment, not a todo'"
+                className="flex-1 px-3 py-2 border border-red-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                autoFocus
+              />
+              <button
+                onClick={submitCorrectionFeedback}
+                disabled={!correctionInput.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit
+              </button>
+              <button
+                onClick={() => {
+                  setPendingFeedback(null);
+                  setCorrectionInput("");
+                }}
+                className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Priority selector for todos */}
         {!isNativeApp && pendingAction?.type === "todo" && (
