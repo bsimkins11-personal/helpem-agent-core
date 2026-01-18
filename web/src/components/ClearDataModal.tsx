@@ -62,14 +62,14 @@ export default function ClearDataModal({ isOpen, onClose }: ClearDataModalProps)
   const [showConfirmation, setShowConfirmation] = useState(false);
   const { clearAllData } = useLife();
 
-  if (!isOpen) return null;
-
   useEffect(() => {
     if (isOpen) {
       setSelectedTypes(new Set(DATA_TYPES.map(dt => dt.key)));
       setShowConfirmation(false);
     }
   }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const toggleDataType = (key: string) => {
     const newSelected = new Set(selectedTypes);
