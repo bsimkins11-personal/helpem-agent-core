@@ -29,55 +29,90 @@ export async function GET(req: Request) {
 
 // POST - Create new appointment
 export async function POST(req: Request) {
+  console.log('🔵 ========================================');
+  console.log('🔵 POST /api/appointments - Request Received');
+  console.log('🔵 ========================================');
+  
   try {
     // 🛡️ Rate limiting
     const clientIp = getClientIdentifier(req);
+    console.log('🔍 Client IP:', clientIp);
+    
     const rateLimit = await checkRateLimit({
       identifier: `appointments:${clientIp}`,
       maxRequests: 50, // 50 appointment creations per hour
       windowMs: 60 * 60 * 1000,
     });
+    console.log('🔍 Rate limit check:', rateLimit);
 
     if (!rateLimit.allowed) {
+      console.log('❌ Rate limit exceeded');
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 }
       );
     }
 
+    console.log('🔍 Checking authentication...');
     const user = await getAuthUser(req);
     
     if (!user) {
+      console.error('❌ UNAUTHORIZED - No valid user session');
+      console.error('❌ getAuthUser returned null');
+      const authHeader = req.headers.get('Authorization');
+      console.error('❌ Authorization header:', authHeader ? 'Present' : 'MISSING');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
-    const { title, datetime } = await req.json();
+    console.log('✅ User authenticated:', user.userId);
+    
+    const body = await req.json();
+    console.log('📦 Request body:', body);
+    
+    const { title, datetime } = body;
     
     // 🛡️ Input validation
     if (!title || typeof title !== "string") {
+      console.error('❌ Validation failed: Title missing or invalid');
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
     
     if (title.length > 500) {
+      console.error('❌ Validation failed: Title too long');
       return NextResponse.json({ error: "Title too long (max 500 characters)" }, { status: 400 });
     }
     
     if (!datetime || isNaN(Date.parse(datetime))) {
+      console.error('❌ Validation failed: Invalid datetime:', datetime);
       return NextResponse.json({ error: "Valid datetime is required" }, { status: 400 });
     }
     
     // Sanitize title - remove HTML tags
     const sanitizedTitle = title.replace(/<[^>]*>/g, "").trim();
+    console.log('🧹 Sanitized title:', sanitizedTitle);
     
-    console.log(`➕ Creating appointment for user: ${user.userId}`);
+    console.log(`➕ Inserting appointment into database...`);
+    console.log(`   User ID: ${user.userId}`);
+    console.log(`   Title: ${sanitizedTitle}`);
+    console.log(`   Datetime: ${datetime}`);
+    
     const result = await query(
       'INSERT INTO appointments (user_id, title, datetime) VALUES ($1, $2, $3) RETURNING *',
       [user.userId, sanitizedTitle, datetime]
     );
     
+    console.log('✅ Database INSERT successful!');
+    console.log('✅ Returned appointment:', result.rows[0]);
+    console.log('🔵 ========================================');
+    
     return NextResponse.json({ appointment: result.rows[0] });
   } catch (error) {
-    console.error("❌ Error creating appointment:", error);
+    console.error('🔴 ========================================');
+    console.error("❌ CRITICAL ERROR in POST /api/appointments");
+    console.error("❌ Error type:", error instanceof Error ? error.constructor.name : typeof error);
+    console.error("❌ Error message:", error instanceof Error ? error.message : String(error));
+    console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    console.error('🔴 ========================================');
     
     // Don't expose internal error details to client
     if (error instanceof Error && error.message.includes("invalid input syntax")) {
@@ -85,5 +120,132 @@ export async function POST(req: Request) {
     }
     
     return NextResponse.json({ error: "Failed to create appointment" }, { status: 500 });
+  }
+}
+
+// PATCH - Update existing appointment
+export async function PATCH(req: Request) {
+  console.log('🔵 ========================================');
+  console.log('🔵 PATCH /api/appointments - Request Received');
+  console.log('🔵 ========================================');
+  
+  try {
+    const user = await getAuthUser(req);
+    
+    if (!user) {
+      console.error('❌ UNAUTHORIZED');
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    const body = await req.json();
+    console.log('📦 Request body:', body);
+    
+    const { id, title, datetime } = body;
+    
+    // Validation
+    if (!id) {
+      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 });
+    }
+    
+    if (title && typeof title !== "string") {
+      return NextResponse.json({ error: "Title must be a string" }, { status: 400 });
+    }
+    
+    if (title && title.length > 500) {
+      return NextResponse.json({ error: "Title too long (max 500 characters)" }, { status: 400 });
+    }
+    
+    if (datetime && isNaN(Date.parse(datetime))) {
+      return NextResponse.json({ error: "Invalid datetime" }, { status: 400 });
+    }
+    
+    // Build update query dynamically based on provided fields
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    if (title) {
+      const sanitizedTitle = title.replace(/<[^>]*>/g, "").trim();
+      updates.push(`title = $${paramIndex++}`);
+      values.push(sanitizedTitle);
+    }
+    
+    if (datetime) {
+      updates.push(`datetime = $${paramIndex++}`);
+      values.push(datetime);
+    }
+    
+    if (updates.length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+    
+    // Add user_id and id to parameters
+    values.push(user.userId);
+    values.push(id);
+    
+    console.log(`🔄 Updating appointment ${id} for user: ${user.userId}`);
+    const result = await query(
+      `UPDATE appointments SET ${updates.join(', ')} WHERE user_id = $${paramIndex} AND id = $${paramIndex + 1} RETURNING *`,
+      values
+    );
+    
+    if (result.rows.length === 0) {
+      console.error('❌ Appointment not found or unauthorized');
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+    }
+    
+    console.log('✅ Appointment updated successfully');
+    console.log('🔵 ========================================');
+    return NextResponse.json({ appointment: result.rows[0] });
+  } catch (error) {
+    console.error('🔴 ========================================');
+    console.error("❌ Error updating appointment:", error);
+    console.error('🔴 ========================================');
+    return NextResponse.json({ error: "Failed to update appointment" }, { status: 500 });
+  }
+}
+
+// DELETE - Delete appointment
+export async function DELETE(req: Request) {
+  console.log('🔵 ========================================');
+  console.log('🔵 DELETE /api/appointments - Request Received');
+  console.log('🔵 ========================================');
+  
+  try {
+    const user = await getAuthUser(req);
+    
+    if (!user) {
+      console.error('❌ UNAUTHORIZED');
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    
+    console.log('🔍 Deleting appointment ID:', id);
+    
+    if (!id) {
+      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 });
+    }
+    
+    console.log(`🗑️ Deleting appointment ${id} for user: ${user.userId}`);
+    const result = await query(
+      'DELETE FROM appointments WHERE user_id = $1 AND id = $2 RETURNING *',
+      [user.userId, id]
+    );
+    
+    if (result.rows.length === 0) {
+      console.error('❌ Appointment not found or unauthorized');
+      return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+    }
+    
+    console.log('✅ Appointment deleted successfully');
+    console.log('🔵 ========================================');
+    return NextResponse.json({ success: true, deleted: result.rows[0] });
+  } catch (error) {
+    console.error('🔴 ========================================');
+    console.error("❌ Error deleting appointment:", error);
+    console.error('🔴 ========================================');
+    return NextResponse.json({ error: "Failed to delete appointment" }, { status: 500 });
   }
 }

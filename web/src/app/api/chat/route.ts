@@ -509,7 +509,40 @@ JSON for adding items:
   "message": "REQUIRED - verbal confirmation to speak to user (e.g., 'Got it. I'll remind you to pick up eggs at Publix tomorrow before noon.')"
 }
 
-JSON for changing todo priority:
+JSON for updating items:
+{
+  "action": "update",
+  "type": "todo" | "appointment" | "routine" | "habit",
+  "title": "title of item to find (fuzzy match)",
+  "updates": {
+    // For TODOS:
+    "newTitle": "string (optional)",
+    "priority": "low" | "medium" | "high" (optional)",
+    "dueDate": "ISO string (optional)",
+    "markComplete": true (optional - marks todo as done),
+    
+    // For APPOINTMENTS:
+    "newTitle": "string (optional)",
+    "datetime": "ISO string (optional - to reschedule)",
+    
+    // For HABITS/ROUTINES:
+    "newTitle": "string (optional)",
+    "frequency": "daily" | "weekly" (optional)",
+    "daysOfWeek": ["monday","tuesday"] (optional)",
+    "logCompletion": true (optional - logs completion for today)
+  },
+  "message": "REQUIRED - confirmation like 'I've updated your appointment to 3pm tomorrow.'"
+}
+
+Examples of UPDATE actions:
+- "Reschedule dentist to 3pm tomorrow" → {"action": "update", "type": "appointment", "title": "dentist", "updates": {"datetime": "2026-01-19T15:00:00"}, "message": "I've rescheduled your dentist appointment to 3pm tomorrow."}
+- "Mark buy milk as complete" → {"action": "update", "type": "todo", "title": "buy milk", "updates": {"markComplete": true}, "message": "I've marked 'buy milk' as complete."}
+- "Change meeting to high priority" → {"action": "update", "type": "todo", "title": "meeting", "updates": {"priority": "high"}, "message": "I've changed 'meeting' to high priority."}
+- "Rename workout to morning exercise" → {"action": "update", "type": "routine", "title": "workout", "updates": {"newTitle": "morning exercise"}, "message": "I've renamed 'workout' to 'morning exercise'."}
+- "Log completion for meditation" → {"action": "update", "type": "routine", "title": "meditation", "updates": {"logCompletion": true}, "message": "Great! I've logged your meditation for today."}
+- "Move dentist to next week" → {"action": "update", "type": "appointment", "title": "dentist", "updates": {"datetime": "[next week datetime]"}, "message": "I've moved your dentist appointment to next week."}
+
+DEPRECATED (use "update" action instead):
 {
   "action": "update_priority",
   "todoTitle": "exact title from list",

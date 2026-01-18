@@ -151,7 +151,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   // Track fulfilled intents to avoid repetitive suggestions
   const fulfilledIntentsRef = useRef<Set<string>>(new Set());
 
-  const { todos, habits, appointments, addTodo, addHabit, addAppointment, updateTodoPriority, deleteTodo, deleteHabit, deleteAppointment, deleteRoutine } = useLife();
+  const { todos, habits, appointments, addTodo, addHabit, addAppointment, updateTodo, updateHabit, updateAppointment, updateTodoPriority, deleteTodo, deleteHabit, deleteAppointment, deleteRoutine } = useLife();
   
   // Native audio hook for iOS app
   const nativeAudio = useNativeAudio();
@@ -454,7 +454,17 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           console.log("✅ ChatInput: addAppointment call completed");
           
           // Try to save to database (non-blocking)
+          console.log('🌐 ========================================');
+          console.log('🌐 ChatInput: Starting database save...');
+          console.log('🌐 ========================================');
+          
           try {
+            console.log('🌐 Preparing fetch to /api/appointments');
+            console.log('🌐 Request payload:', {
+              title: data.title,
+              datetime: datetime.toISOString(),
+            });
+            
             const apiResponse = await fetch("/api/appointments", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -464,20 +474,42 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               }),
             });
             
+            console.log('📡 API Response received');
+            console.log('📡 Status:', apiResponse.status, apiResponse.statusText);
+            console.log('📡 OK:', apiResponse.ok);
+            
             if (!apiResponse.ok) {
               const errorData = await apiResponse.json();
-              console.warn("⚠️ Failed to save appointment to database (but added locally):", errorData);
+              console.error('❌ ========================================');
+              console.error("❌ Failed to save appointment to database");
+              console.error("❌ Status:", apiResponse.status);
+              console.error("❌ Error data:", errorData);
+              console.error('❌ ========================================');
               
               // Don't fail the whole operation - appointment is already in local state
               // Just log the issue
               if (apiResponse.status === 401) {
-                console.warn("⚠️ Authentication issue - appointment saved locally only");
+                console.error("❌ AUTHENTICATION FAILED - 401 Unauthorized");
+                console.error("❌ This means the user session is not valid");
+                console.error("❌ Check:");
+                console.error("   - Is session token in keychain?");
+                console.error("   - Is Authorization header being sent?");
+                console.error("   - Is token valid/expired?");
               }
             } else {
-              console.log("✅ Appointment saved to database successfully");
+              const successData = await apiResponse.json();
+              console.log('✅ ========================================');
+              console.log("✅ Appointment saved to database successfully!");
+              console.log("✅ Response data:", successData);
+              console.log('✅ ========================================');
             }
           } catch (err) {
-            console.error("❌ Database save failed (appointment saved locally):", err);
+            console.error('💥 ========================================');
+            console.error("💥 EXCEPTION during database save");
+            console.error("💥 Error:", err);
+            console.error("💥 Error type:", err instanceof Error ? err.constructor.name : typeof err);
+            console.error("💥 Error message:", err instanceof Error ? err.message : String(err));
+            console.error('💥 ========================================');
             // Don't show error to user - appointment is in local state and working
           }
 
@@ -551,6 +583,118 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             action: "speak",
             text: responseText,
           });
+        }
+        
+      } else if (data.action === "update") {
+        // Handle UPDATE requests for todos, appointments, and habits
+        const itemType = data.type; // "todo", "appointment", "routine", "habit"
+        const searchTitle = data.title;
+        const updates = data.updates || {};
+        
+        console.log('🔄 UPDATE action received:', { itemType, searchTitle, updates });
+        
+        // Find the item by title (fuzzy match)
+        let itemToUpdate: any = null;
+        let actualType = itemType;
+        
+        if (itemType === "todo") {
+          itemToUpdate = todos.find(t => 
+            t.title.toLowerCase().includes(searchTitle?.toLowerCase()) ||
+            searchTitle?.toLowerCase().includes(t.title.toLowerCase())
+          );
+        } else if (itemType === "appointment") {
+          itemToUpdate = appointments.find(a => 
+            a.title.toLowerCase().includes(searchTitle?.toLowerCase()) ||
+            searchTitle?.toLowerCase().includes(a.title.toLowerCase())
+          );
+        } else if (itemType === "routine" || itemType === "habit") {
+          actualType = "habit";
+          itemToUpdate = habits.find(h => 
+            h.title.toLowerCase().includes(searchTitle?.toLowerCase()) ||
+            searchTitle?.toLowerCase().includes(h.title.toLowerCase())
+          );
+        }
+        
+        if (!itemToUpdate) {
+          const responseText = `I couldn't find a ${itemType} called "${searchTitle}".`;
+          addMessage({
+            id: uuidv4(),
+            role: "assistant",
+            content: responseText,
+          });
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: responseText,
+            });
+          }
+        } else {
+          // Perform the update
+          try {
+            if (actualType === "todo") {
+              // Update TODO using context function
+              const todoUpdates: Partial<Todo> = {};
+              
+              if (updates.newTitle) todoUpdates.title = updates.newTitle;
+              if (updates.priority) todoUpdates.priority = updates.priority;
+              if (updates.dueDate) todoUpdates.dueDate = new Date(updates.dueDate);
+              if (updates.markComplete) todoUpdates.completedAt = new Date();
+              
+              updateTodo(itemToUpdate.id, todoUpdates);
+              
+            } else if (actualType === "appointment") {
+              // Update APPOINTMENT using context function
+              const appointmentUpdates: Partial<Appointment> = {};
+              
+              if (updates.newTitle) appointmentUpdates.title = updates.newTitle;
+              if (updates.datetime) appointmentUpdates.datetime = new Date(updates.datetime);
+              
+              updateAppointment(itemToUpdate.id, appointmentUpdates);
+              
+            } else if (actualType === "habit") {
+              // Update HABIT/ROUTINE using context function
+              const habitUpdates: Partial<Habit> = {};
+              
+              if (updates.newTitle) habitUpdates.title = updates.newTitle;
+              if (updates.frequency) habitUpdates.frequency = updates.frequency;
+              if (updates.daysOfWeek) habitUpdates.daysOfWeek = updates.daysOfWeek;
+              if (updates.logCompletion) {
+                // Log completion by appending to completions array
+                habitUpdates.completions = [...(itemToUpdate.completions || []), { date: new Date() }];
+              }
+              
+              updateHabit(itemToUpdate.id, habitUpdates);
+            }
+            
+            // Show success message
+            const responseText = data.message || `Updated "${itemToUpdate.title}".`;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: responseText,
+            });
+            
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: responseText,
+              });
+            }
+          } catch (error) {
+            console.error('❌ Error updating item:', error);
+            const errorText = `Sorry, I couldn't update "${searchTitle}".`;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: errorText,
+            });
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: errorText,
+              });
+            }
+          }
         }
         
       } else if (data.action === "delete") {
@@ -655,7 +799,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       setLoading(false);
       setIsProcessing(false);
     }
-  }, [loading, messages, todos, habits, appointments, addMessage, updateTodoPriority, isNativeApp, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit]);
+  }, [loading, messages, todos, habits, appointments, addMessage, updateTodoPriority, isNativeApp, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit, addTodo, addAppointment, addHabit, updateTodo, updateAppointment, updateHabit]);
 
   // Handle native transcription results (iOS native only)
   useEffect(() => {

@@ -18,13 +18,16 @@ export type LifeContextType = {
   addTodo: (todo: Todo) => void;
   completeTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
+  updateTodo: (id: string, updates: Partial<Todo>) => void;
   updateTodoPriority: (id: string, priority: Priority) => void;
   moveTodoToGroceries: (id: string) => void;
   addHabit: (habit: Habit) => void;
   logHabit: (id: string) => void;
   deleteHabit: (id: string) => void;
+  updateHabit: (id: string, updates: Partial<Habit>) => void;
   addAppointment: (appt: Appointment) => void;
   deleteAppointment: (id: string) => void;
+  updateAppointment: (id: string, updates: Partial<Appointment>) => void;
   addRoutine: (routine: Routine) => void;
   deleteRoutine: (id: string) => void;
   addRoutineItem: (routineId: string, item: RoutineItem) => void;
@@ -142,6 +145,33 @@ export function LifeProvider({ children }: LifeProviderProps) {
           console.error('❌ Failed to load appointments, status:', apptsRes.status);
         }
 
+        // Load habits from database
+        console.log('🔄 Fetching habits from /api/habits...');
+        const habitsRes = await fetch('/api/habits');
+        console.log('📡 Habits API response status:', habitsRes.status, habitsRes.statusText);
+        
+        if (habitsRes.ok) {
+          const habitsData = await habitsRes.json();
+          console.log('📡 Habits API response data:', habitsData);
+          
+          if (habitsData.habits && habitsData.habits.length > 0) {
+            const dbHabits: Habit[] = habitsData.habits.map((h: any) => ({
+              id: h.id,
+              title: h.title,
+              frequency: h.frequency || 'daily',
+              daysOfWeek: h.days_of_week || [],
+              completions: Array.isArray(h.completions) ? h.completions : [],
+              createdAt: new Date(h.created_at),
+            }));
+            setHabits(dbHabits);
+            console.log(`✅ Loaded ${dbHabits.length} habits from database`);
+          } else {
+            console.log('✅ No habits in database - starting fresh with empty state');
+          }
+        } else {
+          console.error('❌ Failed to load habits, status:', habitsRes.status);
+        }
+
         setDataLoaded(true);
       } catch (error) {
         console.error("❌ Failed to load data from database:", error);
@@ -160,8 +190,43 @@ export function LifeProvider({ children }: LifeProviderProps) {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completedAt: new Date() } : t));
   }, []);
 
-  const deleteTodo = useCallback((id: string) => {
+  const updateTodo = useCallback(async (id: string, updates: Partial<Todo>) => {
+    // Optimistic update
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    
+    // Persist to database
+    try {
+      const response = await fetch("/api/todos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      
+      if (!response.ok) {
+        console.error('❌ Failed to update todo in database');
+      } else {
+        console.log('✅ Todo updated in database');
+      }
+    } catch (error) {
+      console.error('❌ Error updating todo:', error);
+    }
+  }, []);
+
+  const deleteTodo = useCallback(async (id: string) => {
+    // Optimistic update - remove from UI immediately
     setTodos(prev => prev.filter(t => t.id !== id));
+    
+    // Persist to database
+    try {
+      const response = await fetch(`/api/todos?id=${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        console.error('❌ Failed to delete todo from database');
+      } else {
+        console.log('✅ Todo deleted from database');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting todo:', error);
+    }
   }, []);
 
   const updateTodoPriority = useCallback((id: string, priority: Priority) => {
@@ -237,8 +302,43 @@ export function LifeProvider({ children }: LifeProviderProps) {
     ));
   }, []);
 
-  const deleteHabit = useCallback((id: string) => {
+  const updateHabit = useCallback(async (id: string, updates: Partial<Habit>) => {
+    // Optimistic update
+    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
+    
+    // Persist to database
+    try {
+      const response = await fetch("/api/habits", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      
+      if (!response.ok) {
+        console.error('❌ Failed to update habit in database');
+      } else {
+        console.log('✅ Habit updated in database');
+      }
+    } catch (error) {
+      console.error('❌ Error updating habit:', error);
+    }
+  }, []);
+
+  const deleteHabit = useCallback(async (id: string) => {
+    // Optimistic update - remove from UI immediately
     setHabits(prev => prev.filter(h => h.id !== id));
+    
+    // Persist to database
+    try {
+      const response = await fetch(`/api/habits?id=${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        console.error('❌ Failed to delete habit from database');
+      } else {
+        console.log('✅ Habit deleted from database');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting habit:', error);
+    }
   }, []);
 
   const addAppointment = useCallback((appt: Appointment) => {
@@ -259,8 +359,43 @@ export function LifeProvider({ children }: LifeProviderProps) {
     });
   }, []);
 
-  const deleteAppointment = useCallback((id: string) => {
+  const updateAppointment = useCallback(async (id: string, updates: Partial<Appointment>) => {
+    // Optimistic update
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    
+    // Persist to database
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      
+      if (!response.ok) {
+        console.error('❌ Failed to update appointment in database');
+      } else {
+        console.log('✅ Appointment updated in database');
+      }
+    } catch (error) {
+      console.error('❌ Error updating appointment:', error);
+    }
+  }, []);
+
+  const deleteAppointment = useCallback(async (id: string) => {
+    // Optimistic update - remove from UI immediately
     setAppointments(prev => prev.filter(a => a.id !== id));
+    
+    // Persist to database
+    try {
+      const response = await fetch(`/api/appointments?id=${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        console.error('❌ Failed to delete appointment from database');
+      } else {
+        console.log('✅ Appointment deleted from database');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting appointment:', error);
+    }
   }, []);
 
   const addRoutine = useCallback((routine: Routine) => {
@@ -359,13 +494,16 @@ export function LifeProvider({ children }: LifeProviderProps) {
     addTodo,
     completeTodo,
     deleteTodo,
+    updateTodo,
     updateTodoPriority,
     moveTodoToGroceries,
     addHabit,
     logHabit,
     deleteHabit,
+    updateHabit,
     addAppointment,
     deleteAppointment,
+    updateAppointment,
     addRoutine,
     deleteRoutine,
     addRoutineItem,
@@ -373,7 +511,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     clearCompletedRoutineItems,
     moveRoutineItemToTodos,
     clearAllData,
-  }), [todos, habits, appointments, routines, addTodo, completeTodo, deleteTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, deleteHabit, addAppointment, deleteAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, clearAllData]);
+  }), [todos, habits, appointments, routines, addTodo, completeTodo, deleteTodo, updateTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, deleteHabit, updateHabit, addAppointment, deleteAppointment, updateAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, clearAllData]);
 
   return (
     <LifeContext.Provider value={value}>
