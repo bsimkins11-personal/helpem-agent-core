@@ -73,16 +73,19 @@ export default function AppPage() {
     const end = new Date(viewDate);
     
     if (calendarView === "day") {
-      end.setDate(end.getDate() + 1);
+      // Set end to 23:59:59 of the same day (end of day)
+      end.setHours(23, 59, 59, 999);
     } else if (calendarView === "week") {
       // Start on Sunday of the week
       const dayOfWeek = start.getDay();
       start.setDate(start.getDate() - dayOfWeek);
       end.setDate(start.getDate() + 7);
+      end.setHours(23, 59, 59, 999);
     } else if (calendarView === "month") {
       start.setDate(1); // First day of month
       end.setMonth(end.getMonth() + 1);
-      end.setDate(1); // First day of next month
+      end.setDate(0); // Last day of current month
+      end.setHours(23, 59, 59, 999);
     }
     
     return { start, end };
@@ -103,7 +106,7 @@ export default function AppPage() {
   const viewDateAppointments = appointments
     .filter((apt) => {
       const aptDate = new Date(apt.datetime);
-      const inRange = aptDate >= rangeStart && aptDate < rangeEnd;
+      const inRange = aptDate >= rangeStart && aptDate <= rangeEnd;
       
       console.log(`   Checking "${apt.title}":`, {
         datetime: aptDate.toISOString(),
