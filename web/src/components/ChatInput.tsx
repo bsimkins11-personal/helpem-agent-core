@@ -176,6 +176,13 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
     });
   }, []);
 
+  const clearChat = useCallback(() => {
+    setMessages([]);
+    sessionStorage.removeItem(CHAT_STORAGE_KEY);
+    fulfilledIntentsRef.current.clear();
+    console.log("🗑️ Chat history cleared");
+  }, []);
+
   const sendMessageWithText = useCallback(async (text: string, isVoiceInput: boolean = false) => {
     if (!text.trim() || loading) return;
 
@@ -836,6 +843,24 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           }
         }
         
+      } else if (data.action === "clear_chat") {
+        // Clear chat history
+        clearChat();
+        
+        const responseText = data.message || "Chat cleared.";
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        
+        if (isNativeApp) {
+          window.webkit?.messageHandlers?.native?.postMessage({
+            action: "speak",
+            text: responseText,
+          });
+        }
+        
       } else {
         const rawResponse = data.message || data.error || "I'm not sure how to help with that.";
         let responseText = stripMarkdown(rawResponse);
@@ -874,7 +899,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       setLoading(false);
       setIsProcessing(false);
     }
-  }, [loading, messages, todos, habits, appointments, addMessage, updateTodoPriority, isNativeApp, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit, addTodo, addAppointment, addHabit, updateTodo, updateAppointment, updateHabit]);
+  }, [loading, messages, todos, habits, appointments, addMessage, clearChat, updateTodoPriority, isNativeApp, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit, addTodo, addAppointment, addHabit, updateTodo, updateAppointment, updateHabit]);
 
   // Handle native transcription results (iOS native only)
   useEffect(() => {
