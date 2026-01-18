@@ -7,7 +7,6 @@ import { AppointmentCard } from "@/components/AppointmentCard";
 import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
-import { AppointmentDebugPanel } from "@/components/AppointmentDebugPanel";
 import { useLife } from "@/state/LifeStore";
 import { useState } from "react";
 
@@ -194,9 +193,6 @@ export default function AppPage() {
           <p className="text-white/80 mt-1 text-sm md:text-base">{formattedDate}</p>
         </div>
       </div>
-
-      {/* DEBUG PANEL - Remove this after fixing appointment issue */}
-      <AppointmentDebugPanel />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <div className="order-1">
