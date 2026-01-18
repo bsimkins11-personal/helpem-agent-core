@@ -342,21 +342,57 @@ export function LifeProvider({ children }: LifeProviderProps) {
   }, []);
 
   const addAppointment = useCallback((appt: Appointment) => {
-    console.log('📅 LifeStore: addAppointment called with:', {
+    console.log('🚨 ========================================');
+    console.log('🚨 LifeStore: addAppointment CALLED');
+    console.log('🚨 ========================================');
+    console.log('📅 Input appointment object:', {
       id: appt.id,
       title: appt.title,
       datetime: appt.datetime,
-      datetimeISO: new Date(appt.datetime).toISOString(),
-      isValidDate: !isNaN(new Date(appt.datetime).getTime()),
+      datetimeType: typeof appt.datetime,
+      datetimeISO: appt.datetime instanceof Date ? appt.datetime.toISOString() : 'NOT A DATE OBJECT',
+      isValidDate: appt.datetime instanceof Date && !isNaN(appt.datetime.getTime()),
+      createdAt: appt.createdAt,
+    });
+    
+    // CRITICAL: Ensure datetime is a Date object
+    const normalizedAppt = {
+      ...appt,
+      datetime: appt.datetime instanceof Date ? appt.datetime : new Date(appt.datetime),
+      createdAt: appt.createdAt instanceof Date ? appt.createdAt : new Date(appt.createdAt),
+    };
+    
+    console.log('📅 Normalized appointment:', {
+      id: normalizedAppt.id,
+      title: normalizedAppt.title,
+      datetime: normalizedAppt.datetime.toISOString(),
+      dateOnly: normalizedAppt.datetime.toLocaleDateString(),
+      timeOnly: normalizedAppt.datetime.toLocaleTimeString(),
     });
     
     setAppointments(prev => {
-      console.log('📅 LifeStore: Previous appointments count:', prev.length);
-      const newAppointments = [...prev, appt];
-      console.log('📅 LifeStore: New appointments count:', newAppointments.length);
-      console.log('📅 LifeStore: New appointment added:', appt.title);
+      console.log('📅 LifeStore: BEFORE setState');
+      console.log('   Previous appointments array:', prev);
+      console.log('   Previous count:', prev.length);
+      
+      const newAppointments = [...prev, normalizedAppt];
+      
+      console.log('📅 LifeStore: AFTER creating new array');
+      console.log('   New appointments array:', newAppointments);
+      console.log('   New count:', newAppointments.length);
+      console.log('   Just added:', normalizedAppt.title);
+      console.log('🚨 ========================================');
+      console.log('🚨 LifeStore: addAppointment COMPLETE');
+      console.log('🚨 Returning new array with', newAppointments.length, 'appointments');
+      console.log('🚨 ========================================');
+      
       return newAppointments;
     });
+    
+    // Force log after state update
+    setTimeout(() => {
+      console.log('⏰ 1 second later - checking if state persisted...');
+    }, 1000);
   }, []);
 
   const updateAppointment = useCallback(async (id: string, updates: Partial<Appointment>) => {

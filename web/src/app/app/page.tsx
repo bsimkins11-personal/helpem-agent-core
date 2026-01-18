@@ -26,7 +26,17 @@ export default function AppPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
   
-  console.log('📅 AppPage: Rendering with', appointments.length, 'appointments');
+  console.log('🟦 ========================================');
+  console.log('🟦 AppPage: RENDERING');
+  console.log('🟦 ========================================');
+  console.log('📅 Total appointments in state:', appointments.length);
+  console.log('📅 Appointments array:', appointments);
+  appointments.forEach((apt, idx) => {
+    console.log(`   [${idx}] "${apt.title}" at ${apt.datetime instanceof Date ? apt.datetime.toISOString() : apt.datetime}`);
+  });
+  console.log('📅 Selected date for filtering:', selectedDate.toISOString());
+  console.log('📅 Calendar view:', calendarView);
+  console.log('🟦 ========================================');
   
   // Expand/collapse states for each module
   const [expandedModules, setExpandedModules] = useState({
@@ -81,12 +91,33 @@ export default function AppPage() {
   const { start: rangeStart, end: rangeEnd } = getDateRange();
   const isViewingToday = viewDate.getTime() === today.getTime();
 
+  console.log('🔍 ========================================');
+  console.log('🔍 DATE FILTERING');
+  console.log('🔍 ========================================');
+  console.log('📅 Date range for filtering:');
+  console.log('   Start:', rangeStart.toISOString());
+  console.log('   End:', rangeEnd.toISOString());
+  console.log('   View:', calendarView);
+  console.log('   Is viewing today?', isViewingToday);
+
   const viewDateAppointments = appointments
     .filter((apt) => {
       const aptDate = new Date(apt.datetime);
-      return aptDate >= rangeStart && aptDate < rangeEnd;
+      const inRange = aptDate >= rangeStart && aptDate < rangeEnd;
+      
+      console.log(`   Checking "${apt.title}":`, {
+        datetime: aptDate.toISOString(),
+        dateOnly: aptDate.toLocaleDateString(),
+        inRange: inRange,
+        reason: !inRange ? `${aptDate.toISOString()} is ${aptDate < rangeStart ? 'before' : 'after'} range` : 'IN RANGE ✅'
+      });
+      
+      return inRange;
     })
     .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
+  
+  console.log('🔍 Filtered appointments count:', viewDateAppointments.length);
+  console.log('🔍 ========================================');
 
   // Navigation functions
   const navigatePrev = () => {
