@@ -6,6 +6,7 @@ import { useLife } from "@/state/LifeStore";
 import { Priority, Todo } from "@/types/todo";
 import { Appointment } from "@/types/appointment";
 import { Habit } from "@/types/habit";
+import { Grocery } from "@/types/grocery";
 import { useNativeAudio } from "@/hooks/useNativeAudio";
 
 type Message = {
@@ -13,12 +14,13 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   action?: {
-    type: "todo" | "habit" | "appointment";
+    type: "todo" | "habit" | "appointment" | "grocery";
     title: string;
     priority?: Priority;
     datetime?: string;
     frequency?: "daily" | "weekly";
     daysOfWeek?: string[];
+    content?: string; // For grocery items
   };
 };
 
@@ -127,7 +129,7 @@ interface ChatInputProps {
 type PendingDeletion = {
   itemId: string;
   itemTitle: string;
-  itemType: "todo" | "appointment" | "routine" | "habit";
+  itemType: "todo" | "appointment" | "routine" | "habit" | "grocery";
   confirmMessage: string;
 };
 
@@ -153,7 +155,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   // Track fulfilled intents to avoid repetitive suggestions
   const fulfilledIntentsRef = useRef<Set<string>>(new Set());
 
-  const { todos, habits, appointments, addTodo, addHabit, addAppointment, updateTodo, updateHabit, updateAppointment, updateTodoPriority, deleteTodo, deleteHabit, deleteAppointment, deleteRoutine } = useLife();
+  const { todos, habits, appointments, groceries, addTodo, addHabit, addAppointment, addGrocery, updateTodo, updateHabit, updateAppointment, updateGrocery, updateTodoPriority, deleteTodo, deleteHabit, deleteAppointment, deleteRoutine, deleteGrocery, completeGrocery } = useLife();
   
   // Native audio hook for iOS app
   const nativeAudio = useNativeAudio();
@@ -200,6 +202,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           deleteAppointment(pendingDeletion.itemId);
         } else if (pendingDeletion.itemType === "routine" || pendingDeletion.itemType === "habit") {
           deleteHabit(pendingDeletion.itemId);
+        } else if (pendingDeletion.itemType === "grocery") {
+          deleteGrocery(pendingDeletion.itemId);
         }
         
         const responseText = pendingDeletion.confirmMessage;
@@ -278,15 +282,15 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          conversationHistory: recentMessages,
-          userData: { todos, habits, appointments },
-          currentDateTime,
-          currentDateTimeISO: now.toISOString(),
-          fulfilledIntents,
-        }),
-      });
+          body: JSON.stringify({
+            message: text,
+            conversationHistory: recentMessages,
+            userData: { todos, habits, appointments, groceries },
+            currentDateTime,
+            currentDateTimeISO: now.toISOString(),
+            fulfilledIntents,
+          }),
+        });
       
       // Mark this intent as fulfilled after successful response
       if (intent) {
@@ -526,6 +530,49 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               text: responseText,
             });
           }
+        } else if (internalType === "grocery") {
+          const id = uuidv4();
+          const content = data.title || data.content;
+          
+          console.log("🛒 Creating grocery item:", {
+            id,
+            content,
+          });
+          
+          // Add to local state first
+          addGrocery({
+            id,
+            content,
+            completed: false,
+            createdAt: now,
+          });
+          
+          // Try to save to database (non-blocking)
+          try {
+            const apiResponse = await fetch("/api/groceries", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ content }),
+            });
+            
+            if (!apiResponse.ok) {
+              console.warn("⚠️ Failed to save grocery to database (but added locally)");
+            } else {
+              console.log("✅ Grocery saved to database successfully");
+            }
+          } catch (err) {
+            console.error("❌ Database save failed (grocery saved locally):", err);
+          }
+          
+          const responseText = data.message || `Added "${content}" to your grocery list.`;
+          addMessage({ id: uuidv4(), role: "assistant", content: responseText });
+
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: responseText,
+            });
+          }
         }
 
         // No confirmation flows; we add immediately.
@@ -588,8 +635,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         }
         
       } else if (data.action === "update") {
-        // Handle UPDATE requests for todos, appointments, and habits
-        const itemType = data.type; // "todo", "appointment", "routine", "habit"
+        // Handle UPDATE requests for todos, appointments, habits, and groceries
+        const itemType = data.type; // "todo", "appointment", "routine", "habit", "grocery"
         const searchTitle = data.title;
         const updates = data.updates || {};
         
@@ -614,6 +661,11 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           itemToUpdate = habits.find(h => 
             h.title.toLowerCase().includes(searchTitle?.toLowerCase()) ||
             searchTitle?.toLowerCase().includes(h.title.toLowerCase())
+          );
+        } else if (itemType === "grocery") {
+          itemToUpdate = groceries.find(g => 
+            g.content.toLowerCase().includes(searchTitle?.toLowerCase()) ||
+            searchTitle?.toLowerCase().includes(g.content.toLowerCase())
           );
         }
         
@@ -666,10 +718,25 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               }
               
               updateHabit(itemToUpdate.id, habitUpdates);
+              
+            } else if (actualType === "grocery") {
+              // Update GROCERY using context function
+              const groceryUpdates: Partial<Grocery> = {};
+              
+              if (updates.newContent || updates.newTitle) {
+                groceryUpdates.content = updates.newContent || updates.newTitle;
+              }
+              if (updates.markComplete) {
+                groceryUpdates.completed = true;
+                groceryUpdates.completedAt = new Date();
+              }
+              
+              updateGrocery(itemToUpdate.id, groceryUpdates);
             }
             
             // Show success message
-            const responseText = data.message || `Updated "${itemToUpdate.title}".`;
+            const displayTitle = actualType === "grocery" ? itemToUpdate.content : itemToUpdate.title;
+            const responseText = data.message || `Updated "${displayTitle}".`;
             addMessage({
               id: uuidv4(),
               role: "assistant",
@@ -701,7 +768,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         
       } else if (data.action === "delete") {
         // Handle deletion requests with inline confirmation
-        const itemType = data.type; // "todo", "appointment", "routine", "habit"
+        const itemType = data.type; // "todo", "appointment", "routine", "habit", "grocery"
         let itemToDelete: any = null;
         let itemTitle = "";
         
@@ -724,6 +791,12 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             data.title?.toLowerCase().includes(h.title.toLowerCase())
           );
           itemTitle = itemToDelete?.title;
+        } else if (itemType === "grocery") {
+          itemToDelete = groceries.find(g => 
+            g.content.toLowerCase().includes(data.title?.toLowerCase()) ||
+            data.title?.toLowerCase().includes(g.content.toLowerCase())
+          );
+          itemTitle = itemToDelete?.content;
         }
         
         if (!itemToDelete) {

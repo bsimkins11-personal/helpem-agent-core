@@ -6,6 +6,7 @@ import { Todo, Priority } from "@/types/todo";
 import { Habit } from "@/types/habit";
 import { Appointment } from "@/types/appointment";
 import { Routine, RoutineItem } from "@/types/routine";
+import { Grocery } from "@/types/grocery";
 
 // No seed data - all users start with clean slate for UAT/production
 
@@ -15,6 +16,7 @@ export type LifeContextType = {
   habits: Habit[];
   appointments: Appointment[];
   routines: Routine[];
+  groceries: Grocery[];
   addTodo: (todo: Todo) => void;
   completeTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
@@ -34,6 +36,11 @@ export type LifeContextType = {
   completeRoutineItem: (routineId: string, itemId: string) => void;
   clearCompletedRoutineItems: (routineId: string) => void;
   moveRoutineItemToTodos: (routineId: string, itemId: string, title: string) => void;
+  addGrocery: (grocery: Grocery) => void;
+  completeGrocery: (id: string) => void;
+  deleteGrocery: (id: string) => void;
+  updateGrocery: (id: string, updates: Partial<Grocery>) => void;
+  clearCompletedGroceries: () => void;
   clearAllData: () => void;
 };
 
@@ -49,6 +56,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [groceries, setGroceries] = useState<Grocery[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Load data from database or seed data on mount
@@ -170,6 +178,32 @@ export function LifeProvider({ children }: LifeProviderProps) {
           }
         } else {
           console.error('❌ Failed to load habits, status:', habitsRes.status);
+        }
+
+        // Load groceries from database
+        console.log('🔄 Fetching groceries from /api/groceries...');
+        const groceriesRes = await fetch('/api/groceries');
+        console.log('📡 Groceries API response status:', groceriesRes.status, groceriesRes.statusText);
+        
+        if (groceriesRes.ok) {
+          const groceriesData = await groceriesRes.json();
+          console.log('📡 Groceries API response data:', groceriesData);
+          
+          if (groceriesData.groceries && groceriesData.groceries.length > 0) {
+            const dbGroceries: Grocery[] = groceriesData.groceries.map((g: any) => ({
+              id: g.id,
+              content: g.content,
+              completed: g.completed || false,
+              completedAt: g.completed_at ? new Date(g.completed_at) : undefined,
+              createdAt: new Date(g.created_at),
+            }));
+            setGroceries(dbGroceries);
+            console.log(`✅ Loaded ${dbGroceries.length} grocery items from database`);
+          } else {
+            console.log('✅ No groceries in database - starting fresh with empty state');
+          }
+        } else {
+          console.error('❌ Failed to load groceries, status:', groceriesRes.status);
         }
 
         setDataLoaded(true);
@@ -493,6 +527,93 @@ export function LifeProvider({ children }: LifeProviderProps) {
     sendFeedback(title, "todo", "grocery");
   }, [sendFeedback]);
 
+  const addGrocery = useCallback((grocery: Grocery) => {
+    setGroceries(prev => [...prev, grocery]);
+  }, []);
+
+  const completeGrocery = useCallback(async (id: string) => {
+    // Optimistic update
+    setGroceries(prev => prev.map(g => 
+      g.id === id ? { ...g, completed: true, completedAt: new Date() } : g
+    ));
+    
+    // Persist to database
+    try {
+      const response = await fetch("/api/groceries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, completed: true }),
+      });
+      
+      if (!response.ok) {
+        console.error('❌ Failed to update grocery in database');
+      } else {
+        console.log('✅ Grocery updated in database');
+      }
+    } catch (error) {
+      console.error('❌ Error updating grocery:', error);
+    }
+  }, []);
+
+  const updateGrocery = useCallback(async (id: string, updates: Partial<Grocery>) => {
+    // Optimistic update
+    setGroceries(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+    
+    // Persist to database
+    try {
+      const response = await fetch("/api/groceries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      
+      if (!response.ok) {
+        console.error('❌ Failed to update grocery in database');
+      } else {
+        console.log('✅ Grocery updated in database');
+      }
+    } catch (error) {
+      console.error('❌ Error updating grocery:', error);
+    }
+  }, []);
+
+  const deleteGrocery = useCallback(async (id: string) => {
+    // Optimistic update - remove from UI immediately
+    setGroceries(prev => prev.filter(g => g.id !== id));
+    
+    // Persist to database
+    try {
+      const response = await fetch(`/api/groceries?id=${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        console.error('❌ Failed to delete grocery from database');
+      } else {
+        console.log('✅ Grocery deleted from database');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting grocery:', error);
+    }
+  }, []);
+
+  const clearCompletedGroceries = useCallback(async () => {
+    // Get IDs of completed groceries
+    const completedIds = groceries.filter(g => g.completed).map(g => g.id);
+    
+    // Optimistic update - remove completed items
+    setGroceries(prev => prev.filter(g => !g.completed));
+    
+    // Delete from database
+    try {
+      await Promise.all(
+        completedIds.map(id => 
+          fetch(`/api/groceries?id=${id}`, { method: 'DELETE' })
+        )
+      );
+      console.log(`✅ Cleared ${completedIds.length} completed groceries from database`);
+    } catch (error) {
+      console.error('❌ Error clearing completed groceries:', error);
+    }
+  }, [groceries]);
+
   const clearAllData = useCallback(async () => {
     console.log('🗑️ Clearing all app data (database + local state)...');
     
@@ -518,6 +639,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     setHabits([]);
     setAppointments([]);
     setRoutines([]);
+    setGroceries([]);
     console.log('✅ All data cleared from app');
   }, []);
 
@@ -527,6 +649,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     habits,
     appointments,
     routines,
+    groceries,
     addTodo,
     completeTodo,
     deleteTodo,
@@ -546,8 +669,13 @@ export function LifeProvider({ children }: LifeProviderProps) {
     completeRoutineItem,
     clearCompletedRoutineItems,
     moveRoutineItemToTodos,
+    addGrocery,
+    completeGrocery,
+    deleteGrocery,
+    updateGrocery,
+    clearCompletedGroceries,
     clearAllData,
-  }), [todos, habits, appointments, routines, addTodo, completeTodo, deleteTodo, updateTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, deleteHabit, updateHabit, addAppointment, deleteAppointment, updateAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, clearAllData]);
+  }), [todos, habits, appointments, routines, groceries, addTodo, completeTodo, deleteTodo, updateTodo, updateTodoPriority, moveTodoToGroceries, addHabit, logHabit, deleteHabit, updateHabit, addAppointment, deleteAppointment, updateAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, addGrocery, completeGrocery, deleteGrocery, updateGrocery, clearCompletedGroceries, clearAllData]);
 
   return (
     <LifeContext.Provider value={value}>
