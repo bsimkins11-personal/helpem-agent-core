@@ -28,6 +28,22 @@ export interface SessionError {
   status: number;
 }
 
+function getJwtSecrets(): string[] {
+  const secrets: string[] = [];
+
+  const primary = process.env.JWT_SECRET;
+  const fallback = process.env.JWT_SECRET_FALLBACK;
+  const list = process.env.JWT_SECRETS;
+
+  if (primary) secrets.push(primary);
+  if (fallback) secrets.push(fallback);
+  if (list) {
+    list.split(",").map((s) => s.trim()).filter(Boolean).forEach((s) => secrets.push(s));
+  }
+
+  return Array.from(new Set(secrets));
+}
+
 /**
  * Creates an app-owned session token after successful Apple auth.
  * 
@@ -66,7 +82,8 @@ export function createSessionToken(userId: string, appleUserId: string): string 
 export async function verifySessionToken(
   request: Request
 ): Promise<SessionResult | SessionError> {
-  if (!JWT_SECRET) {
+  const secrets = getJwtSecrets();
+  if (secrets.length === 0) {
     console.error("JWT_SECRET environment variable not set");
     return {
       success: false,
@@ -88,9 +105,23 @@ export async function verifySessionToken(
   const token = authHeader.replace("Bearer ", "");
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, {
-      algorithms: ["HS256"],
-    }) as SessionPayload;
+    let decoded: SessionPayload | null = null;
+    let lastError: unknown = null;
+
+    for (const secret of secrets) {
+      try {
+        decoded = jwt.verify(token, secret, {
+          algorithms: ["HS256"],
+        }) as SessionPayload;
+        break;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (!decoded) {
+      throw lastError ?? new Error("JWT verification failed");
+    }
 
     if (!decoded.userId || !decoded.appleUserId) {
       return {

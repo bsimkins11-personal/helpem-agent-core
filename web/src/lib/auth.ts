@@ -7,6 +7,22 @@ export interface AuthUser {
   appleUserId: string;
 }
 
+function getJwtSecrets(): string[] {
+  const secrets: string[] = [];
+
+  const primary = process.env.JWT_SECRET;
+  const fallback = process.env.JWT_SECRET_FALLBACK;
+  const list = process.env.JWT_SECRETS;
+
+  if (primary) secrets.push(primary);
+  if (fallback) secrets.push(fallback);
+  if (list) {
+    list.split(",").map((s) => s.trim()).filter(Boolean).forEach((s) => secrets.push(s));
+  }
+
+  return Array.from(new Set(secrets));
+}
+
 /**
  * Get authenticated user from session token (cookie or iOS native)
  * Returns null if not authenticated
@@ -43,14 +59,28 @@ export async function getAuthUser(req?: Request): Promise<AuthUser | null> {
     console.log('🔍 Token length:', token.length);
     
     // Verify JWT token
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
+    const secrets = getJwtSecrets();
+    if (secrets.length === 0) {
       console.error('❌ JWT_SECRET not configured in environment');
       return null;
     }
-    console.log('✅ JWT_SECRET is configured');
+    console.log(`✅ JWT_SECRET is configured (${secrets.length} secret${secrets.length === 1 ? "" : "s"})`);
     
-    const decoded = jwt.verify(token, secret) as any;
+    let decoded: any | null = null;
+    let lastError: unknown = null;
+
+    for (const secret of secrets) {
+      try {
+        decoded = jwt.verify(token, secret) as any;
+        break;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (!decoded) {
+      throw lastError ?? new Error("JWT verification failed");
+    }
     console.log('✅ Token verified successfully');
     console.log('🔍 Decoded payload:', {
       userId: decoded.userId,
