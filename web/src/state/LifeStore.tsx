@@ -224,6 +224,14 @@ export function LifeProvider({ children }: LifeProviderProps) {
 
   const completeTodo = useCallback((id: string) => {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completedAt: new Date() } : t));
+    
+    // Cancel notification when todo is completed (iOS only)
+    if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
+      window.webkit.messageHandlers.native.postMessage({
+        action: "cancelNotification",
+        id: id,
+      });
+    }
   }, []);
 
   const updateTodo = useCallback(async (id: string, updates: Partial<Todo>) => {
@@ -251,6 +259,14 @@ export function LifeProvider({ children }: LifeProviderProps) {
   const deleteTodo = useCallback(async (id: string) => {
     // Optimistic update - remove from UI immediately
     setTodos(prev => prev.filter(t => t.id !== id));
+    
+    // Cancel notification when todo is deleted (iOS only)
+    if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
+      window.webkit.messageHandlers.native.postMessage({
+        action: "cancelNotification",
+        id: id,
+      });
+    }
     
     // Persist to database
     try {
@@ -507,6 +523,14 @@ export function LifeProvider({ children }: LifeProviderProps) {
   const deleteAppointment = useCallback(async (id: string) => {
     // Optimistic update - remove from UI immediately
     setAppointments(prev => prev.filter(a => a.id !== id));
+    
+    // Cancel notification when appointment is deleted (iOS only)
+    if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
+      window.webkit.messageHandlers.native.postMessage({
+        action: "cancelNotification",
+        id: `${id}-reminder`,
+      });
+    }
     
     // Persist to database
     try {

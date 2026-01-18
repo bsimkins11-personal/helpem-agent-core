@@ -478,6 +478,12 @@ struct WebViewContainer: UIViewRepresentable {
             case "speak":
                 handleSpeak(text: body["text"] as? String)
                 
+            case "scheduleNotification":
+                handleScheduleNotification(body: body)
+                
+            case "cancelNotification":
+                handleCancelNotification(body: body)
+                
             default:
                 print("⚠️ Unknown action:", action)
             }
@@ -525,6 +531,51 @@ struct WebViewContainer: UIViewRepresentable {
             
             // Reset voice flag
             lastInputWasVoice = false
+        }
+        
+        private func handleScheduleNotification(body: [String: Any]) {
+            guard let id = body["id"] as? String,
+                  let title = body["title"] as? String,
+                  let bodyText = body["body"] as? String,
+                  let dateString = body["date"] as? String else {
+                print("⚠️ Missing required notification parameters")
+                return
+            }
+            
+            // Parse ISO date string
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            guard let date = formatter.date(from: dateString) else {
+                print("❌ Invalid date format:", dateString)
+                return
+            }
+            
+            print("🔔 Scheduling notification '\(id)' for", date)
+            
+            Task {
+                do {
+                    try await NotificationManager.shared.scheduleNotification(
+                        id: id,
+                        title: title,
+                        body: bodyText,
+                        date: date,
+                        userInfo: ["type": "reminder", "id": id]
+                    )
+                    print("✅ Notification scheduled successfully")
+                } catch {
+                    print("❌ Failed to schedule notification:", error)
+                }
+            }
+        }
+        
+        private func handleCancelNotification(body: [String: Any]) {
+            guard let id = body["id"] as? String else {
+                print("⚠️ Missing notification ID")
+                return
+            }
+            
+            print("🗑️ Canceling notification '\(id)'")
+            NotificationManager.shared.cancelNotification(id: id)
         }
 
         // MARK: - Authentication Handlers

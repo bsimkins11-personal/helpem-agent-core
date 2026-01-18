@@ -398,6 +398,18 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               action: "speak",
               text: responseText,
             });
+            
+            // Schedule notification if todo has a time/date
+            if (reminderDate) {
+              console.log(`🔔 Scheduling notification for "${data.title}" at`, reminderDate);
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "scheduleNotification",
+                id: id,
+                title: "Reminder",
+                body: data.title,
+                date: reminderDate.toISOString(),
+              });
+            }
           } else {
             // Only show follow-ups if agent didn't provide custom message (web only)
             if (!data.message) {
@@ -550,6 +562,19 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               action: "speak",
               text: responseText,
             });
+            
+            // Schedule notification for appointment (1 hour before)
+            const notificationTime = new Date(datetime.getTime() - 60 * 60 * 1000); // 1 hour before
+            if (notificationTime > new Date()) { // Only if in the future
+              console.log(`🔔 Scheduling appointment notification for "${data.title}" at`, notificationTime);
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "scheduleNotification",
+                id: `${id}-reminder`,
+                title: "Upcoming Appointment",
+                body: `${data.title} in 1 hour`,
+                date: notificationTime.toISOString(),
+              });
+            }
           }
         } else if (internalType === "grocery") {
           // Support both single item and multiple items (array)
