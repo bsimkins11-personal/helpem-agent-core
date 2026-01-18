@@ -399,9 +399,10 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               text: responseText,
             });
             
-            // Schedule notification if todo has a time/date
-            if (reminderDate) {
-              console.log(`🔔 Scheduling notification for "${data.title}" at`, reminderDate);
+            // Schedule notification ONLY for reminders (todos with specific time/date)
+            // Regular todos/tasks without time do NOT get notifications
+            if (reminderDate && hasExplicitTime) {
+              console.log(`🔔 REMINDER: Scheduling notification for "${data.title}" at`, reminderDate);
               window.webkit?.messageHandlers?.native?.postMessage({
                 action: "scheduleNotification",
                 id: id,
@@ -409,6 +410,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
                 body: data.title,
                 date: reminderDate.toISOString(),
               });
+            } else {
+              console.log(`📝 TODO: No notification (no specific time) for "${data.title}"`);
             }
           } else {
             // Only show follow-ups if agent didn't provide custom message (web only)
