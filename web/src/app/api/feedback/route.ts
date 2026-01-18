@@ -17,6 +17,7 @@ export async function POST(req: Request) {
       userMessage, 
       assistantResponse, 
       action,
+      actionType,
       correction
     } = await req.json();
     

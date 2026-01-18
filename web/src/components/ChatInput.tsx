@@ -22,7 +22,9 @@ type Message = {
     daysOfWeek?: string[];
     content?: string; // For grocery items
   };
+  actionType?: "add" | "update" | "delete"; // Type of CRUD operation performed
   feedback?: "up" | "down"; // User feedback for RLHF
+  feedbackId?: string; // Unique ID for this action (for feedback tracking)
   userMessage?: string; // Original user message that triggered this response
   correction?: string; // User's explanation of what went wrong (for thumbs down)
 };
@@ -195,10 +197,14 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
     });
   }, []);
 
-  const handleFeedback = useCallback(async (messageId: string, feedback: "up" | "down") => {
+  const handleFeedback = useCallback(async (feedbackId: string, feedback: "up" | "down") => {
+    // Find message by feedbackId
+    const message = messages.find(m => m.feedbackId === feedbackId);
+    if (!message) return;
+
     // For thumbs down, ask for correction first
     if (feedback === "down") {
-      setPendingFeedback({ messageId, feedback });
+      setPendingFeedback({ messageId: feedbackId, feedback });
       // Add a prompt asking what went wrong
       addMessage({
         id: uuidv4(),
@@ -210,26 +216,24 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
     // For thumbs up, record immediately
     setMessages(prev => prev.map(msg => 
-      msg.id === messageId ? { ...msg, feedback } : msg
+      msg.feedbackId === feedbackId ? { ...msg, feedback } : msg
     ));
-
-    const message = messages.find(m => m.id === messageId);
-    if (!message) return;
 
     try {
       await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messageId,
+          messageId: feedbackId,
           feedback,
-          userMessage: message.userMessage,
+          userMessage: message.userMessage || "",
           assistantResponse: message.content,
           action: message.action,
+          actionType: message.actionType,
           timestamp: new Date().toISOString(),
         }),
       });
-      console.log(`✅ Feedback recorded: ${feedback} for message ${messageId}`);
+      console.log(`✅ Feedback recorded: ${feedback} for ${message.actionType} ${message.action?.type} action`);
     } catch (error) {
       console.error("❌ Failed to send feedback:", error);
     }
@@ -242,10 +246,10 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
     // Update message with feedback and correction
     setMessages(prev => prev.map(msg => 
-      msg.id === messageId ? { ...msg, feedback, correction: correctionInput } : msg
+      msg.feedbackId === messageId ? { ...msg, feedback, correction: correctionInput } : msg
     ));
 
-    const message = messages.find(m => m.id === messageId);
+    const message = messages.find(m => m.feedbackId === messageId);
     if (!message) return;
 
     try {
@@ -325,10 +329,15 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         }
         
         const responseText = pendingDeletion.confirmMessage;
+        const feedbackId = uuidv4();
         addMessage({
           id: uuidv4(),
           role: "assistant",
           content: responseText,
+          action: { type: pendingDeletion.itemType as any, title: pendingDeletion.itemTitle },
+          actionType: "delete",
+          feedbackId,
+          userMessage: text,
         });
         
         if (isNativeApp) {
@@ -486,10 +495,14 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           }
 
           // ALWAYS add message to chat window (both native and web)
+          const feedbackId = uuidv4();
           addMessage({
             id: uuidv4(),
             role: "assistant",
             content: responseText,
+            action: { type: "todo", title: data.title, priority: priorityValue, datetime: reminderDate?.toISOString() },
+            actionType: "add",
+            feedbackId,
             userMessage: userMessageForFeedback,
           });
 
@@ -545,7 +558,16 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
           const days = data.daysOfWeek?.length ? ` on ${data.daysOfWeek.join(", ")}` : "";
           const responseText = `Added routine "${data.title}"${days}.`;
-          addMessage({ id: uuidv4(), role: "assistant", content: responseText });
+          const feedbackId = uuidv4();
+          addMessage({ 
+            id: uuidv4(), 
+            role: "assistant", 
+            content: responseText,
+            action: { type: "habit", title: data.title, frequency: data.frequency || "daily", daysOfWeek: data.daysOfWeek },
+            actionType: "add",
+            feedbackId,
+            userMessage: userMessageForFeedback,
+          });
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -659,7 +681,16 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           console.log("✅ Appointment added to local state");
 
           // Show success message
-          addMessage({ id: uuidv4(), role: "assistant", content: responseText });
+          const feedbackId = uuidv4();
+          addMessage({ 
+            id: uuidv4(), 
+            role: "assistant", 
+            content: responseText,
+            action: { type: "appointment", title: data.title, datetime: datetime.toISOString() },
+            actionType: "add",
+            feedbackId,
+            userMessage: userMessageForFeedback,
+          });
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -717,7 +748,16 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           }
           
           const responseText = data.message || `Added ${items.length} item${items.length > 1 ? 's' : ''} to your grocery list.`;
-          addMessage({ id: uuidv4(), role: "assistant", content: responseText });
+          const feedbackId = uuidv4();
+          addMessage({ 
+            id: uuidv4(), 
+            role: "assistant", 
+            content: responseText,
+            action: { type: "grocery", content: items.join(", ") },
+            actionType: "add",
+            feedbackId,
+            userMessage: userMessageForFeedback,
+          });
 
           if (isNativeApp) {
             window.webkit?.messageHandlers?.native?.postMessage({
@@ -1426,28 +1466,28 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             }`}>
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
             </div>
-            {/* Feedback buttons for assistant messages */}
-            {msg.role === "assistant" && (
+            {/* Feedback buttons ONLY for action messages (add/update/delete across 4 categories) */}
+            {msg.role === "assistant" && msg.feedbackId && msg.actionType && (
               <div className="flex gap-1 mt-1">
                 <button
-                  onClick={() => handleFeedback(msg.id, "up")}
+                  onClick={() => handleFeedback(msg.feedbackId!, "up")}
                   className={`p-1 rounded transition-colors ${
                     msg.feedback === "up" 
                       ? "bg-green-100 text-green-600" 
                       : "text-gray-400 hover:text-green-600 hover:bg-green-50"
                   }`}
-                  title="Good response"
+                  title="Correct action"
                 >
                   👍
                 </button>
                 <button
-                  onClick={() => handleFeedback(msg.id, "down")}
+                  onClick={() => handleFeedback(msg.feedbackId!, "down")}
                   className={`p-1 rounded transition-colors ${
                     msg.feedback === "down" 
                       ? "bg-red-100 text-red-600" 
                       : "text-gray-400 hover:text-red-600 hover:bg-red-50"
                   }`}
-                  title="Bad response"
+                  title="Wrong action"
                 >
                   👎
                 </button>
