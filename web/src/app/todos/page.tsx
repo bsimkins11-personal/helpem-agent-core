@@ -11,6 +11,7 @@ type PriorityFilter = 'all' | 'high' | 'medium' | 'low';
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 const PRIORITY_TABS = [
+  { key: 'all' as const, label: 'All', color: 'bg-brandBlue', hoverColor: 'hover:bg-blue-100', textColor: 'text-brandBlue' },
   { key: 'high' as const, label: 'High', color: 'bg-red-500', hoverColor: 'hover:bg-red-100', textColor: 'text-red-600' },
   { key: 'medium' as const, label: 'Med', color: 'bg-amber-500', hoverColor: 'hover:bg-amber-100', textColor: 'text-amber-600' },
   { key: 'low' as const, label: 'Low', color: 'bg-green-500', hoverColor: 'hover:bg-green-100', textColor: 'text-green-600' },
@@ -114,17 +115,6 @@ export default function TodosPage() {
               {p.label}
             </button>
           ))}
-          {priorityFilter !== 'all' && (
-            <button
-              onClick={() => setPriorityFilter('all')}
-              className="ml-1 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-              title="Clear filter"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 

@@ -15,6 +15,7 @@ type PriorityFilter = "all" | "high" | "medium" | "low";
 type CalendarView = "day" | "week" | "month";
 
 const PRIORITY_TABS = [
+  { key: "all" as const, label: "All", color: "bg-brandBlue", activeText: "text-white", inactiveText: "text-brandBlue", inactiveBg: "bg-brandBlueLight" },
   { key: "high" as const, label: "High", color: "bg-red-500", activeText: "text-white", inactiveText: "text-red-600", inactiveBg: "bg-red-50" },
   { key: "medium" as const, label: "Med", color: "bg-amber-500", activeText: "text-white", inactiveText: "text-amber-600", inactiveBg: "bg-amber-50" },
   { key: "low" as const, label: "Low", color: "bg-green-500", activeText: "text-white", inactiveText: "text-green-600", inactiveBg: "bg-green-50" },
@@ -351,7 +352,7 @@ export default function AppPage() {
                 {PRIORITY_TABS.map((p) => (
                   <button
                     key={p.key}
-                    onClick={() => setPriorityFilter(priorityFilter === p.key ? "all" : p.key)}
+                    onClick={() => setPriorityFilter(p.key)}
                     className={`px-2 py-1 rounded-md text-xs font-medium transition-all
                       ${priorityFilter === p.key ? `${p.color} ${p.activeText}` : `${p.inactiveBg} ${p.inactiveText} hover:opacity-80`}`}
                   >
