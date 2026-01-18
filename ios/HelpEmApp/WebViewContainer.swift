@@ -61,6 +61,13 @@ struct WebViewContainer: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = "\(webView.value(forKey: "userAgent") as? String ?? "Safari") \(userAgentSuffix)"
         
+        // Enable Safari Web Inspector for debugging
+        #if DEBUG
+        if #available(iOS 16.4, *) {
+            webView.isInspectable = true
+        }
+        #endif
+        
         // 🧹 Configure for lower memory usage
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.allowsBackForwardNavigationGestures = false
