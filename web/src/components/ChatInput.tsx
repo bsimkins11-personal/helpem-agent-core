@@ -299,8 +299,17 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
           body: JSON.stringify({ 
             message: retryPrompt,
             context: {
-              todos: todos.map(t => ({ id: t.id, title: t.title, priority: t.priority })),
-              appointments: appointments.map(a => ({ id: a.id, title: a.title, datetime: a.datetime })),
+              todos: todos.map(t => ({ 
+                id: t.id, 
+                title: t.title, 
+                priority: t.priority,
+                dueDate: t.dueDate instanceof Date ? t.dueDate.toISOString() : t.dueDate
+              })),
+              appointments: appointments.map(a => ({ 
+                id: a.id, 
+                title: a.title, 
+                datetime: typeof a.datetime === 'string' ? a.datetime : a.datetime instanceof Date ? a.datetime.toISOString() : a.datetime 
+              })),
               habits: habits.map(h => ({ id: h.id, title: h.title })),
               groceries: groceries.map(g => ({ id: g.id, content: g.content })),
             }
