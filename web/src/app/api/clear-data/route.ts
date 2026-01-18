@@ -73,11 +73,8 @@ export async function POST(req: Request) {
     }
     
     if (dataTypes.includes('routines')) {
-      const result = await query(
-        'DELETE FROM routines WHERE user_id = $1',
-        [user.userId]
-      );
-      deletedCounts.routines = result.rowCount || 0;
+      // Routines are client-only; no server table exists.
+      deletedCounts.routines = 0;
     }
     
     if (dataTypes.includes('chat')) {
@@ -85,15 +82,11 @@ export async function POST(req: Request) {
         'DELETE FROM user_inputs WHERE user_id = $1',
         [user.userId]
       );
-      const messagesResult = await query(
-        'DELETE FROM chat_messages WHERE user_id = $1',
-        [user.userId]
-      );
       const instructionsResult = await query(
         'DELETE FROM user_instructions WHERE user_id = $1',
         [user.userId]
       );
-      deletedCounts.chatMessages = (inputsResult.rowCount || 0) + (messagesResult.rowCount || 0);
+      deletedCounts.chatMessages = inputsResult.rowCount || 0;
       deletedCounts.userInstructions = instructionsResult.rowCount || 0;
     }
     

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLife } from "@/state/LifeStore";
 
 interface ClearDataModalProps {
@@ -55,12 +55,21 @@ const DATA_TYPES: DataType[] = [
 ];
 
 export default function ClearDataModal({ isOpen, onClose }: ClearDataModalProps) {
-  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(
+    new Set(DATA_TYPES.map(dt => dt.key))
+  );
   const [isClearing, setIsClearing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const { clearAllData } = useLife();
 
   if (!isOpen) return null;
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedTypes(new Set(DATA_TYPES.map(dt => dt.key)));
+      setShowConfirmation(false);
+    }
+  }, [isOpen]);
 
   const toggleDataType = (key: string) => {
     const newSelected = new Set(selectedTypes);
@@ -70,14 +79,6 @@ export default function ClearDataModal({ isOpen, onClose }: ClearDataModalProps)
       newSelected.add(key);
     }
     setSelectedTypes(newSelected);
-  };
-
-  const selectAll = () => {
-    setSelectedTypes(new Set(DATA_TYPES.map(dt => dt.key)));
-  };
-
-  const selectNone = () => {
-    setSelectedTypes(new Set());
   };
 
   const handleClearData = async () => {
@@ -111,14 +112,14 @@ export default function ClearDataModal({ isOpen, onClose }: ClearDataModalProps)
         // Clear chat from sessionStorage if selected
         if (selectedTypes.has('chat')) {
           sessionStorage.removeItem('helpem-chat-session');
+          sessionStorage.removeItem('helpem_chat_history');
           console.log('✅ Cleared chat from sessionStorage');
         }
 
-        // Clear local state for selected data types
-        if (selectedTypes.has('todos') || selectedTypes.has('groceries') || 
-            selectedTypes.has('appointments') || selectedTypes.has('habits') || 
-            selectedTypes.has('routines') || selectedTypes.has('chat')) {
-          // Reload the page to refresh all state
+        // Refresh state after clearing data
+        if (selectedTypes.size === DATA_TYPES.length) {
+          await clearAllData();
+        } else if (selectedTypes.size > 0) {
           window.location.reload();
         }
 
@@ -134,14 +135,14 @@ export default function ClearDataModal({ isOpen, onClose }: ClearDataModalProps)
     } finally {
       setIsClearing(false);
       setShowConfirmation(false);
-      setSelectedTypes(new Set());
+      setSelectedTypes(new Set(DATA_TYPES.map(dt => dt.key)));
     }
   };
 
   const handleClose = () => {
     if (!isClearing) {
       setShowConfirmation(false);
-      setSelectedTypes(new Set());
+      setSelectedTypes(new Set(DATA_TYPES.map(dt => dt.key)));
       onClose();
     }
   };
@@ -171,37 +172,6 @@ export default function ClearDataModal({ isOpen, onClose }: ClearDataModalProps)
 
         {/* Content */}
         <div className="px-6 py-4">
-          {/* Quick actions */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            <button
-              onClick={selectAll}
-              disabled={isClearing}
-              className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-            >
-              Select All
-            </button>
-            <button
-              onClick={selectNone}
-              disabled={isClearing}
-              className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-            >
-              Select None
-            </button>
-            <button
-              onClick={() => {
-                selectAll();
-                // Auto-trigger clear all after selection
-                setTimeout(() => {
-                  setShowConfirmation(true);
-                }, 100);
-              }}
-              disabled={isClearing}
-              className="px-4 py-2 text-sm bg-red-100 hover:bg-red-200 text-red-700 font-semibold rounded-lg transition-colors disabled:opacity-50"
-            >
-              🗑️ Clear All Data
-            </button>
-          </div>
-
           {/* Data type checkboxes */}
           <div className="space-y-2">
             {DATA_TYPES.map((dataType) => (

@@ -56,10 +56,6 @@ export async function DELETE(req: Request) {
       [user.userId]
     );
     
-    const deletedChatMessages = await query(
-      'DELETE FROM chat_messages WHERE user_id = $1',
-      [user.userId]
-    );
     
     const deletedCounts = {
       todos: deletedTodos.rowCount,
@@ -67,7 +63,7 @@ export async function DELETE(req: Request) {
       habits: deletedHabits.rowCount,
       userInputs: deletedInputs.rowCount,
       userInstructions: deletedInstructions.rowCount,
-      chatMessages: deletedChatMessages.rowCount,
+      chatMessages: 0,
     };
     
     console.log(`✅ Cleared data for user ${user.userId}:`);
