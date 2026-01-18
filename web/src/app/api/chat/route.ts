@@ -1000,7 +1000,7 @@ FULFILLED_INTENTS: None yet
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: chatMessages,
-      temperature: 0.9, // Higher temperature for more variance in responses
+      temperature: 0.3, // Lower temperature for more consistent, rule-following responses
     });
 
     const content = response.choices[0].message.content || "";
