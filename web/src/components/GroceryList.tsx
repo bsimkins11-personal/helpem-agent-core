@@ -4,15 +4,9 @@ import { useLife } from "@/state/LifeStore";
 import { isTodoSignal } from "@/lib/classifier";
 
 export function GroceryList() {
-  const { routines, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos } = useLife();
-  
-  const groceryRoutine = routines.find(r => r.category === "groceries");
-  
-  if (!groceryRoutine) {
-    return null;
-  }
+  const { groceries, completeGrocery, clearCompletedGroceries, moveGroceryToTodos } = useLife();
 
-  const allItems = groceryRoutine.items;
+  const allItems = groceries;
   const hasCompletedItems = allItems.some(item => item.completed);
 
   return (
@@ -34,7 +28,7 @@ export function GroceryList() {
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
                 <button
-                  onClick={() => completeRoutineItem(groceryRoutine.id, item.id)}
+                  onClick={() => completeGrocery(item.id)}
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors
                     ${item.completed 
                       ? 'bg-orange-500 border-orange-500' 
@@ -53,7 +47,7 @@ export function GroceryList() {
                   </span>
                   {!item.completed && isTodoSignal(item.content) && (
                     <button
-                      onClick={() => moveRoutineItemToTodos(groceryRoutine.id, item.id, item.content)}
+                      onClick={() => moveGroceryToTodos(item.id)}
                       className="text-xs text-brandBlue hover:text-blue-700"
                     >
                       Move to todos
@@ -68,7 +62,7 @@ export function GroceryList() {
           {hasCompletedItems && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
-                onClick={() => clearCompletedRoutineItems(groceryRoutine.id)}
+                onClick={clearCompletedGroceries}
                 className="w-full py-2 px-4 text-sm font-medium text-orange-600 hover:text-orange-700 
                            hover:bg-orange-50 rounded-lg transition-colors"
               >

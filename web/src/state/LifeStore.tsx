@@ -42,6 +42,7 @@ export type LifeContextType = {
   deleteGrocery: (id: string) => void;
   updateGrocery: (id: string, updates: Partial<Grocery>) => void;
   clearCompletedGroceries: () => void;
+  moveGroceryToTodos: (id: string) => void;
   clearAllData: () => void;
 };
 
@@ -666,6 +667,21 @@ export function LifeProvider({ children }: LifeProviderProps) {
     }
   }, [groceries]);
 
+  const moveGroceryToTodos = useCallback((id: string) => {
+    const grocery = groceries.find(g => g.id === id);
+    if (!grocery) return;
+
+    const now = new Date();
+    addTodo({
+      id: uuidv4(),
+      title: grocery.content,
+      priority: "medium",
+      createdAt: now,
+    });
+
+    deleteGrocery(id);
+  }, [groceries, addTodo, deleteGrocery]);
+
   const clearAllData = useCallback(async () => {
     console.log('🗑️ Clearing all app data (database + local state)...');
     
@@ -727,8 +743,9 @@ export function LifeProvider({ children }: LifeProviderProps) {
     deleteGrocery,
     updateGrocery,
     clearCompletedGroceries,
+    moveGroceryToTodos,
     clearAllData,
-  }), [todos, habits, appointments, routines, groceries, addTodo, completeTodo, deleteTodo, updateTodo, updateTodoPriority, moveTodoToGroceries, moveTodoToAppointment, addHabit, logHabit, deleteHabit, updateHabit, addAppointment, deleteAppointment, updateAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, addGrocery, completeGrocery, deleteGrocery, updateGrocery, clearCompletedGroceries, clearAllData]);
+  }), [todos, habits, appointments, routines, groceries, addTodo, completeTodo, deleteTodo, updateTodo, updateTodoPriority, moveTodoToGroceries, moveTodoToAppointment, addHabit, logHabit, deleteHabit, updateHabit, addAppointment, deleteAppointment, updateAppointment, addRoutine, deleteRoutine, addRoutineItem, completeRoutineItem, clearCompletedRoutineItems, moveRoutineItemToTodos, addGrocery, completeGrocery, deleteGrocery, updateGrocery, clearCompletedGroceries, moveGroceryToTodos, clearAllData]);
 
   return (
     <LifeContext.Provider value={value}>
