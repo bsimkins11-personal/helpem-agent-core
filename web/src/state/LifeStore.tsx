@@ -363,8 +363,31 @@ export function LifeProvider({ children }: LifeProviderProps) {
     });
   }, [addItemsToGroceryRoutine, sendFeedback]);
 
-  const addHabit = useCallback((habit: Habit) => {
+  const addHabit = useCallback(async (habit: Habit) => {
+    // Optimistic update - add to UI immediately
     setHabits(prev => [...prev, habit]);
+    
+    // Persist to database
+    try {
+      const response = await fetch("/api/habits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: habit.title,
+          frequency: habit.frequency || "daily",
+          daysOfWeek: habit.daysOfWeek || [],
+          completions: habit.completions || [],
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('❌ Failed to save habit to database (but added locally)');
+      } else {
+        console.log('✅ Habit saved to database successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error saving habit to database (saved locally):', error);
+    }
   }, []);
 
   const logHabit = useCallback((id: string) => {
