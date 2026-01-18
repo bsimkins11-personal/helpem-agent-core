@@ -8,7 +8,6 @@ import UIKit
 struct RootView: View {
     
     @StateObject private var authManager = AuthManager.shared
-    @State private var showDatabaseTest = false
     @State private var webViewHandler: WebViewHandler?
     
     private func openFeedbackURL() {
@@ -174,26 +173,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if authManager.isAuthenticated {
-                if showDatabaseTest {
-                    // Database test view
-                    NavigationView {
-                        DatabaseTestView()
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .navigationBarLeading) {
-                                    Button("Back to App") {
-                                        showDatabaseTest = false
-                                    }
-                                }
-                                ToolbarItem(placement: .navigationBarTrailing) {
-                                    Button("Logout") {
-                                        authManager.logout()
-                                    }
-                                }
-                            }
-                    }
-                } else {
-                    // Main app view with custom header
+                // Main app view with custom header
                     GeometryReader { geometry in
                         ZStack {
                             VStack(spacing: 0) {
@@ -281,38 +261,13 @@ struct RootView: View {
                                 // WebView
                                 WebViewContainer(authManager: authManager, webViewHandler: $webViewHandler)
                             }
-                            
-                            // Floating buttons
-                            VStack {
-                                Spacer()
-                                
-                                HStack {
-                                    Spacer()
-                                    // Database test button (bottom right)
-                                    Button(action: {
-                                        showDatabaseTest = true
-                                    }) {
-                                        Image(systemName: "cylinder.split.1x2")
-                                            .font(.title2)
-                                            .foregroundColor(.white)
-                                            .padding()
-                                            .background(Color.blue)
-                                            .clipShape(Circle())
-                                            .shadow(radius: 4)
-                                    }
-                                    .padding()
-                                    .padding(.bottom, geometry.safeAreaInsets.bottom)
-                                }
-                            }
                         }
                         .ignoresSafeArea()
                     }
-                }
             } else {
                 SignInView(authManager: authManager)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
-        .animation(.easeInOut(duration: 0.2), value: showDatabaseTest)
     }
 }
