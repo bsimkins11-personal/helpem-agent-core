@@ -42,8 +42,8 @@ export async function POST(req: Request) {
     // Delete requested data types
     if (dataTypes.includes('todos')) {
       const result = await query(
-        'DELETE FROM todos WHERE user_id = $1 AND (category IS NULL OR category != $2)',
-        [user.userId, 'grocery']
+        'DELETE FROM todos WHERE user_id = $1',
+        [user.userId]
       );
       deletedCounts.todos = result.rowCount || 0;
     }
