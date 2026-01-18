@@ -860,10 +860,13 @@ export async function POST(req: Request) {
 
   const client = getOpenAIClient();
 
-  // Use client's FORMATTED datetime directly (already in their local timezone)
+  // Parse client's ISO time for date calculations (but don't reformat it for AI)
+  const now = currentDateTimeISO ? new Date(currentDateTimeISO) : new Date();
+  
+  // Use client's FORMATTED datetime directly for AI (already in their local timezone)
   // The client sends a pre-formatted string like "Saturday, January 17th, 2026 at 10:08 PM"
   // which is in THEIR local timezone - use it as-is!
-  const formattedNow = currentDateTime || formatCurrentDateTime(new Date());
+  const formattedNow = currentDateTime || formatCurrentDateTime(now);
   
   console.log('🕐 TIMEZONE DEBUG:');
   console.log('   Client sent currentDateTime:', currentDateTime);
