@@ -1372,16 +1372,19 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
     const id = uuidv4();
     const now = new Date();
+    
+    // Extract title with fallback for groceries (which use content instead)
+    const title = pendingAction.title || pendingAction.content || "Untitled";
 
     switch (pendingAction.type) {
       case "todo":
-        addTodo({ id, title: pendingAction.title, priority: selectedPriority, dueDate: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : undefined, createdAt: now });
+        addTodo({ id, title, priority: selectedPriority, dueDate: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : undefined, createdAt: now });
         break;
       case "habit":
-        addHabit({ id, title: pendingAction.title, frequency: pendingAction.frequency || "daily", createdAt: now, completions: [] });
+        addHabit({ id, title, frequency: pendingAction.frequency || "daily", createdAt: now, completions: [] });
         break;
       case "appointment":
-        addAppointment({ id, title: pendingAction.title, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, createdAt: now });
+        addAppointment({ id, title, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, createdAt: now });
         break;
     }
 
