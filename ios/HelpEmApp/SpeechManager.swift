@@ -245,36 +245,37 @@ final class SpeechManager {
     func stopListening() {
         print("🛑 Stopping listening...")
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            self.audioEngine.stop()
-            self.audioEngine.inputNode.removeTap(onBus: 0)
-            self.request?.endAudio()
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self.task?.cancel()
-                self.task = nil
-                self.request = nil
-                
-                do {
-                    try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-                    print("✅ Audio session deactivated")
-                } catch {
-                    print("⚠️ Error deactivating audio session:", error)
-                }
-                
-                // Send final result
-                let output = self.finalTranscript ?? 
-                             self.latestPartial.trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                if !output.isEmpty {
-                    print("📝 Sending transcript:", output)
-                    self.onFinalResult?(output)
-                }
-                
-                self.latestPartial = ""
-                self.finalTranscript = nil
-            }
+        // Capture current transcript immediately
+        let output = self.finalTranscript ?? 
+                     self.latestPartial.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Stop audio engine IMMEDIATELY - no delays
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: 0)
+        request?.endAudio()
+        
+        // Cancel recognition task
+        task?.cancel()
+        task = nil
+        request = nil
+        
+        // Deactivate audio session IMMEDIATELY
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            print("✅ Audio session deactivated immediately")
+        } catch {
+            print("⚠️ Error deactivating audio session:", error)
         }
+        
+        // Send final result if we have one
+        if !output.isEmpty {
+            print("📝 Sending transcript:", output)
+            self.onFinalResult?(output)
+        }
+        
+        // Clear state
+        self.latestPartial = ""
+        self.finalTranscript = nil
     }
     
     // MARK: - Cleanup
