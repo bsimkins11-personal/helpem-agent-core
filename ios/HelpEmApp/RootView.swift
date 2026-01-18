@@ -37,30 +37,13 @@ struct RootView: View {
         webViewHandler?.triggerSupport()
     }
     
-    private func showClearDataAlert() {
-        // Show native confirmation alert
-        print("⚠️ iOS: Showing clear data confirmation")
-        
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first,
-              let rootViewController = window.rootViewController else {
-            print("❌ Could not get root view controller")
-            return
+    private func openClearDataModal() {
+        // Trigger clear data modal in WebView
+        print("📱 iOS: openClearDataModal called")
+        if webViewHandler == nil {
+            print("⚠️ iOS: webViewHandler is nil!")
         }
-        
-        let alert = UIAlertController(
-            title: "Clear All Data",
-            message: "Are you sure you want to clear all app data? This will delete all your todos, habits, appointments, and routines. This action cannot be undone.",
-            preferredStyle: .alert
-        )
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Clear All", style: .destructive) { _ in
-            print("🗑️ User confirmed: clearing all data")
-            self.webViewHandler?.clearData()
-        })
-        
-        rootViewController.present(alert, animated: true)
+        webViewHandler?.triggerClearDataModal()
     }
     
     class WebViewHandler {
@@ -136,6 +119,28 @@ struct RootView: View {
                     print("❌ Error triggering support: \(error)")
                 } else {
                     print("✅ Support JavaScript executed successfully")
+                }
+            }
+        }
+        
+        func triggerClearDataModal() {
+            print("🗑️ iOS: Triggering clear data modal")
+            let js = """
+            (function() {
+                console.log('📱 iOS JavaScript: Calling window.showClearDataModal()');
+                if (typeof window.showClearDataModal === 'function') {
+                    window.showClearDataModal();
+                    console.log('✅ iOS JavaScript: showClearDataModal() called');
+                } else {
+                    console.error('❌ iOS JavaScript: window.showClearDataModal is not a function');
+                }
+            })();
+            """
+            webView?.evaluateJavaScript(js) { result, error in
+                if let error = error {
+                    print("❌ Error triggering clear data modal: \(error)")
+                } else {
+                    print("✅ Clear data modal JavaScript executed successfully")
                 }
             }
         }
@@ -224,9 +229,9 @@ struct RootView: View {
                                             Divider()
                                             
                                             Button(action: {
-                                                showClearDataAlert()
+                                                openClearDataModal()
                                             }) {
-                                                Label("Clear All Data", systemImage: "trash")
+                                                Label("Clear App Data", systemImage: "trash")
                                             }
                                             
                                             Button(role: .destructive, action: {

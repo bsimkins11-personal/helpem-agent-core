@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { AlphaFeedbackModal } from './AlphaFeedbackModal';
 import { UsageModal } from './UsageModal';
 import SupportModal from './SupportModal';
+import ClearDataModal from './ClearDataModal';
 import { useLife } from '@/state/LifeStore';
 
 const navItems = [
@@ -22,6 +23,7 @@ export function LayoutHeader() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showClearDataModal, setShowClearDataModal] = useState(false);
   const [isFromiOSApp, setIsFromiOSApp] = useState(false);
   const { clearAllData } = useLife();
 
@@ -52,11 +54,16 @@ export function LayoutHeader() {
       console.log('🌐 Web: showSupportModal called');
       setShowSupportModal(true);
     };
-    (window as any).__clearAllData = () => {
-      console.log('🌐 Web: __clearAllData called from window');
-      clearAllData();
+    (window as any).showClearDataModal = () => {
+      console.log('🌐 Web: showClearDataModal called');
+      setShowClearDataModal(true);
     };
-    console.log('✅ Web: Functions exposed globally (clearAllData type:', typeof clearAllData, ')');
+    (window as any).__clearAllData = () => {
+      console.log('🌐 Web: __clearAllData called from window (deprecated)');
+      // Redirect to new modal
+      setShowClearDataModal(true);
+    };
+    console.log('✅ Web: Functions exposed globally');
 
     // Listen for iOS native triggers (backup method)
     const handleShowFeedback = () => {
@@ -79,9 +86,10 @@ export function LayoutHeader() {
       delete (window as any).showFeedbackModal;
       delete (window as any).showUsageModal;
       delete (window as any).showSupportModal;
+      delete (window as any).showClearDataModal;
       delete (window as any).__clearAllData;
     };
-  }, [clearAllData]);
+  }, []);
 
   const isAppRoute = pathname?.startsWith('/app') || 
                      pathname?.startsWith('/appointments') || 
@@ -271,23 +279,14 @@ export function LayoutHeader() {
                     Get Support
                   </button>
                   <button
-                    onClick={async () => {
-                      if (confirm("⚠️ Are you sure you want to clear all app data? This will permanently delete all your todos, habits, appointments, and routines from the database. This action cannot be undone.")) {
-                        console.log('🗑️ Web: User confirmed clear all data');
-                        try {
-                          await clearAllData();
-                          alert("✅ All app data has been cleared from database and app.");
-                          console.log('✅ Web: Data cleared successfully');
-                        } catch (error) {
-                          console.error('❌ Web: Error clearing data:', error);
-                          alert("⚠️ Error clearing data. Please try again.");
-                        }
-                      }
+                    onClick={() => {
+                      console.log('🗑️ Opening Clear Data modal');
                       setMobileMenuOpen(false);
+                      setShowClearDataModal(true);
                     }}
                     className="px-4 py-3 text-left text-orange-600 hover:bg-orange-50 rounded-lg transition-colors font-medium"
                   >
-                    Clear All Data
+                    Clear App Data
                   </button>
                   <button
                     onClick={() => {
@@ -364,6 +363,12 @@ export function LayoutHeader() {
       <SupportModal
         isOpen={showSupportModal}
         onClose={() => setShowSupportModal(false)}
+      />
+
+      {/* Clear Data Modal */}
+      <ClearDataModal
+        isOpen={showClearDataModal}
+        onClose={() => setShowClearDataModal(false)}
       />
     </>
   );
