@@ -3,6 +3,34 @@ import { query } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 import { checkRateLimit, getClientIdentifier } from "@/lib/rateLimiter";
 
+type PgError = {
+  code?: string;
+  message?: string;
+};
+
+async function ensureAppointmentsTable() {
+  await query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
+  await query(
+    `CREATE TABLE IF NOT EXISTS appointments (
+      id UUID NOT NULL DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL,
+      title TEXT NOT NULL,
+      datetime TIMESTAMP(3) NOT NULL,
+      created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT appointments_pkey PRIMARY KEY (id)
+    )`
+  );
+  await query('CREATE INDEX IF NOT EXISTS appointments_user_id_idx ON appointments(user_id)');
+}
+
+function isMissingTableError(error: PgError) {
+  return error?.code === "42P01";
+}
+
+function isMissingUuidFunction(error: PgError) {
+  return error?.code === "42883";
+}
+
 // GET - Fetch user's appointments
 export async function GET(req: Request) {
   try {
@@ -22,6 +50,15 @@ export async function GET(req: Request) {
     console.log(`✅ Found ${result.rows.length} appointments for user`);
     return NextResponse.json({ appointments: result.rows });
   } catch (error) {
+    const pgError = error as PgError;
+    if (isMissingTableError(pgError) || isMissingUuidFunction(pgError)) {
+      try {
+        await ensureAppointmentsTable();
+        return NextResponse.json({ appointments: [] });
+      } catch (setupError) {
+        console.error("Error ensuring appointments table:", setupError);
+      }
+    }
     console.error("Error fetching appointments:", error);
     return NextResponse.json({ error: "Failed to fetch appointments" }, { status: 500 });
   }
@@ -105,10 +142,25 @@ export async function POST(req: Request) {
     console.log(`   Title: ${sanitizedTitle}`);
     console.log(`   Datetime: ${datetime}`);
     
-    const result = await query(
-      'INSERT INTO appointments (user_id, title, datetime) VALUES ($1, $2, $3) RETURNING *',
-      [user.userId, sanitizedTitle, datetime]
-    );
+    let result;
+    try {
+      result = await query(
+        'INSERT INTO appointments (user_id, title, datetime) VALUES ($1, $2, $3) RETURNING *',
+        [user.userId, sanitizedTitle, datetime]
+      );
+    } catch (error) {
+      const pgError = error as PgError;
+      if (isMissingTableError(pgError) || isMissingUuidFunction(pgError)) {
+        console.warn("⚠️ Appointments table missing. Creating it now.");
+        await ensureAppointmentsTable();
+        result = await query(
+          'INSERT INTO appointments (user_id, title, datetime) VALUES ($1, $2, $3) RETURNING *',
+          [user.userId, sanitizedTitle, datetime]
+        );
+      } else {
+        throw error;
+      }
+    }
     
     console.log('✅ Database INSERT successful!');
     console.log('✅ Returned appointment:', result.rows[0]);
