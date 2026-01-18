@@ -74,15 +74,27 @@ export function LayoutHeader() {
       console.log('🌐 Web: showUsageModal event received');
       setShowUsageModal(true);
     };
+    const handleShowSupport = () => {
+      console.log('🌐 Web: showSupportModal event received');
+      setShowSupportModal(true);
+    };
+    const handleShowClearData = () => {
+      console.log('🌐 Web: showClearDataModal event received');
+      setShowClearDataModal(true);
+    };
     
     console.log('🎧 Web: Setting up event listeners for iOS');
     window.addEventListener('showFeedbackModal', handleShowFeedback);
     window.addEventListener('showUsageModal', handleShowUsage);
+    window.addEventListener('showSupportModal', handleShowSupport);
+    window.addEventListener('showClearDataModal', handleShowClearData);
     
     return () => {
       console.log('🧹 Web: Cleaning up');
       window.removeEventListener('showFeedbackModal', handleShowFeedback);
       window.removeEventListener('showUsageModal', handleShowUsage);
+      window.removeEventListener('showSupportModal', handleShowSupport);
+      window.removeEventListener('showClearDataModal', handleShowClearData);
       delete (window as any).showFeedbackModal;
       delete (window as any).showUsageModal;
       delete (window as any).showSupportModal;

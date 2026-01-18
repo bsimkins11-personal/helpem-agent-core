@@ -46,6 +46,14 @@ struct RootView: View {
         webViewHandler?.triggerClearDataModal()
     }
     
+    private func navigateHome() {
+        print("🏠 iOS: Navigating to app home")
+        if webViewHandler == nil {
+            print("⚠️ iOS: webViewHandler is nil!")
+        }
+        webViewHandler?.navigateHome()
+    }
+    
     class WebViewHandler {
         weak var webView: WKWebView?
         
@@ -111,6 +119,10 @@ struct RootView: View {
                     console.log('✅ iOS JavaScript: showSupportModal() called');
                 } else {
                     console.error('❌ iOS JavaScript: window.showSupportModal is not a function');
+                    // Fallback to event
+                    const event = new CustomEvent('showSupportModal');
+                    window.dispatchEvent(event);
+                    console.log('📱 iOS JavaScript: Fallback event dispatched');
                 }
             })();
             """
@@ -133,6 +145,10 @@ struct RootView: View {
                     console.log('✅ iOS JavaScript: showClearDataModal() called');
                 } else {
                     console.error('❌ iOS JavaScript: window.showClearDataModal is not a function');
+                    // Fallback to event
+                    const event = new CustomEvent('showClearDataModal');
+                    window.dispatchEvent(event);
+                    console.log('📱 iOS JavaScript: Fallback event dispatched');
                 }
             })();
             """
@@ -173,6 +189,16 @@ struct RootView: View {
                 }
             }
         }
+        
+        func navigateHome() {
+            guard let url = URL(string: AppEnvironment.webAppURL) else {
+                print("❌ iOS: Invalid home URL")
+                return
+            }
+            print("🏠 iOS: Loading home URL \(url.absoluteString)")
+            let request = URLRequest(url: url)
+            webView?.load(request)
+        }
     }
     
     var body: some View {
@@ -191,18 +217,23 @@ struct RootView: View {
                                     // Header content
                                     HStack(alignment: .center) {
                                         // Logo + Tagline
-                                        HStack(spacing: 12) {
-                                            if let uiImage = UIImage(named: "HelpEm_Logo") {
-                                                Image(uiImage: uiImage)
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(height: 65)
+                                        Button(action: {
+                                            navigateHome()
+                                        }) {
+                                            HStack(spacing: 12) {
+                                                if let uiImage = UIImage(named: "HelpEm_Logo") {
+                                                    Image(uiImage: uiImage)
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(height: 65)
+                                                }
+                                                
+                                                Text("Built for you.")
+                                                    .font(.system(size: 17))
+                                                    .foregroundColor(.gray)
                                             }
-                                            
-                                            Text("Built for you.")
-                                                .font(.system(size: 17))
-                                                .foregroundColor(.gray)
                                         }
+                                        .buttonStyle(.plain)
                                         
                                         Spacer()
                                         
