@@ -22,6 +22,8 @@ type Message = {
     daysOfWeek?: string[];
     content?: string; // For grocery items
   };
+  feedback?: "up" | "down"; // User feedback for RLHF
+  userMessage?: string; // Original user message that triggered this response
 };
 
 const MAX_MESSAGES = 50;
@@ -190,6 +192,35 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
     });
   }, []);
 
+  const handleFeedback = useCallback(async (messageId: string, feedback: "up" | "down") => {
+    // Update local state immediately
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, feedback } : msg
+    ));
+
+    // Find the message and send feedback to backend
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId,
+          feedback,
+          userMessage: message.userMessage,
+          assistantResponse: message.content,
+          action: message.action,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      console.log(`✅ Feedback recorded: ${feedback} for message ${messageId}`);
+    } catch (error) {
+      console.error("❌ Failed to send feedback:", error);
+    }
+  }, [messages]);
+
   const clearChat = useCallback(() => {
     setMessages([]);
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -325,6 +356,9 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       // DEBUG: Log what agent returned
       console.log("Agent response:", JSON.stringify(data, null, 2));
 
+      // Store user message for feedback tracking
+      const userMessageForFeedback = text;
+
       if (data.action === "add") {
         const displayType = data.type === "habit" ? "routine" : data.type;
         const internalType = data.type === "routine" ? "habit" : data.type;
@@ -390,6 +424,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             id: uuidv4(),
             role: "assistant",
             content: responseText,
+            userMessage: userMessageForFeedback,
           });
 
           if (isNativeApp) {
@@ -1317,7 +1352,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         )}
 
         {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2 items-start`}>
             <div className={`max-w-[85%] md:max-w-[80%] p-2.5 md:p-3 rounded-2xl ${
               msg.role === "user"
                 ? "bg-brandBlue text-white rounded-br-md"
@@ -1325,6 +1360,33 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             }`}>
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
             </div>
+            {/* Feedback buttons for assistant messages */}
+            {msg.role === "assistant" && (
+              <div className="flex gap-1 mt-1">
+                <button
+                  onClick={() => handleFeedback(msg.id, "up")}
+                  className={`p-1 rounded transition-colors ${
+                    msg.feedback === "up" 
+                      ? "bg-green-100 text-green-600" 
+                      : "text-gray-400 hover:text-green-600 hover:bg-green-50"
+                  }`}
+                  title="Good response"
+                >
+                  👍
+                </button>
+                <button
+                  onClick={() => handleFeedback(msg.id, "down")}
+                  className={`p-1 rounded transition-colors ${
+                    msg.feedback === "down" 
+                      ? "bg-red-100 text-red-600" 
+                      : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  }`}
+                  title="Bad response"
+                >
+                  👎
+                </button>
+              </div>
+            )}
           </div>
         ))}
 
