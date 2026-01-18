@@ -122,11 +122,19 @@ interface ChatInputProps {
   onNavigateCalendar?: (date: Date) => void;
 }
 
+type PendingDeletion = {
+  itemId: string;
+  itemTitle: string;
+  itemType: "todo" | "appointment" | "routine" | "habit";
+  confirmMessage: string;
+};
+
 export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(() => loadSessionMessages());
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<Message["action"] | null>(null);
+  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null);
   const [selectedPriority, setSelectedPriority] = useState<Priority>("medium");
   const [voiceGender, setVoiceGender] = useState<"female" | "male">("female");
   const [isListening, setIsListening] = useState(false);
@@ -167,14 +175,6 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   const sendMessageWithText = useCallback(async (text: string, isVoiceInput: boolean = false) => {
     if (!text.trim() || loading) return;
 
-    // Detect intent from user message
-    const intent = detectIntent(text);
-    
-    // Reset fulfilled intents if user explicitly re-queries
-    if (isRequery(text)) {
-      fulfilledIntentsRef.current.clear();
-    }
-
     const userMessage: Message = {
       id: uuidv4(),
       role: "user",
@@ -183,6 +183,72 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
     addMessage(userMessage);
     setInput("");
+
+    // Check if user is responding to a pending deletion confirmation
+    if (pendingDeletion) {
+      const lowerText = text.toLowerCase().trim();
+      const isYes = lowerText === "yes" || lowerText === "y" || lowerText === "yeah" || lowerText === "yep" || lowerText === "confirm";
+      const isNo = lowerText === "no" || lowerText === "n" || lowerText === "nope" || lowerText === "cancel";
+      
+      if (isYes) {
+        // Delete the item
+        if (pendingDeletion.itemType === "todo") {
+          deleteTodo(pendingDeletion.itemId);
+        } else if (pendingDeletion.itemType === "appointment") {
+          deleteAppointment(pendingDeletion.itemId);
+        } else if (pendingDeletion.itemType === "routine" || pendingDeletion.itemType === "habit") {
+          deleteHabit(pendingDeletion.itemId);
+        }
+        
+        const responseText = pendingDeletion.confirmMessage;
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        
+        if (isNativeApp) {
+          window.webkit?.messageHandlers?.native?.postMessage({
+            action: "speak",
+            text: responseText,
+          });
+        }
+        
+        setPendingDeletion(null);
+        return;
+        
+      } else if (isNo) {
+        // User cancelled deletion
+        const responseText = `Okay, I won't delete "${pendingDeletion.itemTitle}".`;
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        
+        if (isNativeApp) {
+          window.webkit?.messageHandlers?.native?.postMessage({
+            action: "speak",
+            text: responseText,
+          });
+        }
+        
+        setPendingDeletion(null);
+        return;
+      }
+      
+      // If neither yes nor no, clear pending deletion and process as normal message
+      setPendingDeletion(null);
+    }
+
+    // Detect intent from user message
+    const intent = detectIntent(text);
+    
+    // Reset fulfilled intents if user explicitly re-queries
+    if (isRequery(text)) {
+      fulfilledIntentsRef.current.clear();
+    }
+
     setLoading(true);
     setPendingAction(null);
 
@@ -471,7 +537,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         }
         
       } else if (data.action === "delete") {
-        // Handle deletion requests with confirmation
+        // Handle deletion requests with inline confirmation
         const itemType = data.type; // "todo", "appointment", "routine", "habit"
         let itemToDelete: any = null;
         let itemTitle = "";
@@ -511,47 +577,26 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
             });
           }
         } else {
-          // Show confirmation dialog
-          const confirmed = confirm(`Are you sure you want to delete "${itemTitle}"?`);
+          // Store pending deletion and show inline confirmation
+          setPendingDeletion({
+            itemId: itemToDelete.id,
+            itemTitle: itemTitle,
+            itemType: itemType,
+            confirmMessage: data.message || `Removed "${itemTitle}" from your ${itemType}s.`,
+          });
           
-          if (confirmed) {
-            // Delete the item
-            if (itemType === "todo") {
-              deleteTodo(itemToDelete.id);
-            } else if (itemType === "appointment") {
-              deleteAppointment(itemToDelete.id);
-            } else if (itemType === "routine" || itemType === "habit") {
-              deleteHabit(itemToDelete.id);
-            }
-            
-            const responseText = data.message || `Removed "${itemTitle}" from your ${itemType}s.`;
-            addMessage({
-              id: uuidv4(),
-              role: "assistant",
-              content: responseText,
+          const confirmText = `Are you sure you want to delete "${itemTitle}"? Reply with "yes" to confirm or "no" to cancel.`;
+          addMessage({
+            id: uuidv4(),
+            role: "assistant",
+            content: confirmText,
+          });
+          
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: confirmText,
             });
-            
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: responseText,
-              });
-            }
-          } else {
-            // User cancelled
-            const responseText = `Okay, I won't delete "${itemTitle}".`;
-            addMessage({
-              id: uuidv4(),
-              role: "assistant",
-              content: responseText,
-            });
-            
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: responseText,
-              });
-            }
           }
         }
         
@@ -593,7 +638,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       setLoading(false);
       setIsProcessing(false);
     }
-  }, [loading, messages, todos, habits, appointments, addMessage, updateTodoPriority, isNativeApp]);
+  }, [loading, messages, todos, habits, appointments, addMessage, updateTodoPriority, isNativeApp, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit]);
 
   // Handle native transcription results (iOS native only)
   useEffect(() => {
