@@ -61,7 +61,16 @@ export async function POST(req: Request) {
       console.error('❌ getAuthUser returned null');
       const authHeader = req.headers.get('Authorization');
       console.error('❌ Authorization header:', authHeader ? 'Present' : 'MISSING');
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      
+      // Return detailed error for debugging
+      return NextResponse.json({ 
+        error: "Unauthorized",
+        debug: {
+          reason: "getAuthUser returned null - JWT verification failed",
+          hasAuthHeader: !!authHeader,
+          suggestion: "Check Vercel logs or JWT_SECRET environment variable"
+        }
+      }, { status: 401 });
     }
     
     console.log('✅ User authenticated:', user.userId);

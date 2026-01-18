@@ -76,16 +76,25 @@ export async function getAuthUser(req?: Request): Promise<AuthUser | null> {
       appleUserId: decoded.appleUserId,
     };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorName = (error instanceof Error && 'name' in error) ? (error as any).name : 'Unknown';
+    
     console.error('🔴 ========================================');
     console.error('❌ AUTH ERROR in getAuthUser');
     console.error('❌ Error type:', error instanceof Error ? error.constructor.name : typeof error);
-    console.error('❌ Error message:', error instanceof Error ? error.message : String(error));
-    if (error instanceof Error && 'name' in error) {
-      console.error('❌ JWT Error name:', (error as any).name);
-    }
+    console.error('❌ Error message:', errorMessage);
+    console.error('❌ JWT Error name:', errorName);
     console.error('🔴 ========================================');
+    
+    // Log to client via response header (for debugging)
+    if (req) {
+      console.error('🔍 DEBUG: Will include error in audit log for client debugging');
+    }
+    
     auditLog("AUTH_FAILED", { 
-      reason: error instanceof Error ? error.message : "Unknown error" 
+      reason: errorMessage,
+      errorName: errorName,
+      tokenPresent: !!req?.headers.get('Authorization')
     }, req);
     return null;
   }
