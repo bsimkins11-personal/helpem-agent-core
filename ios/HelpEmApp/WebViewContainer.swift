@@ -305,6 +305,7 @@ struct WebViewContainer: UIViewRepresentable {
         
         // Memory management
         private var memoryObserver: NSObjectProtocol?
+        private var backgroundObserver: NSObjectProtocol?
         
         // MARK: - Initialization
         
@@ -338,6 +339,9 @@ struct WebViewContainer: UIViewRepresentable {
                     self.pendingFinalTexts.append(text)
                 }
             }
+            
+            // Setup background observer for cleanup
+            setupBackgroundObserver()
         }
         
         deinit {
@@ -345,6 +349,12 @@ struct WebViewContainer: UIViewRepresentable {
             if let observer = memoryObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
+            // Remove background observer
+            if let observer = backgroundObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            // Force cleanup all audio resources
+            forceCleanupAllAudio()
         }
         
         // MARK: - Memory Management
@@ -357,6 +367,18 @@ struct WebViewContainer: UIViewRepresentable {
                 queue: .main
             ) { [weak self] _ in
                 self?.handleMemoryWarning()
+            }
+        }
+        
+        /// Setup background observer to cleanup audio when app backgrounds
+        private func setupBackgroundObserver() {
+            backgroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.didEnterBackgroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                print("📱 WebView: App entering background - cleanup audio")
+                self?.forceCleanupAllAudio()
             }
         }
         
@@ -408,6 +430,28 @@ struct WebViewContainer: UIViewRepresentable {
             
             dataStore.removeData(ofTypes: dataTypes, modifiedSince: oneDay) {
                 print("🧹 Cleared old WebView cache data")
+            }
+        }
+        
+        /// Force cleanup ALL audio resources (mic, speech, TTS)
+        private func forceCleanupAllAudio() {
+            print("🧹 WebView: Force cleanup all audio")
+            
+            // Stop speech recognition
+            speechManager.stopListening()
+            
+            // Stop text-to-speech
+            if synthesizer.isSpeaking {
+                synthesizer.stopSpeaking(at: .immediate)
+                print("✅ TTS stopped")
+            }
+            
+            // Deactivate audio session
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                print("✅ Audio session deactivated")
+            } catch {
+                print("⚠️ Error deactivating audio session:", error)
             }
         }
         
