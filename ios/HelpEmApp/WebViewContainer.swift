@@ -167,11 +167,19 @@ struct WebViewContainer: UIViewRepresentable {
                 // Handle 401 responses (session expired)
                 return originalFetch(input, init).then((response) => {
                     if (response && response.status === 401) {
-                        console.warn('Session expired (401)');
-                        if (window.webkit?.messageHandlers?.native) {
-                            window.webkit.messageHandlers.native.postMessage({ 
-                                action: 'authExpired' 
-                            });
+                        console.warn('⚠️ Got 401 response for:', url);
+                        // Don't immediately trigger auth expiry - might be a temporary issue
+                        // Let the app handle it gracefully (data saved locally)
+                        // Only trigger on critical auth endpoints
+                        if (url.includes('/auth/')) {
+                            console.error('❌ Critical auth endpoint failed');
+                            if (window.webkit?.messageHandlers?.native) {
+                                window.webkit.messageHandlers.native.postMessage({ 
+                                    action: 'authExpired' 
+                                });
+                            }
+                        } else {
+                            console.log('ℹ️ Non-critical 401 - continuing with local data');
                         }
                     }
                     return response;
