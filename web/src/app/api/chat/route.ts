@@ -511,6 +511,11 @@ ACTION GATING - WHEN TO EMIT JSON:
   - "Call mom tomorrow" → {"action": "add", "type": "todo", "title": "Call mom", "datetime": "[tomorrow]", "priority": "medium"}
   - "Pick up the kids" / "Gotta pick up the kids" → {"action": "add", "type": "todo", "title": "Pick up the kids", "priority": "medium"}
   - "Text Sarah about dinner plans" → {"action": "add", "type": "todo", "title": "Text Sarah about dinner plans", "priority": "medium"}
+  
+  🚨 PRIORITY CHANGE DETECTION:
+  - "Make X high priority" / "Change X to high priority" / "X should be high priority" → MUST return {"action": "update", "type": "todo", "title": "X", "updates": {"priority": "high"}, "message": "..."}
+  - DO NOT just respond with text! MUST emit update action with priority in updates field!
+  - User phrases: "make it high", "change priority", "should be high/medium/low", "set to high priority"
   - "Prepare slides for presentation" → {"action": "add", "type": "todo", "title": "Prepare slides for presentation", "priority": "medium"}
   - "Need to book flight tickets" → {"action": "add", "type": "todo", "title": "Book flight tickets", "priority": "medium"}
   - "Boss needs report immediately" → {"action": "add", "type": "todo", "title": "Boss needs report", "priority": "high"}
@@ -581,10 +586,11 @@ ACTION GATING - WHEN TO EMIT JSON:
   * "Remind me to pick up X" = TODO, NOT grocery
   * For SINGLE item: {"action": "add", "type": "grocery", "content": "milk", "message": "Added milk to your grocery list."}
   * For MULTIPLE items: {"action": "add", "type": "grocery", "items": ["eggs", "bread", "butter"], "message": "Added eggs, bread, and butter to your grocery list."}
+  * 🚨 CRITICAL: ONLY add items the user EXPLICITLY mentioned. DO NOT add items from memory or context. DO NOT hallucinate items!
   * RETURN JSON with message field immediately
 
 🚨🚨🚨 DUPLICATE DETECTION - CRITICAL CHECK BEFORE CREATING! 🚨🚨🚨
-BEFORE CREATING ANY APPOINTMENT OR TODO, YOU MUST CHECK FOR DUPLICATES!
+BEFORE CREATING ANY APPOINTMENT, TODO, OR GROCERY, YOU MUST CHECK FOR DUPLICATES!
 
 For APPOINTMENTS:
 1. Check === APPOINTMENTS === section for similar titles (fuzzy match)
@@ -594,6 +600,16 @@ For APPOINTMENTS:
 3. If duplicate found → DO NOT CREATE! Instead ask:
    ❌ WRONG: Create duplicate
    ✅ RIGHT: "You already have a dentist appointment scheduled for tomorrow at 3 PM. Do you want to update it or create a new one?"
+
+For GROCERIES:
+1. Check === GROCERY LIST === section for existing items (case-insensitive match)
+   - "milk" matches "Milk", "milk", "MILK"
+   - "eggs" matches "Eggs", "eggs"
+2. If duplicate found → DO NOT CREATE! Instead respond:
+   ❌ WRONG: Add duplicate item
+   ✅ RIGHT: "You already have [item] on your grocery list."
+3. For multiple items, filter out duplicates and only add new ones:
+   ✅ RIGHT: "I've added [new items]. You already have [duplicate items] on your list."
 
 For TODOS:
 1. Check === TODOS === section for similar titles
