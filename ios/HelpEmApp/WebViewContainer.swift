@@ -328,7 +328,7 @@ struct WebViewContainer: UIViewRepresentable {
                 // Persist voice input to backend for auditing/analytics
                 Task.detached { [text] in
                     do {
-                        try await APIClient.shared.saveUserInput(content: text, type: "voice")
+                        _ = try await APIClient.shared.saveUserInput(content: text, type: "voice")
                         print("📥 Logged voice input to backend")
                     } catch {
                         print("⚠️ Failed to log voice input:", error.localizedDescription)
@@ -374,8 +374,7 @@ struct WebViewContainer: UIViewRepresentable {
             let dataStore = WKWebsiteDataStore.default()
             let dataTypes = Set([
                 WKWebsiteDataTypeDiskCache,
-                WKWebsiteDataTypeMemoryCache,
-                WKWebsiteDataTypeOfflineWebApplicationCache
+                WKWebsiteDataTypeMemoryCache
             ])
             
             dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date.distantPast) {
