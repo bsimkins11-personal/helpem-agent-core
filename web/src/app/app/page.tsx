@@ -249,19 +249,41 @@ export default function AppPage() {
               onMouseDown={() => {
                 setInputMode("talk");
                 scrollToChat();
+                // Trigger iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
+                }
               }}
               onMouseUp={() => {
                 setInputMode("type");
+                // Stop iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+                }
               }}
               onMouseLeave={() => {
-                if (inputMode === "talk") setInputMode("type");
+                if (inputMode === "talk") {
+                  setInputMode("type");
+                  // Stop iOS recording
+                  if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                    (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+                  }
+                }
               }}
               onTouchStart={() => {
                 setInputMode("talk");
                 scrollToChat();
+                // Trigger iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
+                }
               }}
               onTouchEnd={() => {
                 setInputMode("type");
+                // Stop iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+                }
               }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none ${
                 inputMode === "talk"

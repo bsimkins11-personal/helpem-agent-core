@@ -144,6 +144,8 @@ function isRequery(message: string): boolean {
 interface ChatInputProps {
   onNavigateCalendar?: (date: Date) => void;
   inputMode?: InputMode;
+  onRecordingStart?: () => void;
+  onRecordingStop?: () => void;
 }
 
 type PendingDeletion = {
@@ -153,7 +155,12 @@ type PendingDeletion = {
   confirmMessage: string;
 };
 
-export default function ChatInput({ onNavigateCalendar, inputMode: externalInputMode }: ChatInputProps = {}) {
+export default function ChatInput({ 
+  onNavigateCalendar, 
+  inputMode: externalInputMode,
+  onRecordingStart,
+  onRecordingStop 
+}: ChatInputProps = {}) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(() => loadSessionMessages());
   const [loading, setLoading] = useState(false);
@@ -1355,7 +1362,10 @@ export default function ChatInput({ onNavigateCalendar, inputMode: externalInput
       // Web browser fallback
       startWebRecording();
     }
-  }, [startWebRecording]);
+    
+    // Notify parent component
+    onRecordingStart?.();
+  }, [startWebRecording, onRecordingStart]);
 
   const handleTalkStop = useCallback(() => {
     if (!isPressingToTalk) return;
@@ -1370,7 +1380,10 @@ export default function ChatInput({ onNavigateCalendar, inputMode: externalInput
       // Web browser fallback
       stopWebRecording();
     }
-  }, [stopWebRecording]);
+    
+    // Notify parent component
+    onRecordingStop?.();
+  }, [stopWebRecording, onRecordingStop]);
 
   // Note: Auto-start removed - now using press-and-hold on Talk button
 
