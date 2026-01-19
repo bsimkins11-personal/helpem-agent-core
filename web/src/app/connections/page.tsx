@@ -131,7 +131,7 @@ export default function ConnectionsPage() {
             <div>
               <h1 className="text-3xl font-bold text-brandText mb-2">Connections</h1>
               <p className="text-brandTextLight">
-                Connect helpem to your productivity ecosystem
+                Connectors coming soon. Make helpem your command center for personal productivity.
               </p>
             </div>
             <Link
@@ -252,12 +252,12 @@ export default function ConnectionsPage() {
       {/* Footer CTA */}
       <div className="bg-gradient-to-br from-brandBlue to-brandGreen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Your Personal Command Center</h2>
+          <h2 className="text-3xl font-bold mb-4">Connectors Coming Soon</h2>
           <p className="text-lg text-white/90 mb-6 max-w-2xl mx-auto">
-            helpem connects to the tools you already use, creating a unified hub for your productivity.
+            Make helpem your command center for personal productivity. Connect to your calendar, task manager, email, and more.
           </p>
           <p className="text-sm text-white/75">
-            Don't see your favorite tool? Email us at{" "}
+            Have a specific integration in mind? Let us know at{" "}
             <a href="mailto:support@helpem.ai" className="underline font-semibold">
               support@helpem.ai
             </a>
