@@ -58,6 +58,11 @@ struct RootView: View {
     
     class WebViewHandler {
         weak var webView: WKWebView?
+        var cleanupAudioCallback: (() -> Void)?
+        
+        func forceCleanupAudio() {
+            cleanupAudioCallback?()
+        }
         
         func triggerFeedback() {
             print("🔔 iOS: Triggering feedback modal")
@@ -316,12 +321,8 @@ struct RootView: View {
     }
     
     private func forceCleanupAllAudio() {
-        // Stop all audio sessions when app backgrounds
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            print("✅ Audio session deactivated on background")
-        } catch {
-            print("⚠️ Error deactivating audio session:", error)
-        }
+        print("📱 RootView: Force cleanup audio on background")
+        // Tell WebView/Coordinator to cleanup
+        webViewHandler?.forceCleanupAudio()
     }
 }

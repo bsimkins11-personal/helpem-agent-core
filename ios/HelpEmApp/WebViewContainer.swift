@@ -79,6 +79,9 @@ struct WebViewContainer: UIViewRepresentable {
             print("🔗 WebViewContainer: Setting up WebViewHandler")
             let handler = RootView.WebViewHandler()
             handler.webView = webView
+            handler.cleanupAudioCallback = { [weak context] in
+                context?.coordinator.forceCleanupAllAudio()
+            }
             self.webViewHandler = handler
             print("✅ WebViewContainer: WebViewHandler set up complete")
         }
