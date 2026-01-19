@@ -211,6 +211,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if authManager.isAuthenticated {
+                print("🔐 RootView: User IS authenticated - showing WebView")
                 // Main app view with custom header
                     GeometryReader { geometry in
                         ZStack {
@@ -308,6 +309,7 @@ struct RootView: View {
                         .ignoresSafeArea()
                     }
             } else {
+                print("🔐 RootView: User NOT authenticated - showing SignInView")
                 SignInView(authManager: authManager)
             }
         }

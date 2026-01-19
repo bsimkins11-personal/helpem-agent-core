@@ -21,6 +21,7 @@ struct WebViewContainer: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
+        print("🌐 WebViewContainer: makeUIView called - creating WebView")
         // Configure WebView with memory optimization
         let config = WKWebViewConfiguration()
         let controller = WKUserContentController()
