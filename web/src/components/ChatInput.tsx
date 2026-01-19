@@ -143,6 +143,7 @@ function isRequery(message: string): boolean {
 
 interface ChatInputProps {
   onNavigateCalendar?: (date: Date) => void;
+  inputMode?: InputMode;
 }
 
 type PendingDeletion = {
@@ -152,7 +153,7 @@ type PendingDeletion = {
   confirmMessage: string;
 };
 
-export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
+export default function ChatInput({ onNavigateCalendar, inputMode: externalInputMode }: ChatInputProps = {}) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(() => loadSessionMessages());
   const [loading, setLoading] = useState(false);
@@ -162,7 +163,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   const [voiceGender, setVoiceGender] = useState<"female" | "male">("female");
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [inputMode, setInputMode] = useState<InputMode>("type");
+  const [localInputMode, setLocalInputMode] = useState<InputMode>("type");
+  const inputMode = externalInputMode || localInputMode;
   const [pendingFeedback, setPendingFeedback] = useState<{ messageId: string; feedback: "down" } | null>(null);
   const [correctionInput, setCorrectionInput] = useState("");
   
@@ -1342,7 +1344,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   const handleTalkStart = useCallback(() => {
     if (isPressingToTalk) return;
     isPressingToTalk = true;
-    setInputMode("talk");
+    setLocalInputMode("talk");
     setIsListening(true);
     setIsProcessing(false);
     
@@ -1442,67 +1444,19 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
     }
   }, []);
 
-  return (
-    <div ref={chatContainerRef} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px] relative overflow-hidden">
-      {/* Header with Type/Talk toggle - STICKY at top of chat container */}
-      <div className="sticky top-0 z-30 bg-white flex items-center justify-between p-3 border-b border-gray-200 rounded-t-xl md:rounded-t-2xl shadow-md">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setInputMode("type");
-              window.__conversationStarted = false;
-              if (isListening) stopListening();
-              scrollToChatModule(); // Auto-scroll to chat when clicked
-            }}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              inputMode === "type"
-                ? "bg-brandBlue text-white"
-                : "bg-gray-100 text-brandTextLight hover:bg-gray-200"
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Type
-          </button>
-          
-          <button
-            style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.currentTarget.setPointerCapture(e.pointerId);
-              handleTalkStart();
-              scrollToChatModule(); // Auto-scroll to chat when pressed
-            }}
-            onPointerUp={(e) => {
-              e.preventDefault();
-              e.currentTarget.releasePointerCapture(e.pointerId);
-              handleTalkStop();
-            }}
-            onPointerCancel={(e) => {
-              e.preventDefault();
-              e.currentTarget.releasePointerCapture(e.pointerId);
-              handleTalkStop();
-            }}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all select-none touch-none ${
-              isPressingToTalk
-                ? "bg-red-500 text-white"
-                : inputMode === "talk"
-                  ? "bg-brandGreen text-white"
-                  : "bg-gray-100 text-brandTextLight hover:bg-gray-200"
-            }`}
-          >
-            <svg className="w-4 h-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-            </svg>
-            <span className="pointer-events-none">{isListening ? "Recording..." : "Hold to Talk"}</span>
-          </button>
-        </div>
-      </div>
+  // Handle external inputMode changes (when controlled by parent)
+  useEffect(() => {
+    if (externalInputMode === "talk" && !isListening) {
+      handleTalkStart();
+    } else if (externalInputMode === "type" && isListening) {
+      handleTalkStop();
+    }
+  }, [externalInputMode, isListening]);
 
+  return (
+    <div ref={chatContainerRef} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px]">
       {/* Messages - Scrollable content area */}
-      <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 z-10 ${inputMode === "type" ? "pb-4" : ""}`}>
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-brandTextLight py-6 md:py-8">
             <div className="text-3xl md:text-4xl mb-2 md:mb-3">
@@ -1640,9 +1594,9 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Text Input Area - Only in Type mode - STICKY at bottom */}
+      {/* Text Input Area - Only in Type mode */}
       {inputMode === "type" && (
-        <div className="sticky bottom-0 z-30 bg-white p-3 md:p-4 border-t border-gray-200 rounded-b-xl md:rounded-b-2xl shadow-md">
+        <div className="border-t border-gray-200 bg-white p-3 md:p-4">
           <div className="flex gap-2">
             <input
               type="text"
