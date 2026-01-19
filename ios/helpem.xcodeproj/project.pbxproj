@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		06ABCDDA2F1425E10073CCF2 /* HelpEmApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HelpEmApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		06ABCDDA2F1425E10073CCF2 /* helpem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = helpem.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		06ABCDE92F1426710073CCF2 /* Exceptions for "HelpEmApp" folder in "HelpEmApp" target */ = {
+		06ABCDE92F1426710073CCF2 /* Exceptions for "HelpEmApp" folder in "helpem" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 06ABCDD92F1425E10073CCF2 /* HelpEmApp */;
+			target = 06ABCDD92F1425E10073CCF2 /* helpem */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -24,7 +24,7 @@
 		06ABCDDC2F1425E10073CCF2 /* HelpEmApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				06ABCDE92F1426710073CCF2 /* Exceptions for "HelpEmApp" folder in "HelpEmApp" target */,
+				06ABCDE92F1426710073CCF2 /* Exceptions for "HelpEmApp" folder in "helpem" target */,
 			);
 			path = HelpEmApp;
 			sourceTree = "<group>";
@@ -53,7 +53,7 @@
 		06ABCDDB2F1425E10073CCF2 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				06ABCDDA2F1425E10073CCF2 /* HelpEmApp.app */,
+				06ABCDDA2F1425E10073CCF2 /* helpem.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,9 +61,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		06ABCDD92F1425E10073CCF2 /* HelpEmApp */ = {
+		06ABCDD92F1425E10073CCF2 /* helpem */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 06ABCDE52F1425E10073CCF2 /* Build configuration list for PBXNativeTarget "HelpEmApp" */;
+			buildConfigurationList = 06ABCDE52F1425E10073CCF2 /* Build configuration list for PBXNativeTarget "helpem" */;
 			buildPhases = (
 				06ABCDD62F1425E10073CCF2 /* Sources */,
 				06ABCDD72F1425E10073CCF2 /* Frameworks */,
@@ -76,11 +76,11 @@
 			fileSystemSynchronizedGroups = (
 				06ABCDDC2F1425E10073CCF2 /* HelpEmApp */,
 			);
-			name = HelpEmApp;
+			name = helpem;
 			packageProductDependencies = (
 			);
 			productName = HelpEmApp;
-			productReference = 06ABCDDA2F1425E10073CCF2 /* HelpEmApp.app */;
+			productReference = 06ABCDDA2F1425E10073CCF2 /* helpem.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -98,7 +98,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 06ABCDD52F1425E10073CCF2 /* Build configuration list for PBXProject "HelpEmApp" */;
+			buildConfigurationList = 06ABCDD52F1425E10073CCF2 /* Build configuration list for PBXProject "helpem" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -112,7 +112,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				06ABCDD92F1425E10073CCF2 /* HelpEmApp */,
+				06ABCDD92F1425E10073CCF2 /* helpem */,
 			);
 		};
 /* End PBXProject section */
@@ -334,7 +334,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		06ABCDD52F1425E10073CCF2 /* Build configuration list for PBXProject "HelpEmApp" */ = {
+		06ABCDD52F1425E10073CCF2 /* Build configuration list for PBXProject "helpem" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				06ABCDE32F1425E10073CCF2 /* Debug */,
@@ -343,7 +343,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		06ABCDE52F1425E10073CCF2 /* Build configuration list for PBXNativeTarget "HelpEmApp" */ = {
+		06ABCDE52F1425E10073CCF2 /* Build configuration list for PBXNativeTarget "helpem" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				06ABCDE62F1425E10073CCF2 /* Debug */,

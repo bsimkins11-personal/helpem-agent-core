@@ -1,19 +1,106 @@
 100-Question Power QA Results
 ==========================================
-Date: Fri Jan 16 11:44:48 EST 2026
-API: http://localhost:3000
-Grade: A+ 🌟
-Status: ROCK SOLID
+Date: Sun Jan 18 03:39:41 EST 2026
+API: https://app.helpem.ai
+Grade: C ⚠️
+Status: NEEDS WORK
 
-Score: 100 / 100 (100%)
-Failed: 0
+Score: 12 / 100 (12%)
+Failed: 88
 Warnings: 1
 
-Critical Issues: 0
-
+Critical Issues: 88
+• Q9: Health - Wrong action
+• Q14: Short - Wrong action
+• Q15: Long desc - Wrong action
+• Q16: Question form - Wrong action
+• Q17: Multiple verbs - Wrong action
+• Q18: With location - Wrong action
+• Q19: Tech task - Wrong action
+• Q20: Social - Wrong action
+• Q21: Tomorrow - Wrong action
+• Q22: Tomorrow + time - Wrong action
+• Q23: Next week - Wrong action
+• Q24: Specific date - Wrong action
+• Q25: This morning - Wrong action
+• Q26: This afternoon - Wrong action
+• Q27: Tonight - Wrong action
+• Q28: This evening - Wrong action
+• Q29: Next Monday - Wrong action
+• Q30: Next Friday - Wrong action
+• Q31: In 2 hours - Wrong action
+• Q32: Later today - Wrong action
+• Q33: End of week - Wrong action
+• Q34: Monday morning - Wrong action
+• Q35: Friday evening - Wrong action
+• Q36: Weekend - Wrong action
+• Q37: Next month - Wrong action
+• Q38: Specific time - Wrong action
+• Q39: Morning time - Wrong action
+• Q40: Evening time - Wrong action
+• Q41: Urgent keyword - Wrong action
+• Q42: Important keyword - Wrong action
+• Q43: ASAP keyword - Wrong action
+• Q44: Critical keyword - Wrong action
+• Q45: Priority explicit - Wrong action
+• Q46: Deadline stress - Wrong action
+• Q47: Exclamation - Wrong action
+• Q48: Time pressure - Wrong action
+• Q49: Boss request - Wrong action
+• Q50: Emergency - Wrong action
+• Q51: Doctor - Wrong action
+• Q52: Dentist - Wrong action
+• Q53: Meeting - Wrong action
+• Q54: Interview - Wrong action
+• Q55: Coffee - Wrong action
+• Q56: Lunch - Wrong action
+• Q57: Call scheduled - Wrong action
+• Q58: Haircut - Wrong action
+• Q59: Vet - Wrong action
+• Q60: Parent-teacher - Wrong action
+• Q61: Multiple people - Wrong action
+• Q62: With location - Wrong action
+• Q63: Video call - Wrong action
+• Q64: Ambiguous - Wrong action
+• Q65: No time given - Wrong action
+• Q66: Daily habit - Wrong action
+• Q67: Weekly task - Wrong action
+• Q68: Gym routine - Wrong action
+• Q69: Weekly meeting - Wrong action
+• Q70: Bi-weekly - Wrong action
+• Q71: Monthly - Wrong action
+• Q72: Weekend chore - Wrong action
+• Q73: Evening habit - Wrong action
+• Q74: Work routine - Wrong action
+• Q75: Exercise - Wrong action
+• Q76: Explicit add - Wrong action
+• Q77: Multiple items - Wrong action
+• Q78: Single item - Wrong action
+• Q79: Task not item - Wrong action
+• Q80: Pick up task - Wrong action
+• Q81: Ambiguous - Wrong action
+• Q82: Specific brand - Wrong action
+• Q83: Quantity - Wrong action
+• Q84: Store task - Wrong action
+• Q85: Shopping list - Wrong action
+• Q86: Morning greeting - Wrong action
+• Q87: Daily overview - Wrong action
+• Q88: Tomorrow query - Wrong action
+• Q89: Week ahead - Wrong action
+• Q90: Todo list - Wrong action
+• Q91: Appointments - Wrong action
+• Q92: Free time - Wrong action
+• Q93: Help request - Wrong action
+• Q94: Capability - Wrong action
+• Q95: Thank you - Wrong action
+• Q96: Very long task - Wrong action
+• Q97: Multiple tasks - Wrong action
+• Q98: Emoji in text - Wrong action
+• Q99: All caps - Wrong action
+• Q100: Mixed case - Wrong action
 
 Warnings: 1
-• Q48: Priority should be high
+• Q1: Missing title
 
 Categories Tested:
 ✓ Section 1: Todo Creation - Basic (20 tests)
@@ -26,6 +113,6 @@ Categories Tested:
 ✓ Section 8: Edge Cases (5 tests)
 
 Next Steps:
-✓ Ship it! HelpEm is rock solid.
+• Review and address critical issues
 
 

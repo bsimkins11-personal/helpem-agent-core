@@ -1429,16 +1429,30 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
     }
   }, [sendMessage]);
 
+  // Ref for scrolling to chat module
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to chat module when user clicks input buttons
+  const scrollToChatModule = useCallback(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  }, []);
+
   return (
-    <div className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px]">
-      {/* Header with Type/Talk toggle */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-100">
+    <div ref={chatContainerRef} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px]">
+      {/* Header with Type/Talk toggle - STICKY on scroll */}
+      <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-3 border-b border-gray-100 rounded-t-xl md:rounded-t-2xl">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
               setInputMode("type");
               window.__conversationStarted = false;
               if (isListening) stopListening();
+              scrollToChatModule(); // Auto-scroll to chat when clicked
             }}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
               inputMode === "type"
@@ -1458,6 +1472,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
               e.preventDefault();
               e.currentTarget.setPointerCapture(e.pointerId);
               handleTalkStart();
+              scrollToChatModule(); // Auto-scroll to chat when pressed
             }}
             onPointerUp={(e) => {
               e.preventDefault();
@@ -1625,15 +1640,16 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Text Input Area - Only in Type mode */}
+      {/* Text Input Area - Only in Type mode - STICKY at bottom */}
       {inputMode === "type" && (
-        <div className="p-3 md:p-4 border-t border-gray-100">
+        <div className="sticky bottom-0 bg-white p-3 md:p-4 border-t border-gray-100 rounded-b-xl md:rounded-b-2xl">
           <div className="flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={scrollToChatModule}
               placeholder="Type your message..."
               className="flex-1 min-w-0 border border-gray-200 p-2.5 md:p-3 rounded-xl text-sm md:text-base text-brandText placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brandBlue/50"
               disabled={loading}

@@ -662,28 +662,75 @@ struct WebViewContainer: UIViewRepresentable {
                 synthesizer.stopSpeaking(at: .immediate)
             }
             
-            // Configure audio session for speech
+            // Configure audio session for professional speech output
             let session = AVAudioSession.sharedInstance()
-            try? session.setCategory(
-                .playback,
-                mode: .spokenAudio,
-                options: [.duckOthers]  // Duck other audio
-            )
-            try? session.setActive(true)
+            do {
+                try session.setCategory(
+                    .playAndRecord,  // Allows interruption + background audio
+                    mode: .spokenAudio,  // Optimized for voice frequencies
+                    options: [.duckOthers, .defaultToSpeaker]  // Duck background audio, use speaker
+                )
+                try session.setActive(true)
+                print("✅ Audio session configured for premium speech")
+            } catch {
+                print("⚠️ Audio session config failed:", error)
+            }
+            
+            // Select premium voice (neural TTS)
+            let selectedVoice = selectPremiumVoice()
             
             // Break text into semantic chunks with appropriate pauses
             let chunks = semanticChunks(from: text)
             
-            // Speak each chunk
+            // Speak each chunk with premium voice
             for chunk in chunks {
                 let utterance = AVSpeechUtterance(string: chunk.text)
-                utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
-                utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+                utterance.voice = selectedVoice
+                utterance.rate = 0.52  // Slightly faster for natural AI assistant feel
+                utterance.pitchMultiplier = 1.0
+                utterance.volume = 1.0
                 utterance.postUtteranceDelay = chunk.pause
                 synthesizer.speak(utterance)
             }
             
             print("🔊 Speaking: \(text.prefix(50))...")
+        }
+        
+        /// Select the highest quality voice available
+        private func selectPremiumVoice() -> AVSpeechSynthesisVoice? {
+            let allVoices = AVSpeechSynthesisVoice.speechVoices()
+            
+            // Get current locale (defaults to en-US)
+            let locale = Locale.current.language.languageCode?.identifier ?? "en"
+            
+            // Priority 1: Find Premium (Neural) voice
+            if let premiumVoice = allVoices.first(where: { voice in
+                voice.language.hasPrefix(locale) && voice.quality == .premium
+            }) {
+                print("✅ Selected Voice: \(premiumVoice.name) | Quality: Premium (Neural)")
+                return premiumVoice
+            }
+            
+            // Priority 2: Find Enhanced voice
+            if let enhancedVoice = allVoices.first(where: { voice in
+                voice.language.hasPrefix(locale) && voice.quality == .enhanced
+            }) {
+                print("✅ Selected Voice: \(enhancedVoice.name) | Quality: Enhanced")
+                return enhancedVoice
+            }
+            
+            // Priority 3: Any English voice
+            if let englishVoice = allVoices.first(where: { voice in
+                voice.language.hasPrefix("en")
+            }) {
+                print("⚠️ Selected Voice: \(englishVoice.name) | Quality: Default (Fallback)")
+                return englishVoice
+            }
+            
+            // Fallback: System default
+            let fallback = AVSpeechSynthesisVoice(language: "en-US")
+            print("⚠️ Using system default voice (no premium available)")
+            return fallback
         }
         
         /// Break text into semantic chunks with natural pauses

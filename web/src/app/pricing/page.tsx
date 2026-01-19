@@ -12,18 +12,17 @@ export default function PricingPage() {
       tagline: "Perfect for getting started",
       price: { monthly: 0, annual: 0 },
       features: [
-        "50 tasks per month",
-        "10 appointments per month",
-        "5 routines",
-        "Basic grocery lists",
+        "100 AI messages/month",
+        "3 todos, 3 appointments, 3 habits",
+        "Unlimited grocery items",
         "Voice + text input",
-        "Web app access",
+        "Premium voice (Zoe/Neural)",
         "Smart categorization",
-        "Email support"
+        "AI support"
       ],
       limitations: [
-        "No priority support",
-        "Standard response time"
+        "No human support",
+        "Limited storage"
       ],
       cta: "Start Free",
       href: "/app",
@@ -35,44 +34,41 @@ export default function PricingPage() {
       tagline: "For busy individuals",
       price: { monthly: 4.99, annual: 50 },
       features: [
-        "500 tasks per month",
-        "Unlimited appointments",
-        "Unlimited routines",
-        "Advanced grocery lists",
+        "300 AI messages/month",
+        "20 todos, 20 appointments, 20 habits",
+        "Unlimited grocery items",
+        "Premium voice (Zoe/Neural)",
         "Voice + text input",
-        "Web + mobile sync",
-        "Calendar integration",
         "Smart notifications",
-        "Reminders & alerts",
-        "Priority email support",
-        "Export your data"
+        "Priority categorization",
+        "Export your data",
+        "Email support (5-7 days)"
       ],
       limitations: [],
-      cta: "Start Basic",
+      cta: "Start 7-Day Free Trial",
       href: "/app",
       popular: true,
       color: "blue"
     },
     {
       name: "Premium",
-      tagline: "For power users & teams",
+      tagline: "For power users",
       price: { monthly: 9.99, annual: 100 },
       features: [
-        "Unlimited everything",
-        "All Basic features",
-        "Team collaboration (up to 5)",
-        "Shared grocery lists",
-        "Shared appointments",
+        "Unlimited AI messages*",
+        "Unlimited todos, appointments, habits",
+        "Unlimited grocery items",
+        "Premium voice (Zoe/Neural)",
+        "Voice + text input",
+        "Smart notifications",
         "Advanced analytics",
-        "Custom categories",
-        "API access",
-        "Priority chat support",
-        "Phone support",
-        "Early access to new features",
-        "Custom integrations"
+        "Priority categorization",
+        "Export your data",
+        "Priority support (24-48 hours)",
+        "Early access to new features"
       ],
       limitations: [],
-      cta: "Start Premium",
+      cta: "Start 7-Day Free Trial",
       href: "/app",
       popular: false,
       color: "green"
@@ -105,7 +101,7 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-lg sm:text-xl text-brandTextLight max-w-3xl mx-auto mb-10">
-            Choose the plan that fits your life. Upgrade, downgrade, or cancel anytime.
+            Choose the plan that fits your life. 7-day free trial. Cancel anytime.
           </p>
 
           {/* Billing toggle */}
@@ -235,6 +231,14 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+          
+          {/* Fair Use Disclaimer */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-brandTextLight max-w-3xl mx-auto">
+              * Premium "Unlimited" is subject to fair use policy (approximately 3,000 AI messages/month for typical users). 
+              We've designed our limits to be generous for real-world use while preventing abuse.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -250,7 +254,7 @@ export default function PricingPage() {
                 Can I switch plans anytime?
               </h3>
               <p className="text-brandTextLight">
-                Yes! Upgrade or downgrade at any time. Changes take effect immediately, and we'll prorate any charges. Start with Free, upgrade when you're ready.
+                Yes! Upgrade or downgrade at any time through your iPhone Settings > Subscriptions. Changes take effect immediately. Start with Free, try Basic or Premium with a 7-day trial when you're ready.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -263,10 +267,26 @@ export default function PricingPage() {
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-brandText mb-2">
-                How does team collaboration work?
+                What does "unlimited" mean for Premium?
               </h3>
               <p className="text-brandTextLight">
-                Premium includes team features for up to 5 people with shared grocery lists and appointments. Perfect for families, roommates, or small teams. Need more seats? Contact hello@helpem.ai for custom pricing.
+                Unlimited means no hard limits on AI messages, todos, appointments, or habits. Subject to fair use (approximately 3,000 AI messages/month for typical users). We designed Premium for power users who want to use helpem without thinking about limits.
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-brandText mb-2">
+                How does the 7-day free trial work?
+              </h3>
+              <p className="text-brandTextLight">
+                Start any paid plan with a 7-day free trial. No charges during the trial. At the end of 7 days, we'll ask you to confirm if you want to continue. Only after you confirm will billing begin. Cancel anytime with no questions asked.
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-brandText mb-2">
+                What's premium voice?
+              </h3>
+              <p className="text-brandTextLight">
+                All users get premium voice! We use Apple's Neural voices (like "Zoe") with natural prosody, better pacing, and a more human-like sound. It's one of our most loved features, and it's included free because we use native iOS technology.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -274,7 +294,7 @@ export default function PricingPage() {
                 What payment methods do you accept?
               </h3>
               <p className="text-brandTextLight">
-                We accept all major credit cards (Visa, Mastercard, Amex) and Apple Pay. Billing is automatic and secure through Stripe.
+                All payments are processed securely through Apple's App Store. We accept any payment method linked to your Apple ID (credit cards, debit cards, Apple Pay, Apple Cash). Manage your subscription in iPhone Settings > [Your Name] > Subscriptions.
               </p>
             </div>
           </div>

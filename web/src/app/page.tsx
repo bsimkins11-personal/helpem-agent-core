@@ -69,15 +69,15 @@ export default function LandingPage() {
     },
     {
       q: "What platforms does helpem support?",
-      a: "helpem is available now as a web app at helpem.ai. Native iOS app is in active development—request beta access to be first in line. Android and desktop apps are on the roadmap."
+      a: "helpem is iOS-only. The app provides a seamless native experience with on-device voice features and offline capabilities. Android and desktop apps may be considered in the future based on demand."
     },
     {
       q: "How much does it cost?",
-      a: "helpem offers three plans: Free (50 tasks/month, perfect for trying it out), Basic at $4.99/month (500 tasks, unlimited appointments), and Premium at $9.99/month (unlimited everything plus team features). All plans include smart organization and voice input."
+      a: "helpem offers three plans: Free (100 AI messages/month, perfect for trying it out), Basic at $4.99/month (300 AI messages, 20 todos/appointments/habits), and Premium at $9.99/month (unlimited everything with fair use policy, priority support). All plans include premium voice, smart organization, and voice + text input. Paid plans start with a 7-day free trial."
     },
     {
-      q: "Can I use helpem with my team?",
-      a: "Yes! Premium plans include team collaboration for up to 5 people with shared grocery lists and appointments. Perfect for families, roommates, or small teams staying organized together."
+      q: "What's premium voice?",
+      a: "All users get premium voice! We use Apple's Neural voices (like 'Zoe') with natural prosody and a more human-like sound. It's included free on all plans because we use native iOS technology instead of expensive cloud APIs."
     }
   ];
 
@@ -404,7 +404,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-white/70">
                 <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
                 <li><Link href="/support" className="hover:text-white transition-colors">AI Support Chat</Link></li>
-                <li><a href="mailto:support@helpem.ai" className="hover:text-white transition-colors">Email Support</a></li>
+                <li><a href="mailto:support@helpem.ai" className="hover:text-white transition-colors">support@helpem.ai</a></li>
               </ul>
             </div>
             <div>
