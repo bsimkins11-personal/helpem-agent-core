@@ -429,6 +429,15 @@ struct WebViewContainer: UIViewRepresentable {
             // Force immediate microphone cleanup (no delays)
             // Don't use stopListening() - it has async delays that won't execute when backgrounding
             speechManager.forceCleanup()
+            
+            // Deactivate audio session to remove blue/yellow indicator dots
+            let session = AVAudioSession.sharedInstance()
+            do {
+                try session.setActive(false, options: .notifyOthersOnDeactivation)
+                print("✅ Audio session deactivated")
+            } catch {
+                print("⚠️ Failed to deactivate audio session:", error)
+            }
         }
         
         /// Called when navigation fails
