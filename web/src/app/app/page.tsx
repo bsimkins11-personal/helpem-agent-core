@@ -216,18 +216,18 @@ export default function AppPage() {
       <AlphaFeedbackBanner />
       
       {/* Fixed Container - Welcome Banner + Type/Hold to Talk (below 60px header) */}
-      <div className="fixed top-[60px] left-0 right-0 z-40 bg-white pb-2 shadow-md">
+      <div className="fixed top-[60px] left-0 right-0 z-50 bg-gray-50 shadow-lg border-b-2 border-gray-200">
         {/* Welcome Banner */}
-        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-2 pb-1.5">
-          <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2.5 text-white">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-3 pb-2">
+          <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-3 text-white shadow-md">
             <h1 className="text-base font-bold">{greeting()}</h1>
             <p className="text-white/80 text-xs">{formattedDate}</p>
           </div>
         </div>
         
         {/* Type/Hold to Talk Buttons */}
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-3">
+          <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border-2 border-gray-300 shadow-sm">
             <button
               onClick={() => {
                 setInputMode("type");
@@ -302,7 +302,7 @@ export default function AppPage() {
       </div>
 
       {/* Modules - Scrollable content with proper spacing */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4 pt-[135px]">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4 pt-[160px] bg-gray-50">
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div className="order-1">
