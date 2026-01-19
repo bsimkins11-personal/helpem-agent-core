@@ -1444,8 +1444,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
   return (
     <div ref={chatContainerRef} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px]">
-      {/* Header with Type/Talk toggle - STICKY on scroll */}
-      <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-3 border-b border-gray-100 rounded-t-xl md:rounded-t-2xl">
+      {/* Header with Type/Talk toggle - FIXED to screen */}
+      <div className="fixed top-4 left-4 right-4 z-50 bg-white flex items-center justify-between p-3 border border-gray-200 rounded-xl md:rounded-2xl shadow-lg max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -1501,8 +1501,8 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         </div>
       </div>
 
-      {/* Messages */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
+      {/* Messages - Add padding to account for fixed header/footer */}
+      <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto p-3 md:p-4 pt-20 space-y-3 md:space-y-4 ${inputMode === "type" ? "pb-24" : ""}`}>
         {messages.length === 0 && (
           <div className="text-center text-brandTextLight py-6 md:py-8">
             <div className="text-3xl md:text-4xl mb-2 md:mb-3">
@@ -1640,9 +1640,9 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Text Input Area - Only in Type mode - STICKY at bottom */}
+      {/* Text Input Area - Only in Type mode - FIXED to screen bottom */}
       {inputMode === "type" && (
-        <div className="sticky bottom-0 bg-white p-3 md:p-4 border-t border-gray-100 rounded-b-xl md:rounded-b-2xl">
+        <div className="fixed bottom-4 left-4 right-4 z-50 bg-white p-3 md:p-4 border border-gray-200 rounded-xl md:rounded-2xl shadow-lg max-w-7xl mx-auto">
           <div className="flex gap-2">
             <input
               type="text"
