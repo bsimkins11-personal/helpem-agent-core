@@ -217,35 +217,34 @@ export default function AppPage() {
       
       {/* 1. Header - Already fixed via LayoutHeader at top-0 z-50 */}
       
-      {/* 2. Welcome Banner - Fixed div */}
-      <div className="fixed top-16 left-0 right-0 z-30 bg-gray-50 pt-2 pb-2">
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg md:rounded-xl p-2.5 md:p-4 text-white shadow-lg">
+      {/* 2 & 3. Master Fixed Container - Welcome Banner + Type/Hold to Talk */}
+      <div className="fixed top-[60px] left-0 right-0 z-30 bg-gray-50 shadow-md">
+        {/* 2. Welcome Banner */}
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-1 pb-1">
+          <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg md:rounded-xl p-2 md:p-3 text-white shadow-lg">
             <div>
-              <h1 className="text-xl md:text-2xl font-bold">{greeting()}</h1>
-              <p className="text-white/80 mt-0.5 text-xs md:text-sm">{formattedDate}</p>
+              <h1 className="text-lg md:text-xl font-bold">{greeting()}</h1>
+              <p className="text-white/80 mt-0.5 text-xs">{formattedDate}</p>
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* 3. Type/Hold to Talk - Fixed div */}
-      <div className="fixed top-[132px] left-0 right-0 z-20 bg-gray-50 pb-2">
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="bg-white flex items-center justify-between p-3 border border-gray-200 rounded-xl md:rounded-2xl shadow-md">
+        
+        {/* 3. Type/Hold to Talk */}
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pb-1">
+          <div className="bg-white flex items-center justify-between p-2 md:p-3 border border-gray-200 rounded-lg md:rounded-xl shadow-md">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   setInputMode("type");
                   scrollToChat();
                 }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all ${
                   inputMode === "type"
                     ? "bg-brandBlue text-white"
                     : "bg-gray-100 text-brandTextLight hover:bg-gray-200"
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 Type
@@ -269,13 +268,13 @@ export default function AppPage() {
                 onTouchEnd={() => {
                   setInputMode("type");
                 }}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all select-none ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none ${
                   inputMode === "talk"
                     ? "bg-red-500 text-white"
                     : "bg-gray-100 text-brandTextLight hover:bg-gray-200"
                 }`}
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                   <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                 </svg>
@@ -287,7 +286,7 @@ export default function AppPage() {
       </div>
 
       {/* 4. Modules - Scrollable content (padding-top to clear fixed elements) */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4 pt-[200px]">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4 pt-[160px]">
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div className="order-1">
