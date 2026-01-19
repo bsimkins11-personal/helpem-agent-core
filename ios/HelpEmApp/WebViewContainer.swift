@@ -116,9 +116,8 @@ struct WebViewContainer: UIViewRepresentable {
         }
         
         var request = URLRequest(url: url)
-        // Force reload from server to avoid black screen from stale cache
-        // This ensures we always get the latest version after deployments
-        request.cachePolicy = .reloadIgnoringLocalCacheData
+        // Use normal cache for faster loading
+        request.cachePolicy = .useProtocolCachePolicy
         if !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
