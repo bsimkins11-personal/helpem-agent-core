@@ -254,7 +254,7 @@ export default function PricingPage() {
                 Can I switch plans anytime?
               </h3>
               <p className="text-brandTextLight">
-                Yes! Upgrade or downgrade at any time through your iPhone Settings > Subscriptions. Changes take effect immediately. Start with Free, try Basic or Premium with a 7-day trial when you're ready.
+                Yes! Upgrade or downgrade at any time through your iPhone Settings {'->'} Subscriptions. Changes take effect immediately. Start with Free, try Basic or Premium with a 7-day trial when you're ready.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -294,7 +294,7 @@ export default function PricingPage() {
                 What payment methods do you accept?
               </h3>
               <p className="text-brandTextLight">
-                All payments are processed securely through Apple's App Store. We accept any payment method linked to your Apple ID (credit cards, debit cards, Apple Pay, Apple Cash). Manage your subscription in iPhone Settings > [Your Name] > Subscriptions.
+                All payments are processed securely through Apple's App Store. We accept any payment method linked to your Apple ID (credit cards, debit cards, Apple Pay, Apple Cash). Manage your subscription in iPhone Settings {'->'} [Your Name] {'->'} Subscriptions.
               </p>
             </div>
           </div>
