@@ -133,6 +133,9 @@ export function LayoutHeader() {
               <Link href="/pricing" className="text-[11px] text-brandTextLight hover:text-brandBlue transition-colors">
                 Pricing
               </Link>
+              <Link href="/connections" className="text-[11px] text-brandTextLight hover:text-brandBlue transition-colors">
+                Connections
+              </Link>
               <Link href="/#about" className="text-[11px] text-brandTextLight hover:text-brandBlue transition-colors">
                 About
               </Link>
@@ -242,6 +245,13 @@ export function LayoutHeader() {
                 className="px-4 py-3 text-brandText hover:bg-gray-50 rounded-lg transition-colors font-medium"
               >
                 Pricing
+              </Link>
+              <Link
+                href="/connections"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-4 py-3 text-brandText hover:bg-gray-50 rounded-lg transition-colors font-medium"
+              >
+                🔌 Connections
               </Link>
               <Link
                 href="/#about"
