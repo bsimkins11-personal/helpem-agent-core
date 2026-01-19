@@ -127,7 +127,7 @@ struct DatabaseTestView: View {
             // Schedule a test notification in 5 seconds
             try? await NotificationManager.shared.scheduleNotification(
                 id: "test-notification",
-                title: "HelpEm Test",
+                title: "helpem Test",
                 body: "Notifications are working! 🎉",
                 timeInterval: 5,
                 userInfo: ["type": "test"]

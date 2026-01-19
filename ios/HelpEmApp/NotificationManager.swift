@@ -210,7 +210,7 @@ final class NotificationManager: NSObject {
         
         try? await scheduleNotification(
             id: "example-reminder",
-            title: "HelpEm Reminder",
+            title: "helpem Reminder",
             body: "Don't forget to check your tasks!",
             timeInterval: 3600, // 1 hour
             userInfo: ["type": "reminder", "action": "check-tasks"]
