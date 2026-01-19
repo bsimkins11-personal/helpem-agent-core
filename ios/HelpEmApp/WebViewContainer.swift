@@ -417,7 +417,7 @@ struct WebViewContainer: UIViewRepresentable {
         }
         
         /// Force cleanup ALL audio resources (mic, speech, TTS)
-        private func forceCleanupAllAudio() {
+        func forceCleanupAllAudio() {
             print("🧹 WebView: Force cleanup all audio")
             
             // Stop text-to-speech immediately
