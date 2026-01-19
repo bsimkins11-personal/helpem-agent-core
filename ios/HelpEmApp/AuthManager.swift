@@ -129,7 +129,7 @@ final class AuthManager: NSObject, ObservableObject {
                     
                     if state == .authorized {
                         print("🔄 Attempting silent reauth")
-                        strongSelf.performSilentAuth(continuation: continuation)
+                        self.performSilentAuth(continuation: continuation)
                     } else {
                         print("❌ Credentials not authorized for silent reauth")
                         continuation.resume(returning: false)
