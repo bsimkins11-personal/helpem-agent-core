@@ -60,8 +60,8 @@ final class AuthManager: NSObject, ObservableObject {
     private func checkAppleCredentialState(userId: String) {
         let provider = ASAuthorizationAppleIDProvider()
         provider.getCredentialState(forUserID: userId) { [weak self] state, error in
-            Task { @MainActor in
-                guard let strongSelf = self else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
                 
                 if let error = error {
                     print("⚠️ Credential check error (non-fatal):", error)
@@ -75,7 +75,7 @@ final class AuthManager: NSObject, ObservableObject {
                 case .revoked:
                     // Only logout if credentials are explicitly revoked by user
                     print("❌ Apple credentials explicitly revoked by user")
-                    strongSelf.logout()
+                    self.logout()
                 case .notFound:
                     // notFound can be a false positive - don't auto-logout
                     print("⚠️ Apple credentials not found (may be temporary issue)")
@@ -115,8 +115,8 @@ final class AuthManager: NSObject, ObservableObject {
         let provider = ASAuthorizationAppleIDProvider()
         return await withCheckedContinuation { continuation in
             provider.getCredentialState(forUserID: appleUserId) { [weak self] state, error in
-                Task { @MainActor in
-                    guard let strongSelf = self else {
+                Task { @MainActor [weak self] in
+                    guard let self else {
                         continuation.resume(returning: false)
                         return
                     }
@@ -350,7 +350,18 @@ extension AuthManager: ASAuthorizationControllerPresentationContextProviding {
         if let window = windowScene?.windows.first(where: { $0.isKeyWindow }) {
             return window
         }
-        // Fallback: return first window scene's first window
-        return windowScene?.windows.first ?? UIApplication.shared.windows.first ?? ASPresentationAnchor()
+        // Fallback: return first window scene's first window or create one
+        if let window = windowScene?.windows.first {
+            return window
+        }
+        // Last resort: create new window with scene
+        if let scene = windowScene {
+            return UIWindow(windowScene: scene)
+        }
+        // If all else fails, return any connected scene's window
+        return UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow } ?? UIWindow()
     }
 }
