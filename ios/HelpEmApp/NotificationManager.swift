@@ -174,17 +174,30 @@ final class NotificationManager: NSObject {
         print("🔁 Scheduled daily notification '\(id)' at \(hour):\(minute)")
     }
     
-    /// Cancel specific notification
+    /// Cancel specific notification (both pending and delivered)
     func cancelNotification(id: String) {
-        UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [id])
-        print("🗑️ Cancelled notification '\(id)'")
+        let center = UNUserNotificationCenter.current()
+        
+        // Remove pending notifications (not yet delivered)
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        
+        // Remove delivered notifications (already in notification center)
+        center.removeDeliveredNotifications(withIdentifiers: [id])
+        
+        print("🗑️ Cancelled notification '\(id)' (pending + delivered)")
     }
     
-    /// Cancel all notifications
+    /// Cancel all notifications (both pending and delivered)
     func cancelAllNotifications() {
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-        print("🗑️ Cancelled all notifications")
+        let center = UNUserNotificationCenter.current()
+        
+        // Remove all pending notifications (not yet delivered)
+        center.removeAllPendingNotificationRequests()
+        
+        // Remove all delivered notifications (already in notification center)
+        center.removeAllDeliveredNotifications()
+        
+        print("🗑️ Cancelled all notifications (pending + delivered)")
     }
     
     /// Get all pending notifications
