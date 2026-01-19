@@ -1443,9 +1443,9 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
   }, []);
 
   return (
-    <div ref={chatContainerRef} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px]">
-      {/* Header with Type/Talk toggle - STICKY below greeting module */}
-      <div className="sticky top-[120px] z-10 bg-white flex items-center justify-between p-3 border-b border-gray-100 rounded-t-xl md:rounded-t-2xl shadow-lg">
+    <div ref={chatContainerRef} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px] relative overflow-hidden">
+      {/* Header with Type/Talk toggle - STICKY at top of chat container */}
+      <div className="sticky top-0 z-30 bg-white flex items-center justify-between p-3 border-b border-gray-200 rounded-t-xl md:rounded-t-2xl shadow-md">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -1502,7 +1502,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
       </div>
 
       {/* Messages - Scrollable content area */}
-      <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 ${inputMode === "type" ? "pb-4" : ""}`}>
+      <div ref={messagesContainerRef} className={`flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 z-10 ${inputMode === "type" ? "pb-4" : ""}`}>
         {messages.length === 0 && (
           <div className="text-center text-brandTextLight py-6 md:py-8">
             <div className="text-3xl md:text-4xl mb-2 md:mb-3">
@@ -1642,7 +1642,7 @@ export default function ChatInput({ onNavigateCalendar }: ChatInputProps = {}) {
 
       {/* Text Input Area - Only in Type mode - STICKY at bottom */}
       {inputMode === "type" && (
-        <div className="sticky bottom-0 bg-white p-3 md:p-4 border-t border-gray-100 rounded-b-xl md:rounded-b-2xl">
+        <div className="sticky bottom-0 z-30 bg-white p-3 md:p-4 border-t border-gray-200 rounded-b-xl md:rounded-b-2xl shadow-md">
           <div className="flex gap-2">
             <input
               type="text"
