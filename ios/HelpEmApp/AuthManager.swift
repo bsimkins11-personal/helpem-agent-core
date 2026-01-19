@@ -61,7 +61,7 @@ final class AuthManager: NSObject, ObservableObject {
         let provider = ASAuthorizationAppleIDProvider()
         provider.getCredentialState(forUserID: userId) { [weak self] state, error in
             Task { @MainActor in
-                guard let self = self else { return }
+                guard let strongSelf = self else { return }
                 
                 if let error = error {
                     print("⚠️ Credential check error (non-fatal):", error)
@@ -75,7 +75,7 @@ final class AuthManager: NSObject, ObservableObject {
                 case .revoked:
                     // Only logout if credentials are explicitly revoked by user
                     print("❌ Apple credentials explicitly revoked by user")
-                    self.logout()
+                    strongSelf.logout()
                 case .notFound:
                     // notFound can be a false positive - don't auto-logout
                     print("⚠️ Apple credentials not found (may be temporary issue)")
@@ -116,7 +116,7 @@ final class AuthManager: NSObject, ObservableObject {
         return await withCheckedContinuation { continuation in
             provider.getCredentialState(forUserID: appleUserId) { [weak self] state, error in
                 Task { @MainActor in
-                    guard let self = self else {
+                    guard let strongSelf = self else {
                         continuation.resume(returning: false)
                         return
                     }
@@ -129,7 +129,7 @@ final class AuthManager: NSObject, ObservableObject {
                     
                     if state == .authorized {
                         print("🔄 Attempting silent reauth")
-                        self.performSilentAuth(continuation: continuation)
+                        strongSelf.performSilentAuth(continuation: continuation)
                     } else {
                         print("❌ Credentials not authorized for silent reauth")
                         continuation.resume(returning: false)
@@ -343,9 +343,14 @@ extension AuthManager: ASAuthorizationControllerDelegate {
 extension AuthManager: ASAuthorizationControllerPresentationContextProviding {
     
     /// Provide window for presenting Apple Sign In UI
-    nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+    @MainActor
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         let scenes = UIApplication.shared.connectedScenes
         let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
-        return windowScene?.windows.first { $0.isKeyWindow } ?? UIWindow()
+        if let window = windowScene?.windows.first(where: { $0.isKeyWindow }) {
+            return window
+        }
+        // Fallback: return first window scene's first window
+        return windowScene?.windows.first ?? UIApplication.shared.windows.first ?? ASPresentationAnchor()
     }
 }

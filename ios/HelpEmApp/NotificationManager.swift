@@ -26,7 +26,7 @@ final class NotificationManager: NSObject {
             let granted = try await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .sound, .badge])
             
-            await checkAuthorizationStatus()
+            checkAuthorizationStatus()
             
             if granted {
                 print("✅ Notification permission granted")
@@ -194,8 +194,8 @@ final class NotificationManager: NSObject {
     
     /// Clear badge count
     func clearBadge() {
-        Task { @MainActor in
-            UIApplication.shared.applicationIconBadgeNumber = 0
+        Task {
+            try? await UNUserNotificationCenter.current().setBadgeCount(0)
         }
     }
     
