@@ -209,7 +209,7 @@ export default function AppPage() {
       <AlphaFeedbackBanner />
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-4">
         <div className="space-y-2 md:space-y-4">
-      <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg md:rounded-xl p-2.5 md:p-4 text-white">
+      <div className="sticky top-0 z-20 bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg md:rounded-xl p-2.5 md:p-4 text-white shadow-lg">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">{greeting()}</h1>
           <p className="text-white/80 mt-0.5 text-xs md:text-sm">{formattedDate}</p>
