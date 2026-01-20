@@ -253,6 +253,8 @@ export default function ChatInput({
       normalized === "nah" ||
       normalized === "no thanks" ||
       normalized.startsWith("no that") ||  // "no that's fine", "no that's okay"
+      normalized.startsWith("no it's") ||  // "no it's fine", "no it's good"
+      normalized.startsWith("no its") ||   // "no its fine"
       normalized.startsWith("no i don't") ||  // "no i don't need to", "no i don't want to"
       normalized.startsWith("no i do not") ||
       normalized.startsWith("i said no") ||
@@ -652,7 +654,7 @@ export default function ChatInput({
         appointmentBuilderRef.current = null;
       } else {
       const declined = isDeclineReply(trimmedText);
-      const { topic, location } = extractOptionalFields(trimmedText);
+      const { topic, location } = declined ? { topic: null, location: null } : extractOptionalFields(trimmedText);
       console.log("📝 Extracted:", { declined, topic, location });
       
       // Update builder with OPTIONAL fields only (topic and location)
