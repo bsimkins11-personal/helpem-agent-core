@@ -186,6 +186,7 @@ export default function ChatInput({
   const lastAppointmentTitleRef = useRef<string | null>(null);
   const pendingPriorityTodoIdRef = useRef<string | null>(null);
   const pendingPriorityTodoTitleRef = useRef<string | null>(null);
+  const askedWhoWhatForAppointmentRef = useRef<string | null>(null);
   
   // Web Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1284,6 +1285,26 @@ export default function ChatInput({
               }
               
               updateAppointment(itemToUpdate.id, appointmentUpdates);
+
+              const askedId = askedWhoWhatForAppointmentRef.current;
+              const durationUpdated = Boolean(updates.durationMinutes || updates.duration);
+              const providedWho = typeof updates.withWhom === "string" && updates.withWhom.trim().length > 0;
+              const providedWhat = typeof updates.newTitle === "string" && updates.newTitle.trim().length > 0;
+              if (durationUpdated && !providedWho && !providedWhat && askedId !== itemToUpdate.id) {
+                askedWhoWhatForAppointmentRef.current = itemToUpdate.id;
+                const responseText = "Would you like for me to add who the meeting is with and what it's about?";
+                addMessage({
+                  id: uuidv4(),
+                  role: "assistant",
+                  content: responseText,
+                });
+                if (isNativeApp) {
+                  window.webkit?.messageHandlers?.native?.postMessage({
+                    action: "speak",
+                    text: responseText,
+                  });
+                }
+              }
               
             } else if (actualType === "habit") {
               // Update HABIT/ROUTINE using context function
