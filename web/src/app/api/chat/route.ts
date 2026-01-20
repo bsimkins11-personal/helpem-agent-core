@@ -17,43 +17,37 @@ function getOpenAIClient() {
 }
 
 const OPERATIONAL_RULES = `
-🚨🚨🚨 APPOINTMENT = 5 FIELDS. FILL THEM AND CREATE IT. 🚨🚨🚨
+🚨🚨🚨 CRITICAL FIX FOR DUPLICATE QUESTIONS! 🚨🚨🚨
 
-APPOINTMENT ARRAY TO FILL:
-[
-  day: "tomorrow",         // EXTRACT: "tomorrow", "Monday", "Jan 21", etc.
-  time: "noon",            // EXTRACT: "noon", "3pm", "2:30pm", exact time!
-  duration: 30,            // ASK: "How long?" if missing
-  who: "John",             // EXTRACT: from "with John" or ASK if missing
-  what: "Budget meeting"   // EXTRACT: from context or ASK if missing
-]
+APPOINTMENT FLOW - Follow this EXACTLY:
 
-⚡ EXTRACT FIRST - Before asking ANY questions:
-1. Day: "tomorrow" → Extract it
-2. Time: "at noon", "at 3pm", "2:30pm" → Extract the EXACT time
-3. Who: "with John", "with the team" → Extract from "with [person]"
-4. What: "about budget", "budget review" → Extract from context
+Step 1: User requests appointment
+  → Extract: day, time, who ("with X"), what (topic)
+  → Missing date/time? Ask: {"action": "respond", "message": "What date and time?"}
+  → Missing duration? Ask: {"action": "respond", "message": "How long?"}
 
-THEN ASK for missing mandatory fields:
-- Missing day OR time? → Ask "What date and time?"
-- Missing duration? → Ask "How long?"
+Step 2: User provides duration (e.g., "45 minutes")
+  → NOW YOU MUST RETURN APPOINTMENT JSON!
+  → DO NOT ASK ABOUT OPTIONAL FIELDS IN JSON!
+  → Return: {"action": "add", "type": "appointment", "title": "Meeting", "datetime": "...", "durationMinutes": 45, "withWhom": "AMS team", "topic": null, "message": "Got it"}
+  → THE CLIENT WILL ASK ABOUT MISSING OPTIONAL FIELDS
+  → YOU MUST NOT ASK - CLIENT HANDLES IT!
 
-THEN ASK ONCE for optional fields:
-- Missing who AND what? → Ask "Would you like to add who the meeting is with and what it's about?"
-- Missing only who? → Ask "Would you like to add who the meeting is with?"
-- Missing only what? → Ask "Would you like to add what the meeting is about?"
+EXAMPLES:
 
-WHEN USER ANSWERS:
-- Extract their answer
-- Fill the missing field(s)
-- IMMEDIATELY return JSON to create appointment
-- DO NOT ask again
+❌ WRONG (causes duplicate):
+User: "Meeting tomorrow noon with AMS team"
+You: {"action": "respond", "message": "How long?"}
+User: "45 minutes"
+You: {"action": "respond", "message": "Would you like to add what it's about?"} ← WRONG! Don't ask!
 
-🚨 TIME MUST BE EXACT:
-- User says "at noon" → datetime: "2026-01-21T12:00:00"
-- User says "at 3pm" → datetime: "2026-01-21T15:00:00"
-- User says "2:30pm" → datetime: "2026-01-21T14:30:00"
-- NEVER default to 5pm unless user said "5pm" or "evening"
+✅ RIGHT (no duplicate):
+User: "Meeting tomorrow noon with AMS team"  
+You: {"action": "respond", "message": "How long?"}
+User: "45 minutes"
+You: {"action": "add", "type": "appointment", "title": "Meeting", "datetime": "2026-01-21T12:00:00", "durationMinutes": 45, "withWhom": "AMS team", "topic": null, "message": "Got it"} ← CLIENT asks about optional fields!
+
+🚨 RULE: After duration is provided, RETURN APPOINTMENT JSON. Don't ask about who/what!
 
 🚨🚨🚨 CRITICAL: APPOINTMENT vs TODO DISTINCTION! 🚨🚨🚨
 ONLY ASK ABOUT WHO/WHAT FOR APPOINTMENTS, NOT TODOS!
