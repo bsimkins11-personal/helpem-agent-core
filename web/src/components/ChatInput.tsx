@@ -255,11 +255,21 @@ export default function ChatInput({
       normalized.startsWith("no that") ||  // "no that's fine", "no that's okay"
       normalized.startsWith("no i don't") ||  // "no i don't need to", "no i don't want to"
       normalized.startsWith("no i do not") ||
+      normalized.startsWith("i said no") ||
+      normalized.includes("i do not want to add") ||
+      normalized.includes("i don't want to add") ||
+      normalized.includes("i dont want to add") ||
       normalized.startsWith("not needed") ||
       normalized.startsWith("not necessary") ||
       normalized.match(/^no[,.]?\s*(thanks|that'?s\s*(fine|okay|good|alright|unnecessary)|i\s+don'?t|not\s+(needed|necessary))$/i);
     
     if (isSimpleDecline) return false; // NOT a correction, just declining
+
+    const mentionsOptionalFields = /\b(about|what it's about|what it'?s about|where|location|address|at|in)\b/i.test(normalized);
+    const hasOptionalFieldNegation = /(\bnot\b|\bno\b|\bdon't\b|\bdo not\b|\bdont\b).*(about|what|where|location)/i.test(normalized);
+    if (mentionsOptionalFields && hasOptionalFieldNegation) {
+      return false;
+    }
     
     // EXPLICIT correction phrases (user is providing NEW information or contradicting)
     const hasCorrectionPhrase = 
@@ -280,7 +290,19 @@ export default function ChatInput({
         normalized.includes("supposed to")
       ));
     
-    return hasCorrectionPhrase;
+    const hasDateOrTime =
+      /\b(tomorrow|today|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(normalized) ||
+      /\b(at|around)\s+\d{1,2}(:\d{2})?\s*(am|pm)\b/i.test(normalized) ||
+      /\b\d{1,2}\s*(am|pm)\b/i.test(normalized);
+    const hasDuration = /\b(\d+)\s*(hours?|hrs?|minutes?|mins?)\b/i.test(normalized);
+    const hasWhoCorrection = /\b(with|who)\b/i.test(normalized);
+    const hasMandatoryCorrection = hasDateOrTime || hasDuration || hasWhoCorrection;
+
+    if (mentionsOptionalFields && !hasMandatoryCorrection) {
+      return false;
+    }
+
+    return hasCorrectionPhrase || hasMandatoryCorrection;
   };
   
   // Extract OPTIONAL fields only (topic and location)
@@ -625,6 +647,10 @@ export default function ChatInput({
     if (appointmentBuilderRef.current?.askedForOptionalFields && !isCorrection) {
       console.log("✅✅✅ INTERCEPTING - Client handling optional field response ✅✅✅");
       const builder = appointmentBuilderRef.current;
+      if (!hasAllMandatoryFields(builder)) {
+        console.warn("⚠️ Builder missing mandatory fields during optional follow-up.");
+        appointmentBuilderRef.current = null;
+      } else {
       const declined = isDeclineReply(trimmedText);
       const { topic, location } = extractOptionalFields(trimmedText);
       console.log("📝 Extracted:", { declined, topic, location });
@@ -713,6 +739,7 @@ export default function ChatInput({
       console.log("🧹 Clearing appointmentBuilderRef after finalization");
       appointmentBuilderRef.current = null;
       return;
+      }
     }
     
     // If we have a builder and asked for optional fields, but user is making a correction

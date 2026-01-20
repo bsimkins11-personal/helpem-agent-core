@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Appointment } from '@/types/appointment';
 import { useLife } from '@/state/LifeStore';
 
@@ -12,6 +13,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
   const { deleteAppointment, updateAppointment } = useLife();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     if (!showEdit && !showConfirm) return;
     const originalOverflow = document.body.style.overflow;
@@ -20,6 +22,10 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
       document.body.style.overflow = originalOverflow;
     };
   }, [showEdit, showConfirm]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   const [editForm, setEditForm] = useState({
     title: appointment.title,
     datetime: new Date(appointment.datetime).toISOString().slice(0, 16),
@@ -161,9 +167,9 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
       </div>
 
       {/* Edit Modal */}
-      {showEdit && (
+      {showEdit && isMounted && createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-white"
+          className="fixed inset-0 z-[1000000] flex items-center justify-center p-4 bg-white"
           style={{ backgroundColor: '#ffffff', opacity: 1 }}
         >
           <div className="rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-200 bg-white">
@@ -252,12 +258,13 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white">
+      {showConfirm && isMounted && createPortal(
+        <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-white">
           <div className="rounded-xl p-6 max-w-sm mx-4 shadow-2xl border border-gray-200 bg-white">
             <h3 className="text-lg font-semibold text-brandText mb-2">Delete Appointment</h3>
             <p className="text-brandTextLight mb-6">
@@ -278,7 +285,8 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
