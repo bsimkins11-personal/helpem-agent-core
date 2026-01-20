@@ -768,24 +768,28 @@ export default function ChatInput({
               pendingAppointmentContextRef.current = null;
               pendingAppointmentWithWhomRef.current = null;
               pendingAppointmentTopicRef.current = null;
-              const followupMessage = data.message || "Got it. I’ve updated that appointment with the extra details.";
-              addMessage({
-                id: uuidv4(),
-                role: "assistant",
-                content: followupMessage,
-              });
               const currentAppointment = appointments.find(a => a.id === lastAppointmentIdRef.current);
               const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current || currentAppointment?.title;
               const effectiveWithWhom = updatePayload.withWhom ?? currentAppointment?.withWhom ?? null;
               const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
-              if (askText && askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
-                askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
+              const followupMessage = data.message || "Got it. I’ve updated that appointment with the extra details.";
+              if (askText) {
+                if (askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
+                  askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
+                  addMessage({
+                    id: uuidv4(),
+                    role: "assistant",
+                    content: askText,
+                  });
+                }
+                speakNative(askText);
+              } else {
                 addMessage({
                   id: uuidv4(),
                   role: "assistant",
-                  content: askText,
+                  content: followupMessage,
                 });
-                speakNative(askText, 900);
+                speakNative(followupMessage);
               }
               return;
             }
@@ -1103,47 +1107,39 @@ export default function ChatInput({
 
           console.log("✅ Appointment added to local state");
 
-          // Show success message
+          const followup = getWhoWhatPrompt(title, withWhom);
+
+          // Show message (ask questions before confirming)
           const feedbackId = uuidv4();
           addMessage({ 
             id: uuidv4(), 
             role: "assistant", 
-            content: responseText,
-            action: { type: "appointment", title: data.title, datetime: datetime.toISOString() },
+            content: followup || responseText,
+            action: { type: "appointment", title, datetime: datetime.toISOString() },
             actionType: "add",
             feedbackId,
             userMessage: userMessageForFeedback,
           });
 
           if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-            
+            const spokenText = followup || responseText;
+            speakNative(spokenText);
+
             // Schedule notification for appointment (1 hour before)
             const notificationTime = new Date(datetime.getTime() - 60 * 60 * 1000); // 1 hour before
             if (notificationTime > new Date()) { // Only if in the future
-              console.log(`🔔 Scheduling appointment notification for "${data.title}" at`, notificationTime);
+              console.log(`🔔 Scheduling appointment notification for "${title}" at`, notificationTime);
               window.webkit?.messageHandlers?.native?.postMessage({
                 action: "scheduleNotification",
                 id: `${id}-reminder`,
                 title: "Upcoming Appointment",
-                body: `${data.title} in 1 hour`,
+                body: `${title} in 1 hour`,
                 date: notificationTime.toISOString(),
               });
             }
           }
-
-          const followup = getWhoWhatPrompt(title, withWhom);
           if (followup && askedWhoWhatForAppointmentRef.current != id) {
             askedWhoWhatForAppointmentRef.current = id;
-            addMessage({
-              id: uuidv4(),
-              role: "assistant",
-              content: followup,
-            });
-            speakNative(followup, 900);
           }
           pendingAppointmentWithWhomRef.current = null;
           pendingAppointmentTopicRef.current = null;
