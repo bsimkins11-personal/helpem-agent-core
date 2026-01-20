@@ -205,6 +205,7 @@ export default function AppPage() {
   const allExpanded = Object.values(expandedModules).every(v => v);
 
   const chatRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isHoldingToTalkRef = useRef(false);
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true);
@@ -220,7 +221,6 @@ export default function AppPage() {
   const fixedStackRef = useRef<HTMLDivElement>(null);
   const [fixedStackHeight, setFixedStackHeight] = useState(160);
   const fixedOffset = headerOffsetPx + fixedStackHeight;
-  const contentTopPadding = fixedStackHeight ? fixedOffset + STACK_GAP_PX : 200;
 
   const measureFixedStackHeight = () => {
     if (!fixedStackRef.current) return;
@@ -229,20 +229,25 @@ export default function AppPage() {
   
   const scrollToChat = () => {
     // Scroll so chat appears directly below fixed buttons (140px from top)
-    if (chatRef.current) {
-      const elementPosition = chatRef.current.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - (fixedOffset + STACK_GAP_PX); // Account for fixed header + banner + buttons
-      window.scrollTo({
+    if (chatRef.current && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const containerTop = container.getBoundingClientRect().top;
+      const elementTop = chatRef.current.getBoundingClientRect().top;
+      const offsetPosition = elementTop - containerTop + container.scrollTop;
+      container.scrollTo({
         top: offsetPosition,
         behavior: "smooth"
       });
+      return;
     }
   };
   const scrollToChatInstant = () => {
-    if (chatRef.current) {
-      const elementPosition = chatRef.current.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - (fixedOffset + STACK_GAP_PX);
-      window.scrollTo({
+    if (chatRef.current && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const containerTop = container.getBoundingClientRect().top;
+      const elementTop = chatRef.current.getBoundingClientRect().top;
+      const offsetPosition = elementTop - containerTop + container.scrollTop;
+      container.scrollTo({
         top: offsetPosition,
         behavior: "auto"
       });
@@ -407,9 +412,13 @@ export default function AppPage() {
       </div>
 
       {/* ========== SCROLLABLE CONTENT ========== */}
-      <div 
+      <div
+        ref={scrollContainerRef}
         style={{ 
-          paddingTop: `${contentTopPadding}px`,
+          marginTop: `${fixedOffset}px`,
+          height: `calc(100vh - ${fixedOffset}px)`,
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
           position: 'relative',
           zIndex: 0,
           backgroundColor: '#f9fafb'
