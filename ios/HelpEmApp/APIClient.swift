@@ -75,6 +75,12 @@ final class APIClient {
     }
     
     private func execute<T: Decodable>(request: URLRequest) async throws -> T {
+        // Check network connectivity first
+        if await !NetworkMonitor.shared.isConnected {
+            AppLogger.warning("API request attempted while offline", logger: AppLogger.network)
+            throw APIError.networkError(URLError(.notConnectedToInternet))
+        }
+        
         var lastError: Error?
         
         for attempt in 0...maxRetries {
@@ -85,15 +91,20 @@ final class APIClient {
                     throw APIError.invalidResponse
                 }
                 
-                // Log for debugging
-                print("📡 API: \(request.httpMethod ?? "?") \(request.url?.path ?? "?")")
-                print("📊 Status: \(httpResponse.statusCode)")
+                // Log request details
+                let method = request.httpMethod ?? "?"
+                let path = request.url?.path ?? "?"
+                let status = httpResponse.statusCode
+                
+                AppLogger.info("API \(method) \(path) → \(status)", logger: AppLogger.network)
                 
                 guard (200...299).contains(httpResponse.statusCode) else {
                     // Try to decode error message
                     if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                        AppLogger.error("API error: \(errorResponse.error)", logger: AppLogger.network)
                         throw APIError.serverError(errorResponse.error)
                     }
+                    AppLogger.error("API HTTP error: \(httpResponse.statusCode)", logger: AppLogger.network)
                     throw APIError.httpError(httpResponse.statusCode)
                 }
                 
@@ -101,8 +112,10 @@ final class APIClient {
                     let decoded = try JSONDecoder().decode(T.self, from: data)
                     return decoded
                 } catch {
-                    print("❌ Decode error:", error)
-                    print("📦 Raw data:", String(data: data, encoding: .utf8) ?? "")
+                    AppLogger.error("API decode error: \(error.localizedDescription)", logger: AppLogger.network)
+                    if let dataString = String(data: data, encoding: .utf8) {
+                        AppLogger.debug("Raw response: \(dataString)", logger: AppLogger.network)
+                    }
                     throw APIError.decodingError(error)
                 }
             } catch {
@@ -111,6 +124,7 @@ final class APIClient {
                 // Only retry on transient network failures
                 if attempt < maxRetries, shouldRetry(error: error) {
                     let backoff = UInt64(300_000_000) * UInt64(attempt + 1) // 0.3s, 0.6s
+                    AppLogger.info("Retrying request (attempt \(attempt + 2)/\(maxRetries + 1))", logger: AppLogger.network)
                     try? await Task.sleep(nanoseconds: backoff)
                     continue
                 }

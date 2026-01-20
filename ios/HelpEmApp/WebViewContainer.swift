@@ -310,6 +310,12 @@ struct WebViewContainer: UIViewRepresentable {
         // Memory management
         private var memoryObserver: NSObjectProtocol?
         
+        // Loading timeout management
+        private var loadTimeoutTask: Task<Void, Never>?
+        private let loadTimeout: TimeInterval = 30.0
+        private var retryCount = 0
+        private let maxRetries = 3
+        
         // MARK: - Initialization
         
         init(authManager: AuthManager) {
@@ -387,10 +393,24 @@ struct WebViewContainer: UIViewRepresentable {
 
         // MARK: - WKNavigationDelegate
         
+        /// Called when navigation starts
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            AppLogger.info("WebView navigation started", logger: AppLogger.webview)
+            pageReady = false
+            
+            // Start timeout timer
+            startLoadTimeout()
+        }
+        
         /// Called when page finishes loading
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ WebView page loaded")
+            AppLogger.info("WebView page loaded successfully", logger: AppLogger.webview)
+            
+            // Cancel timeout
+            cancelLoadTimeout()
+            
             pageReady = true
+            retryCount = 0 // Reset retry counter on success
             
             // Send any queued speech results
             pendingFinalTexts.forEach(sendToWeb)
@@ -442,7 +462,176 @@ struct WebViewContainer: UIViewRepresentable {
         
         /// Called when navigation fails
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ WebView navigation failed:", error.localizedDescription)
+            AppLogger.error("WebView navigation failed: \(error.localizedDescription)", logger: AppLogger.webview)
+            cancelLoadTimeout()
+            handleLoadError(error)
+        }
+        
+        /// Called when provisional navigation fails
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            AppLogger.error("WebView provisional navigation failed: \(error.localizedDescription)", logger: AppLogger.webview)
+            cancelLoadTimeout()
+            handleLoadError(error)
+        }
+        
+        // MARK: - Loading Timeout
+        
+        private func startLoadTimeout() {
+            cancelLoadTimeout()
+            
+            loadTimeoutTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(self?.loadTimeout ?? 30.0) * 1_000_000_000)
+                
+                guard !Task.isCancelled, let self = self else { return }
+                
+                AppLogger.warning("WebView load timeout after \(self.loadTimeout)s", logger: AppLogger.webview)
+                self.handleLoadTimeout()
+            }
+        }
+        
+        private func cancelLoadTimeout() {
+            loadTimeoutTask?.cancel()
+            loadTimeoutTask = nil
+        }
+        
+        private func handleLoadTimeout() {
+            let error = NSError(
+                domain: "ai.helpem.webview",
+                code: -1001,
+                userInfo: [NSLocalizedDescriptionKey: "Request timed out"]
+            )
+            handleLoadError(error)
+        }
+        
+        private func handleLoadError(_ error: Error) {
+            guard let webView = webView else { return }
+            
+            let nsError = error as NSError
+            
+            // Don't show error for user cancellation
+            if nsError.code == NSURLErrorCancelled {
+                AppLogger.info("WebView load cancelled by user", logger: AppLogger.webview)
+                return
+            }
+            
+            // Check if we should retry
+            if retryCount < maxRetries && shouldRetryError(nsError) {
+                retryCount += 1
+                AppLogger.info("Retrying WebView load (attempt \(retryCount)/\(maxRetries))", logger: AppLogger.webview)
+                
+                // Wait a bit before retrying
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                    self?.retryLoad()
+                }
+                return
+            }
+            
+            // Show error page
+            let errorHTML = generateErrorHTML(error: nsError)
+            webView.loadHTMLString(errorHTML, baseURL: nil)
+        }
+        
+        private func shouldRetryError(_ error: NSError) -> Bool {
+            // Retry on network errors
+            switch error.code {
+            case NSURLErrorTimedOut,
+                 NSURLErrorCannotFindHost,
+                 NSURLErrorCannotConnectToHost,
+                 NSURLErrorNetworkConnectionLost,
+                 NSURLErrorNotConnectedToInternet:
+                return true
+            default:
+                return false
+            }
+        }
+        
+        private func retryLoad() {
+            guard let url = URL(string: AppEnvironment.webAppURL) else { return }
+            var request = URLRequest(url: url)
+            if let token = KeychainHelper.shared.sessionToken, !token.isEmpty {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            webView?.load(request)
+        }
+        
+        private func generateErrorHTML(error: NSError) -> String {
+            let isOffline = error.code == NSURLErrorNotConnectedToInternet
+            
+            let title = isOffline ? "No Internet Connection" : "Connection Error"
+            let message = isOffline
+                ? "Please check your internet connection and try again."
+                : "Unable to load helpem. Please check your connection."
+            
+            let retryButton = retryCount < maxRetries
+                ? """
+                <button onclick="location.reload()" style="
+                    padding: 14px 28px;
+                    border-radius: 12px;
+                    border: none;
+                    background: #007AFF;
+                    color: white;
+                    font-size: 17px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin-top: 20px;
+                ">
+                    Try Again
+                </button>
+                """
+                : ""
+            
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        min-height: 100vh;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 20px;
+                        text-align: center;
+                    }
+                    .icon {
+                        font-size: 60px;
+                        margin-bottom: 24px;
+                    }
+                    h1 {
+                        font-size: 24px;
+                        font-weight: 700;
+                        margin-bottom: 12px;
+                    }
+                    p {
+                        font-size: 16px;
+                        opacity: 0.9;
+                        line-height: 1.5;
+                        max-width: 300px;
+                    }
+                    button:active {
+                        transform: scale(0.98);
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="icon">\(isOffline ? "📡" : "⚠️")</div>
+                <h1>\(title)</h1>
+                <p>\(message)</p>
+                \(retryButton)
+            </body>
+            </html>
+            """
         }
         
         // MARK: - Native → Web Communication

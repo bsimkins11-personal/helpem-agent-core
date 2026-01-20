@@ -7,8 +7,18 @@ struct HelpEmAppApp: App {
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
+        // Print app environment configuration
+        AppEnvironment.printConfig()
+        
+        // Validate environment URLs
+        guard AppEnvironment.validateURLs() else {
+            AppLogger.critical("Invalid environment URLs - app may not function correctly", logger: AppLogger.general)
+        }
+        
         // Set up notification delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
+        
+        AppLogger.info("helpem app initialized", logger: AppLogger.general)
     }
     
     var body: some Scene {
