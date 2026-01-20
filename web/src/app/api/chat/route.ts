@@ -67,6 +67,7 @@ APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED DETAILS PRESENT):
 - withWhom is OPTIONAL but you should ask once for clarity.
   * If the user says "no particular person" or "not about anything specific", accept and proceed.
   * Do NOT block creation if they decline to name a person or topic.
+- NEVER default durationMinutes. If it's missing, you MUST ask how long.
 - If any REQUIRED fields are missing, ask for them in plain text and DO NOT create.
 - Only return JSON when all required appointment details are present.
 
