@@ -8,7 +8,7 @@ import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
 import { useLife } from "@/state/LifeStore";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 type PriorityFilter = "all" | "high" | "medium" | "low";
@@ -20,6 +20,7 @@ const PRIORITY_TABS = [
   { key: "medium" as const, label: "Med", color: "bg-amber-500", activeText: "text-white", inactiveText: "text-amber-600", inactiveBg: "bg-amber-50" },
   { key: "low" as const, label: "Low", color: "bg-green-500", activeText: "text-white", inactiveText: "text-green-600", inactiveBg: "bg-green-50" },
 ];
+const HEADER_OFFSET_PX = 60;
 
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
@@ -205,12 +206,16 @@ export default function AppPage() {
 
   const chatRef = useRef<HTMLDivElement>(null);
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
+  const fixedStackRef = useRef<HTMLDivElement>(null);
+  const [fixedStackHeight, setFixedStackHeight] = useState(0);
+  const fixedOffset = HEADER_OFFSET_PX + fixedStackHeight;
+  const contentTopPadding = fixedStackHeight ? fixedOffset : 200;
   
   const scrollToChat = () => {
     // Scroll so chat appears directly below fixed buttons (140px from top)
     if (chatRef.current) {
       const elementPosition = chatRef.current.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - 140; // Account for fixed header + banner + buttons
+      const offsetPosition = elementPosition - fixedOffset; // Account for fixed header + banner + buttons
       window.scrollTo({
         top: offsetPosition,
         behavior: "smooth"
@@ -218,19 +223,43 @@ export default function AppPage() {
     }
   };
 
+  useEffect(() => {
+    if (!fixedStackRef.current) return;
+    const element = fixedStackRef.current;
+    const updateHeight = () => {
+      setFixedStackHeight(Math.ceil(element.getBoundingClientRect().height));
+    };
+    updateHeight();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateHeight);
+      return () => {
+        window.removeEventListener("resize", updateHeight);
+      };
+    }
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(element);
+    window.addEventListener("resize", updateHeight);
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
       {/* ========== FIXED CONTAINER - STARTS AT HEADER, BLOCKS ALL CONTENT ========== */}
       <div 
+        ref={fixedStackRef}
         style={{ 
           position: 'fixed',
-          top: '60px',
+          top: `${HEADER_OFFSET_PX}px`,
           left: 0,
           right: 0,
           zIndex: 99999,
           backgroundColor: 'white',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          transition: 'all 0.3s ease'
+          transition: 'box-shadow 0.2s ease',
+          isolation: 'isolate'
         }}
       >
         {/* Alerts */}
@@ -330,9 +359,9 @@ export default function AppPage() {
       {/* ========== SCROLLABLE CONTENT ========== */}
       <div 
         style={{ 
-          paddingTop: '200px',
+          paddingTop: `${contentTopPadding}px`,
           position: 'relative',
-          zIndex: 1,
+          zIndex: 0,
           backgroundColor: '#f9fafb'
         }}
       >
