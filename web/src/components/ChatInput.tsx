@@ -1108,6 +1108,9 @@ export default function ChatInput({
             a.title.toLowerCase().includes(searchTitle?.toLowerCase()) ||
             searchTitle?.toLowerCase().includes(a.title.toLowerCase())
           );
+          if (!itemToUpdate && lastAppointmentIdRef.current) {
+            itemToUpdate = appointments.find(a => a.id === lastAppointmentIdRef.current);
+          }
         } else if (itemType === "routine" || itemType === "habit") {
           actualType = "habit";
           itemToUpdate = habits.find(h => 
