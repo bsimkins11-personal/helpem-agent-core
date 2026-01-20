@@ -1064,209 +1064,56 @@ export default function ChatInput({
             });
           }
         } else if (internalType === "appointment") {
-          // Parse datetime with fallback logic
-          let datetime: Date;
-          if (data.datetime) {
-            datetime = parseAiDatetime(data.datetime);
-            // Check if datetime is valid
-            if (isNaN(datetime.getTime())) {
-              console.error("❌ Invalid datetime from AI:", data.datetime);
-              datetime = getDefaultTomorrowReminder(); // Fallback to tomorrow 9am
-            }
-          } else {
-            console.warn("⚠️ No datetime provided by AI for appointment, using tomorrow 9am");
-            datetime = getDefaultTomorrowReminder(); // Fallback to tomorrow 9am
-          }
+          // Initialize appointment builder with data from AI
+          const datetime = data.datetime ? parseAiDatetime(data.datetime) : getDefaultTomorrowReminder();
+          const durationMinutes = Number.isFinite(data.durationMinutes) ? Number(data.durationMinutes) : 
+                                  Number.isFinite(data.duration) ? Number(data.duration) : 30;
+          const withWhom = typeof data.withWhom === "string" && data.withWhom.trim() ? data.withWhom.trim() : undefined;
+          const topic = data.title;
           
-          const durationMinutes = Number.isFinite(data.durationMinutes)
-            ? Number(data.durationMinutes)
-            : Number.isFinite(data.duration)
-              ? Number(data.duration)
-              : 30;
-          let withWhom = typeof data.withWhom === "string" && data.withWhom.trim().length > 0
-            ? data.withWhom.trim()
-            : null;
-          if (!withWhom && pendingAppointmentWithWhomRef.current) {
-            withWhom = pendingAppointmentWithWhomRef.current;
-          }
-          let title = data.title;
-          if (isGenericAppointmentTitle(title) && pendingAppointmentTopicRef.current) {
-            title = pendingAppointmentTopicRef.current;
-          }
-
-          const followup = getWhoWhatPrompt(title, withWhom);
-          if (followup) {
-            pendingAppointmentContextRef.current = `Appointment request: title="${title}", datetime="${datetime.toISOString()}", durationMinutes=${durationMinutes}${withWhom ? `, withWhom="${withWhom}"` : ""}`;
-            if (withWhom) {
-              pendingAppointmentWithWhomRef.current = withWhom;
-            }
-            if (!isGenericAppointmentTitle(title)) {
-              pendingAppointmentTopicRef.current = title;
-            }
-            pendingAppointmentQuestionRef.current = withWhom ? "what" : "who_what";
-            
-            // Set flag to intercept next user response on client side
-            waitingForOptionalFieldsRef.current = true;
-            lastAppointmentIdRef.current = id; // Store appointment ID for update
-            
+          appointmentBuilderRef.current = {
+            id,
+            title: topic,
+            datetime,
+            durationMinutes,
+            withWhom,
+            topic,
+            askedForOptionalFields: false,
+          };
+          
+          // Check if we have all mandatory fields
+          if (!hasAllMandatoryFields(appointmentBuilderRef.current)) {
+            // Missing mandatory fields - let AI handle asking for them
             addMessage({
               id: uuidv4(),
               role: "assistant",
-              content: followup,
+              content: data.message || "I need more details about this appointment.",
             });
-            speakNative(followup);
+            speakNative(data.message || "I need more details about this appointment.");
             return;
           }
-
-          console.log("📅 Creating appointment:", {
-            id,
-            title,
-            datetime: datetime.toISOString(),
-            durationMinutes,
-            originalDatetime: data.datetime,
-            isValid: !isNaN(datetime.getTime())
-          });
           
-          // Save to database
-          const responseText = data.message || `Added appointment "${title}" for ${formatDateTimeForSpeech(datetime)}.`;
-          
-          // Always add to local state first (works even offline)
-          console.log("📅 ChatInput: Calling addAppointment with:", {
-            id,
-            title,
-            datetime: datetime.toISOString(),
-            createdAt: now.toISOString(),
-          });
-          
-          addAppointment({
-            id,
-            title,
-            withWhom,
-            datetime,
-            durationMinutes,
-            createdAt: now,
-          });
-          lastAppointmentIdRef.current = id;
-          lastAppointmentTitleRef.current = title;
-          
-          console.log("✅ ChatInput: addAppointment call completed");
-          
-          // Try to save to database (non-blocking)
-          console.log('🌐 ========================================');
-          console.log('🌐 ChatInput: Starting database save...');
-          console.log('🌐 ========================================');
-          
-          try {
-            console.log('🌐 Preparing fetch to /api/appointments');
-            console.log('🌐 Request payload:', {
-              title,
-              withWhom,
-              datetime: datetime.toISOString(),
-              durationMinutes,
+          // We have all mandatory fields - check if we need optional fields
+          if (needsOptionalFields(appointmentBuilderRef.current)) {
+            appointmentBuilderRef.current.askedForOptionalFields = true;
+            const promptText = "Would you like for me to add who the meeting is with and what it's about?";
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: promptText,
             });
-            
-            const apiResponse = await fetch("/api/appointments", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                title,
-                withWhom,
-                datetime: datetime.toISOString(),
-                durationMinutes,
-              }),
-            });
-
-            if (apiResponse.status === 409) {
-              const conflictData = await apiResponse.json().catch(() => null);
-              console.warn("⚠️ Appointment conflict detected:", conflictData);
-              deleteAppointment(id);
-              lastAppointmentIdRef.current = null;
-              lastAppointmentTitleRef.current = null;
-              const conflictText = conflictData?.conflict
-                ? `That overlaps with "${conflictData.conflict.title}" at ${formatDateTimeForSpeech(new Date(conflictData.conflict.datetime))}. Want to pick a different time or shorten the meeting?`
-                : "That time overlaps with another appointment. Want to pick a different time or shorten the meeting?";
-              addMessage({
-                id: uuidv4(),
-                role: "assistant",
-                content: conflictText,
-              });
-              return;
-            }
-            
-            console.log('📡 API Response received');
-            console.log('📡 Status:', apiResponse.status, apiResponse.statusText);
-            console.log('📡 OK:', apiResponse.ok);
-            
-            if (!apiResponse.ok) {
-              const errorData = await apiResponse.json();
-              console.error('❌ ========================================');
-              console.error("❌ Failed to save appointment to database");
-              console.error("❌ Status:", apiResponse.status);
-              console.error("❌ Error data:", errorData);
-              console.error('❌ ========================================');
-              
-              // Don't fail the whole operation - appointment is already in local state
-              // Just log the issue
-              if (apiResponse.status === 401) {
-                console.error("❌ AUTHENTICATION FAILED - 401 Unauthorized");
-                console.error("❌ This means the user session is not valid");
-                console.error("❌ Check:");
-                console.error("   - Is session token in keychain?");
-                console.error("   - Is Authorization header being sent?");
-                console.error("   - Is token valid/expired?");
-              }
-            } else {
-              const successData = await apiResponse.json();
-              console.log('✅ ========================================');
-              console.log("✅ Appointment saved to database successfully!");
-              console.log("✅ Response data:", successData);
-              console.log('✅ ========================================');
-            }
-          } catch (err) {
-            console.error('💥 ========================================');
-            console.error("💥 EXCEPTION during database save");
-            console.error("💥 Error:", err);
-            console.error("💥 Error type:", err instanceof Error ? err.constructor.name : typeof err);
-            console.error("💥 Error message:", err instanceof Error ? err.message : String(err));
-            console.error('💥 ========================================');
-            // Don't show error to user - appointment is in local state and working
+            speakNative(promptText);
+            return;
           }
-
-          console.log("✅ Appointment added to local state");
-
-          // Show message (ask questions before confirming)
-          const feedbackId = uuidv4();
-          addMessage({ 
-            id: uuidv4(), 
-            role: "assistant", 
-            content: responseText,
-            action: { type: "appointment", title, datetime: datetime.toISOString() },
-            actionType: "add",
-            feedbackId,
-            userMessage: userMessageForFeedback,
+          
+          // Dead code path - we always ask for optional fields, so finalization happens in client interception
+          // If somehow we get here, just show error
+          addMessage({
+            id: uuidv4(),
+            role: "assistant",
+            content: "Sorry, something went wrong with appointment creation.",
           });
-
-          if (isNativeApp) {
-            speakNative(responseText);
-
-            // Schedule notification for appointment (1 hour before)
-            const notificationTime = new Date(datetime.getTime() - 60 * 60 * 1000); // 1 hour before
-            if (notificationTime > new Date()) { // Only if in the future
-              console.log(`🔔 Scheduling appointment notification for "${title}" at`, notificationTime);
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "scheduleNotification",
-                id: `${id}-reminder`,
-                title: "Upcoming Appointment",
-                body: `${title} in 1 hour`,
-                date: notificationTime.toISOString(),
-              });
-            }
-          }
-          pendingAppointmentWithWhomRef.current = null;
-          pendingAppointmentTopicRef.current = null;
-          pendingAppointmentDeclinedWhoRef.current = false;
-          pendingAppointmentDeclinedWhatRef.current = false;
-          pendingAppointmentQuestionRef.current = null;
+          appointmentBuilderRef.current = null;
         } else if (internalType === "grocery") {
           // Support both single item and multiple items (array)
           const items = data.items || [data.title || data.content];
