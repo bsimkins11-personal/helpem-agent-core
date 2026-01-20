@@ -53,6 +53,10 @@ function isMissingUuidFunction(error: PgError) {
   return error?.code === "42883";
 }
 
+function isMissingColumnError(error: PgError) {
+  return error?.code === "42703";
+}
+
 // GET - Fetch user's appointments
 export async function GET(req: Request) {
   try {
@@ -205,8 +209,8 @@ export async function POST(req: Request) {
       );
     } catch (error) {
       const pgError = error as PgError;
-      if (isMissingTableError(pgError) || isMissingUuidFunction(pgError)) {
-        console.warn("⚠️ Appointments table missing. Creating it now.");
+      if (isMissingTableError(pgError) || isMissingUuidFunction(pgError) || isMissingColumnError(pgError)) {
+        console.warn("⚠️ Appointments schema missing. Creating it now.");
         await ensureAppointmentsTable();
         conflicts = await query(
           `SELECT id, title, datetime, duration_minutes
@@ -240,8 +244,8 @@ export async function POST(req: Request) {
       );
     } catch (error) {
       const pgError = error as PgError;
-      if (isMissingTableError(pgError) || isMissingUuidFunction(pgError)) {
-        console.warn("⚠️ Appointments table missing. Creating it now.");
+      if (isMissingTableError(pgError) || isMissingUuidFunction(pgError) || isMissingColumnError(pgError)) {
+        console.warn("⚠️ Appointments schema missing. Creating it now.");
         await ensureAppointmentsTable();
         result = await query(
           'INSERT INTO appointments (user_id, title, with_whom, topic, location, datetime, duration_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
