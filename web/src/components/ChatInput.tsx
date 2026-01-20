@@ -204,11 +204,20 @@ export default function ChatInput({
     return /^(meeting|appointment|call|event)\s+with\b/.test(normalizedTitle);
   };
 
+  const extractWithWhomFromTitle = (title?: string | null) => {
+    if (!title) return null;
+    const match = title.match(/\bwith\b\s+(.+?)(?:\s+\babout\b|$)/i);
+    if (!match || !match[1]) return null;
+    const candidate = match[1].trim();
+    return candidate.length > 0 ? candidate : null;
+  };
+
   const getWhoWhatPrompt = (title?: string | null, withWhom?: string | null) => {
-    if (withWhom && !isGenericAppointmentTitle(title) && !titleLooksLikeWithWhomOnly(title, withWhom)) {
+    const inferredWithWhom = withWhom || extractWithWhomFromTitle(title);
+    if (inferredWithWhom && !isGenericAppointmentTitle(title) && !titleLooksLikeWithWhomOnly(title, inferredWithWhom)) {
       return null;
     }
-    if (withWhom) {
+    if (inferredWithWhom) {
       return "Would you like for me to add what the meeting is about?";
     }
     return "Would you like for me to add who the meeting is with and what it's about?";
@@ -700,8 +709,9 @@ export default function ChatInput({
                 role: "assistant",
                 content: followupMessage,
               });
-              const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current;
-              const effectiveWithWhom = updatePayload.withWhom ?? null;
+              const currentAppointment = appointments.find(a => a.id === lastAppointmentIdRef.current);
+              const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current || currentAppointment?.title;
+              const effectiveWithWhom = updatePayload.withWhom ?? currentAppointment?.withWhom ?? null;
               const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
               if (askText && askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
                 askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
@@ -1230,6 +1240,87 @@ export default function ChatInput({
           );
         }
         
+        if (!itemToUpdate && actualType === "appointment" && pendingAppointmentContextRef.current && lastAppointmentIdRef.current) {
+          const fallbackId = lastAppointmentIdRef.current;
+          const fallbackUpdates: Partial<Appointment> = {};
+          if (typeof updates.newTitle === "string" && updates.newTitle.trim().length > 0) {
+            fallbackUpdates.title = updates.newTitle.trim();
+          }
+          if (updates.datetime) {
+            fallbackUpdates.datetime = parseAiDatetime(updates.datetime);
+          }
+          if (Number.isFinite(updates.durationMinutes) || Number.isFinite(updates.duration)) {
+            const nextDuration = Number(updates.durationMinutes ?? updates.duration);
+            if (!Number.isNaN(nextDuration)) {
+              fallbackUpdates.durationMinutes = nextDuration;
+            }
+          }
+          if (typeof updates.withWhom === "string" && updates.withWhom.trim().length > 0) {
+            fallbackUpdates.withWhom = updates.withWhom.trim();
+          }
+
+          if (Object.keys(fallbackUpdates).length === 0) {
+            const responseText = "What should I update about that appointment?";
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: responseText,
+            });
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: responseText,
+              });
+            }
+            return;
+          }
+
+          updateAppointment(fallbackId, fallbackUpdates);
+          try {
+            await fetch("/api/appointments", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: fallbackId, ...fallbackUpdates }),
+            });
+          } catch (error) {
+            console.error("❌ Error updating appointment from fallback update:", error);
+          }
+
+          pendingAppointmentContextRef.current = null;
+          const responseText = data.message || "Got it. I’ve updated that appointment.";
+          addMessage({
+            id: uuidv4(),
+            role: "assistant",
+            content: responseText,
+          });
+          if (isNativeApp) {
+            window.webkit?.messageHandlers?.native?.postMessage({
+              action: "speak",
+              text: responseText,
+            });
+          }
+
+          const appointmentSnapshot = appointments.find(a => a.id === fallbackId);
+          const effectiveTitle = fallbackUpdates.title || appointmentSnapshot?.title || lastAppointmentTitleRef.current;
+          const effectiveWithWhom = fallbackUpdates.withWhom ?? appointmentSnapshot?.withWhom ?? null;
+          const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
+          if (askText && askedWhoWhatForAppointmentRef.current != fallbackId) {
+            askedWhoWhatForAppointmentRef.current = fallbackId;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: askText,
+            });
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: askText,
+              });
+            }
+          }
+          return;
+        }
+
         if (!itemToUpdate) {
           if (actualType === "appointment" && pendingAppointmentContextRef.current) {
             const fallbackTitle = updates.newTitle || searchTitle || "Meeting";
