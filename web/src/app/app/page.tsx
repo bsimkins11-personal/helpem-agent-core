@@ -219,24 +219,24 @@ export default function AppPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* FIXED HEADER STACK - SOLID WHITE BACKGROUND */}
+    <>
+      {/* ========== LAYER 1: ALERTS (top-0) ========== */}
+      <div className="fixed top-0 left-0 right-0" style={{ zIndex: 9999 }}>
+        <UsageAlertBanner />
+        <AlphaFeedbackBanner />
+      </div>
+
+      {/* ========== LAYER 2: BANNER + BUTTONS (top-60px) ========== */}
       <div 
-        className="fixed top-[60px] left-0 right-0 bg-white"
+        className="fixed left-0 right-0"
         style={{ 
-          zIndex: 10000,
-          backgroundColor: '#ffffff',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          top: '60px',
+          zIndex: 9998,
+          backgroundColor: 'white'
         }}
       >
-        {/* Alerts */}
-        <div style={{ backgroundColor: '#ffffff' }}>
-          <UsageAlertBanner />
-          <AlphaFeedbackBanner />
-        </div>
-        
-        {/* Welcome Banner */}
-        <div className="w-full bg-white py-1 px-4 md:px-6" style={{ backgroundColor: '#ffffff' }}>
+        {/* Welcome Banner - WHITE BACKGROUND */}
+        <div style={{ backgroundColor: 'white', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px' }}>
           <div className="max-w-7xl mx-auto">
             <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
               <h1 className="text-sm font-bold">{greeting()}</h1>
@@ -245,10 +245,10 @@ export default function AppPage() {
           </div>
         </div>
         
-        {/* Type/Hold to Talk Buttons */}
-        <div className="w-full bg-white py-2 px-4 md:px-6 border-b-4 border-gray-400" style={{ backgroundColor: '#ffffff' }}>
+        {/* Type/Hold to Talk Buttons - WHITE BACKGROUND */}
+        <div style={{ backgroundColor: 'white', paddingTop: '8px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px', borderBottom: '4px solid #9ca3af' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 p-2 rounded-lg border border-gray-200" style={{ backgroundColor: '#f9fafb' }}>
             <button
               onClick={() => {
                 setInputMode("type");
@@ -323,13 +323,14 @@ export default function AppPage() {
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT - starts below fixed header */}
+      {/* ========== LAYER 3: MAIN CONTENT (scrollable, below fixed elements) ========== */}
       <div 
-        className="flex-1 bg-gray-50" 
         style={{ 
-          marginTop: '200px',
+          paddingTop: '200px',
           position: 'relative',
-          zIndex: 1
+          zIndex: 1,
+          backgroundColor: '#f9fafb',
+          minHeight: '100vh'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
@@ -537,6 +538,6 @@ export default function AppPage() {
         </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
