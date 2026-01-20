@@ -182,6 +182,8 @@ export default function ChatInput({
   const flushTimerRef = useRef<number | null>(null);
   const pendingAppointmentContextRef = useRef<string | null>(null);
   const lastUserMessageRef = useRef<string | null>(null);
+  const lastAppointmentIdRef = useRef<string | null>(null);
+  const lastAppointmentTitleRef = useRef<string | null>(null);
   
   // Web Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -369,7 +371,7 @@ export default function ChatInput({
     }
 
     const messageToSend = pendingAppointmentContextRef.current
-      ? `${pendingAppointmentContextRef.current}\nAdditional details: ${trimmedText}`
+      ? `${pendingAppointmentContextRef.current}\nAdditional details: ${trimmedText}\nIMPORTANT: This is follow-up info for the SAME appointment. Do NOT create a new appointment. Return an update action.`
       : trimmedText;
 
     const userMessage: Message = {
@@ -505,13 +507,56 @@ export default function ChatInput({
       // Store user message for feedback tracking
       const userMessageForFeedback = text;
 
-      if (data.action === "add") {
+        if (data.action === "add") {
         const displayType = data.type === "habit" ? "routine" : data.type;
         const internalType = data.type === "routine" ? "habit" : data.type;
         const id = uuidv4();
         const now = new Date();
 
           if (data.type === "appointment") {
+            if (pendingAppointmentContextRef.current && lastAppointmentIdRef.current) {
+              const updatePayload: Partial<Appointment> = {};
+              if (typeof data.title === "string" && data.title.trim().length > 0) {
+                const previousTitle = lastAppointmentTitleRef.current;
+                const nextTitle = data.title.trim();
+                if (!previousTitle || previousTitle.toLowerCase() !== nextTitle.toLowerCase()) {
+                  updatePayload.title = nextTitle;
+                }
+              }
+              if (data.datetime) {
+                updatePayload.datetime = parseAiDatetime(data.datetime);
+              }
+              if (Number.isFinite(data.durationMinutes) || Number.isFinite(data.duration)) {
+                const nextDuration = Number(data.durationMinutes ?? data.duration);
+                if (!Number.isNaN(nextDuration)) {
+                  updatePayload.durationMinutes = nextDuration;
+                }
+              }
+              if (typeof data.withWhom === "string" && data.withWhom.trim().length > 0) {
+                updatePayload.withWhom = data.withWhom.trim();
+              }
+
+              if (Object.keys(updatePayload).length > 0) {
+                updateAppointment(lastAppointmentIdRef.current, updatePayload);
+                try {
+                  await fetch("/api/appointments", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: lastAppointmentIdRef.current, ...updatePayload }),
+                  });
+                } catch (error) {
+                  console.error("❌ Error updating appointment from follow-up:", error);
+                }
+              }
+
+              pendingAppointmentContextRef.current = null;
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: data.message || "Got it. I’ve updated that appointment with the extra details.",
+              });
+              return;
+            }
             pendingAppointmentContextRef.current = null;
           }
         if (internalType === "todo") {
@@ -701,6 +746,8 @@ export default function ChatInput({
             durationMinutes,
             createdAt: now,
           });
+          lastAppointmentIdRef.current = id;
+          lastAppointmentTitleRef.current = data.title;
           
           console.log("✅ ChatInput: addAppointment call completed");
           
@@ -733,6 +780,8 @@ export default function ChatInput({
               const conflictData = await apiResponse.json().catch(() => null);
               console.warn("⚠️ Appointment conflict detected:", conflictData);
               deleteAppointment(id);
+              lastAppointmentIdRef.current = null;
+              lastAppointmentTitleRef.current = null;
               const conflictText = conflictData?.conflict
                 ? `That overlaps with "${conflictData.conflict.title}" at ${formatDateTimeForSpeech(new Date(conflictData.conflict.datetime))}. Want to pick a different time or shorten the meeting?`
                 : "That time overlaps with another appointment. Want to pick a different time or shorten the meeting?";

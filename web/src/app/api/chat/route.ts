@@ -71,6 +71,7 @@ APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED DETAILS PRESENT):
 - NEVER default durationMinutes. If it's missing, you MUST ask how long.
 - If any REQUIRED fields are missing, ask for them in plain text and DO NOT create.
 - Only return JSON when all required appointment details are present.
+- FOLLOW-UP DETAILS: If the user provides additional appointment details after a prior appointment request, return an UPDATE action (do NOT create a new appointment).
 
 CRITICAL PARSING RULES:
 - If there's ANY action verb → CREATE task immediately:

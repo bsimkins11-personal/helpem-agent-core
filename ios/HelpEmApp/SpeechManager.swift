@@ -17,6 +17,7 @@ final class SpeechManager {
     
     private var latestPartial: String = ""
     private var finalTranscript: String?
+    private var stopWorkItem: DispatchWorkItem?
     
     // Cache authorization status for efficiency
     private(set) var isAuthorized = false
@@ -202,6 +203,13 @@ final class SpeechManager {
                 
                 // Check for specific error codes
                 let nsError = error as NSError
+                if nsError.domain == "kAFAssistantErrorDomain", nsError.code == 1110 {
+                    // Common benign error after stop; ignore if we already have text
+                    if !self.latestPartial.isEmpty || self.finalTranscript != nil {
+                        print("ℹ️ Ignoring no-speech error after transcript capture")
+                        return
+                    }
+                }
                 if nsError.domain == "kLSRErrorDomain" {
                     switch nsError.code {
                     case 1110:
@@ -245,37 +253,38 @@ final class SpeechManager {
     func stopListening() {
         print("🛑 Stopping listening...")
         
-        // Capture current transcript immediately
-        let output = self.finalTranscript ?? 
-                     self.latestPartial.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Stop audio engine IMMEDIATELY - no delays
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
+        // End audio input but allow a short tail for final result
         request?.endAudio()
-        
-        // Cancel recognition task
-        task?.cancel()
-        task = nil
-        request = nil
-        
-        // Deactivate audio session IMMEDIATELY
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            print("✅ Audio session deactivated immediately")
-        } catch {
-            print("⚠️ Error deactivating audio session:", error)
+
+        stopWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            let output = self.finalTranscript ??
+                         self.latestPartial.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            self.audioEngine.stop()
+            self.audioEngine.inputNode.removeTap(onBus: 0)
+            self.task?.cancel()
+            self.task = nil
+            self.request = nil
+
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                print("✅ Audio session deactivated")
+            } catch {
+                print("⚠️ Error deactivating audio session:", error)
+            }
+
+            if !output.isEmpty {
+                print("📝 Sending transcript:", output)
+                self.onFinalResult?(output)
+            }
+
+            self.latestPartial = ""
+            self.finalTranscript = nil
         }
-        
-        // Send final result if we have one
-        if !output.isEmpty {
-            print("📝 Sending transcript:", output)
-            self.onFinalResult?(output)
-        }
-        
-        // Clear state
-        self.latestPartial = ""
-        self.finalTranscript = nil
+        stopWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
     }
     
     // MARK: - Cleanup
