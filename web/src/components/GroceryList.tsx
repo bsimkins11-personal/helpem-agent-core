@@ -58,18 +58,20 @@ export function GroceryList() {
             ))}
           </div>
 
-          {/* Clear list button at bottom */}
-          {hasCompletedItems && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <button
-                onClick={clearCompletedGroceries}
-                className="w-full py-2 px-4 text-sm font-medium text-orange-600 hover:text-orange-700 
-                           hover:bg-orange-50 rounded-lg transition-colors"
-              >
-                Clear list
-              </button>
-            </div>
-          )}
+          {/* Clear picked-up items at bottom */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={clearCompletedGroceries}
+              disabled={!hasCompletedItems}
+              className={`w-full py-2 px-4 text-sm font-medium rounded-lg transition-colors ${
+                hasCompletedItems
+                  ? "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  : "text-gray-400 cursor-not-allowed"
+              }`}
+            >
+              Clear picked up items
+            </button>
+          </div>
         </>
       )}
     </div>

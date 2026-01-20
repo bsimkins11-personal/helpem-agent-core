@@ -184,6 +184,8 @@ export default function ChatInput({
   const lastUserMessageRef = useRef<string | null>(null);
   const lastAppointmentIdRef = useRef<string | null>(null);
   const lastAppointmentTitleRef = useRef<string | null>(null);
+  const pendingPriorityTodoIdRef = useRef<string | null>(null);
+  const pendingPriorityTodoTitleRef = useRef<string | null>(null);
   
   // Web Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -368,6 +370,76 @@ export default function ChatInput({
 
     if (/^(cancel|nevermind|never mind|stop)$/i.test(trimmedText)) {
       pendingAppointmentContextRef.current = null;
+    }
+
+    const pendingPriorityTodoId = pendingPriorityTodoIdRef.current;
+    if (pendingPriorityTodoId) {
+      const userMessage: Message = {
+        id: uuidv4(),
+        role: "user",
+        content: trimmedText,
+      };
+      addMessage(userMessage);
+      setInput("");
+
+      const priorityMatch = trimmedText.match(/\b(high|medium|low)\b/i);
+      const isNo = /^(no|nope|nah|not now|skip)$/i.test(trimmedText);
+      const isYes = /^(yes|yeah|yep|sure|ok|okay)$/i.test(trimmedText);
+
+      if (priorityMatch) {
+        const nextPriority = priorityMatch[1].toLowerCase() as Priority;
+        const pendingTitle = pendingPriorityTodoTitleRef.current ?? "that todo";
+        updateTodoPriority(pendingPriorityTodoId, nextPriority);
+        pendingPriorityTodoIdRef.current = null;
+        pendingPriorityTodoTitleRef.current = null;
+        const responseText = `Got it. I set "${pendingTitle}" to ${nextPriority} priority.`;
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        if (isNativeApp) {
+          window.webkit?.messageHandlers?.native?.postMessage({
+            action: "speak",
+            text: responseText,
+          });
+        }
+        return;
+      }
+
+      if (isNo) {
+        pendingPriorityTodoIdRef.current = null;
+        pendingPriorityTodoTitleRef.current = null;
+        const responseText = "Okay, I’ll keep it at medium priority.";
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        if (isNativeApp) {
+          window.webkit?.messageHandlers?.native?.postMessage({
+            action: "speak",
+            text: responseText,
+          });
+        }
+        return;
+      }
+
+      if (isYes) {
+        const responseText = "Which priority would you like: high, medium, or low?";
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        if (isNativeApp) {
+          window.webkit?.messageHandlers?.native?.postMessage({
+            action: "speak",
+            text: responseText,
+          });
+        }
+        return;
+      }
     }
 
     const messageToSend = pendingAppointmentContextRef.current
@@ -565,7 +637,8 @@ export default function ChatInput({
           const hasExplicitTime = hasDate && rawDate && !isMidnight(rawDate);
           const baseDate = hasDate && rawDate ? rawDate : null;
           const reminderDate: Date | undefined = hasExplicitTime ? baseDate! : undefined;
-          const priorityValue = data.priority || "medium";
+            const priorityValue = data.priority || "medium";
+            const userMentionedPriority = /(\bhigh\b|\bmedium\b|\blow\b|priority|urgent|asap|critical|emergency)/i.test(userMessageForFeedback || "");
 
           // Add to local state first (always works)
           addTodo({
@@ -631,6 +704,20 @@ export default function ChatInput({
               action: "speak",
               text: responseText,
             });
+            if (!userMentionedPriority) {
+              pendingPriorityTodoIdRef.current = id;
+              pendingPriorityTodoTitleRef.current = data.title;
+              const followup = "Would you like to set a priority level for this?";
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: followup,
+              });
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: followup,
+              });
+            }
             
             // Schedule notification ONLY for reminders (todos with specific time/date)
             // Regular todos/tasks without time do NOT get notifications
@@ -658,10 +745,23 @@ export default function ChatInput({
                   content: timePrompt,
                 });
               }
+              if (!userMentionedPriority) {
+                pendingPriorityTodoIdRef.current = id;
+                pendingPriorityTodoTitleRef.current = data.title;
+                addMessage({
+                  id: uuidv4(),
+                  role: "assistant",
+                  content: "Would you like to set a priority level for this?",
+                });
+              }
+            }
+            if (!userMentionedPriority && data.message) {
+              pendingPriorityTodoIdRef.current = id;
+              pendingPriorityTodoTitleRef.current = data.title;
               addMessage({
                 id: uuidv4(),
                 role: "assistant",
-                content: `Set a priority for "${data.title}": high, medium, or low. Default is ${priorityValue}.`,
+                content: "Would you like to set a priority level for this?",
               });
             }
           }
