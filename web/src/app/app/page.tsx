@@ -21,6 +21,7 @@ const PRIORITY_TABS = [
   { key: "low" as const, label: "Low", color: "bg-green-500", activeText: "text-white", inactiveText: "text-green-600", inactiveBg: "bg-green-50" },
 ];
 const HEADER_OFFSET_PX = 60;
+const STACK_GAP_PX = 8;
 
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
@@ -209,13 +210,13 @@ export default function AppPage() {
   const fixedStackRef = useRef<HTMLDivElement>(null);
   const [fixedStackHeight, setFixedStackHeight] = useState(0);
   const fixedOffset = HEADER_OFFSET_PX + fixedStackHeight;
-  const contentTopPadding = fixedStackHeight ? fixedOffset : 200;
+  const contentTopPadding = fixedStackHeight ? fixedOffset + STACK_GAP_PX : 200;
   
   const scrollToChat = () => {
     // Scroll so chat appears directly below fixed buttons (140px from top)
     if (chatRef.current) {
       const elementPosition = chatRef.current.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - fixedOffset; // Account for fixed header + banner + buttons
+      const offsetPosition = elementPosition - (fixedOffset + STACK_GAP_PX); // Account for fixed header + banner + buttons
       window.scrollTo({
         top: offsetPosition,
         behavior: "smooth"
@@ -269,7 +270,7 @@ export default function AppPage() {
         </div>
         
         {/* Welcome Banner */}
-        <div style={{ backgroundColor: 'white', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', width: '100%' }}>
+        <div style={{ backgroundColor: 'white', paddingTop: '0px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', width: '100%' }}>
           <div className="max-w-7xl mx-auto">
             <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
               <h1 className="text-sm font-bold">{greeting()}</h1>
