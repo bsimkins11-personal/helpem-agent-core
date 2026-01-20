@@ -825,7 +825,10 @@ export default function ChatInput({
     }
 
     // No need for complex message rewriting - client intercepts appointment responses now
-    const messageToSend = trimmedText;
+    let messageToSend = trimmedText;
+    if (pendingAppointmentWithWhomRef.current && pendingAppointmentContextRef.current) {
+      messageToSend = `${trimmedText}\n\n[Context: meeting is with ${pendingAppointmentWithWhomRef.current}]`;
+    }
 
     const userMessage: Message = {
       id: uuidv4(),
