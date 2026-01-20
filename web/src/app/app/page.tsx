@@ -307,22 +307,30 @@ export default function AppPage() {
             </button>
             
             <button
-              onMouseDown={() => {
+              onPointerDown={(event) => {
+                event.preventDefault();
                 setInputMode("talk");
                 scrollToChat();
-                // Trigger iOS recording
+                // Trigger iOS recording immediately
                 if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
                   (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
                 }
               }}
-              onMouseUp={() => {
+              onPointerUp={() => {
                 setInputMode("type");
                 // Stop iOS recording
                 if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
                   (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
                 }
               }}
-              onMouseLeave={() => {
+              onPointerCancel={() => {
+                setInputMode("type");
+                // Stop iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+                }
+              }}
+              onPointerLeave={() => {
                 if (inputMode === "talk") {
                   setInputMode("type");
                   // Stop iOS recording
@@ -331,22 +339,7 @@ export default function AppPage() {
                   }
                 }
               }}
-              onTouchStart={() => {
-                setInputMode("talk");
-                scrollToChat();
-                // Trigger iOS recording
-                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
-                  (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
-                }
-              }}
-              onTouchEnd={() => {
-                setInputMode("type");
-                // Stop iOS recording
-                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
-                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
-                }
-              }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none ${
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none touch-none ${
                 inputMode === "talk"
                   ? "bg-red-500 text-white"
                   : "bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
