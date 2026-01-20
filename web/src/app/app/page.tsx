@@ -237,6 +237,11 @@ export default function AppPage() {
       });
     }
   };
+  const scrollToChatSoon = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToChat);
+    });
+  };
 
   useEffect(() => {
     if (!fixedStackRef.current) return;
@@ -335,7 +340,7 @@ export default function AppPage() {
             <button
               onClick={() => {
                 setInputMode("type");
-                scrollToChat();
+                scrollToChatSoon();
               }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all ${
                 inputMode === "type"
@@ -354,11 +359,11 @@ export default function AppPage() {
                 event.preventDefault();
                 event.currentTarget.setPointerCapture(event.pointerId);
                 setInputMode("talk");
-                scrollToChat();
                 // Trigger iOS recording immediately
                 if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
                   (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
                 }
+                scrollToChatSoon();
               }}
               onPointerUp={(event) => {
                 event.preventDefault();
