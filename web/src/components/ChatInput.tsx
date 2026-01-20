@@ -991,6 +991,24 @@ export default function ChatInput({
             title = pendingAppointmentTopicRef.current;
           }
 
+          const followup = getWhoWhatPrompt(title, withWhom);
+          if (followup) {
+            pendingAppointmentContextRef.current = `Appointment request: title="${title}", datetime="${datetime.toISOString()}", durationMinutes=${durationMinutes}${withWhom ? `, withWhom="${withWhom}"` : ""}`;
+            if (withWhom) {
+              pendingAppointmentWithWhomRef.current = withWhom;
+            }
+            if (!isGenericAppointmentTitle(title)) {
+              pendingAppointmentTopicRef.current = title;
+            }
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: followup,
+            });
+            speakNative(followup);
+            return;
+          }
+
           console.log("📅 Creating appointment:", {
             id,
             title,
@@ -1107,14 +1125,12 @@ export default function ChatInput({
 
           console.log("✅ Appointment added to local state");
 
-          const followup = getWhoWhatPrompt(title, withWhom);
-
           // Show message (ask questions before confirming)
           const feedbackId = uuidv4();
           addMessage({ 
             id: uuidv4(), 
             role: "assistant", 
-            content: followup || responseText,
+            content: responseText,
             action: { type: "appointment", title, datetime: datetime.toISOString() },
             actionType: "add",
             feedbackId,
@@ -1122,8 +1138,7 @@ export default function ChatInput({
           });
 
           if (isNativeApp) {
-            const spokenText = followup || responseText;
-            speakNative(spokenText);
+            speakNative(responseText);
 
             // Schedule notification for appointment (1 hour before)
             const notificationTime = new Date(datetime.getTime() - 60 * 60 * 1000); // 1 hour before
@@ -1137,9 +1152,6 @@ export default function ChatInput({
                 date: notificationTime.toISOString(),
               });
             }
-          }
-          if (followup && askedWhoWhatForAppointmentRef.current != id) {
-            askedWhoWhatForAppointmentRef.current = id;
           }
           pendingAppointmentWithWhomRef.current = null;
           pendingAppointmentTopicRef.current = null;
