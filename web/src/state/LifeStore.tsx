@@ -513,6 +513,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
       title: todo.title,
       withWhom: null,
       topic: null,
+      location: null,
       datetime,
       durationMinutes: 30,
       createdAt: now,

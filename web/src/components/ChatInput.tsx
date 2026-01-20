@@ -192,6 +192,7 @@ export default function ChatInput({
     durationMinutes?: number;
     withWhom?: string | null;
     topic?: string | null;
+    location?: string | null;
     askedForOptionalFields: boolean;
   };
   const appointmentBuilderRef = useRef<AppointmentBuilder | null>(null);
@@ -241,32 +242,39 @@ export default function ChatInput({
     const text = input.trim();
     let withWhom: string | null = null;
     let topic: string | null = null;
+    let location: string | null = null;
     
     // Extract "with [person]"
-    const withMatch = text.match(/\bwith\b\s+(.*?)(?:\s+\babout\b|$)/i);
+    const withMatch = text.match(/\bwith\b\s+(.*?)(?:\s+\b(?:about|at|in)\b|$)/i);
     if (withMatch && withMatch[1]) {
       withWhom = withMatch[1].trim();
     }
     
     // Extract "about [topic]"
-    const aboutMatch = text.match(/\babout\b\s+(.*)$/i);
+    const aboutMatch = text.match(/\babout\b\s+(.*?)(?:\s+\b(?:at|in)\b|$)/i);
     if (aboutMatch && aboutMatch[1]) {
       topic = aboutMatch[1].trim();
     }
     
+    // Extract "at [location]" or "in [location]"
+    const locationMatch = text.match(/\b(?:at|in)\b\s+(.+?)$/i);
+    if (locationMatch && locationMatch[1]) {
+      location = locationMatch[1].trim();
+    }
+    
     // If no "about" keyword, try to extract topic after affirmatives
-    if (!topic) {
+    if (!topic && !location) {
       const topicMatch = text.match(/(?:yeah|yes|sure|okay)\s+(?:the\s+)?(?:meeting|appointment)?\s*(?:is\s+)?(?:about\s+)?(.+)/i);
       if (topicMatch && topicMatch[1]) {
         const extracted = topicMatch[1].trim();
         // Make sure it's not just filler words
-        if (extracted && !/(yeah|yes|sure|okay|the|meeting|appointment|is|about|with)/i.test(extracted)) {
+        if (extracted && !/(yeah|yes|sure|okay|the|meeting|appointment|is|about|with|at|in)/i.test(extracted)) {
           topic = extracted;
         }
       }
     }
     
-    return { withWhom, topic };
+    return { withWhom, topic, location };
   };
   
   // Legacy helper functions
@@ -573,15 +581,17 @@ export default function ChatInput({
       console.log("✅✅✅ INTERCEPTING - Client handling optional field response ✅✅✅");
       const builder = appointmentBuilderRef.current;
       const declined = isDeclineReply(trimmedText);
-      const { withWhom, topic } = extractOptionalFields(trimmedText);
-      console.log("📝 Extracted:", { declined, withWhom, topic });
+      const { withWhom, topic, location } = extractOptionalFields(trimmedText);
+      console.log("📝 Extracted:", { declined, withWhom, topic, location });
       
       // Update builder with optional fields
       if (withWhom) builder.withWhom = withWhom;
       if (topic) builder.topic = topic;
+      if (location) builder.location = location;
       if (declined) {
         builder.withWhom = null;
         builder.topic = null;
+        builder.location = null;
       }
       
       // Add user message to chat
@@ -599,6 +609,7 @@ export default function ChatInput({
         durationMinutes: builder.durationMinutes!,
         withWhom: builder.withWhom || null,
         topic: builder.topic || null,
+        location: builder.location || null,
         createdAt: new Date(),
       };
       
@@ -1117,13 +1128,14 @@ export default function ChatInput({
                                   Number.isFinite(data.duration) ? Number(data.duration) : undefined;
           const withWhom = typeof data.withWhom === "string" && data.withWhom.trim() ? data.withWhom.trim() : undefined;
           const topic = typeof data.topic === "string" && data.topic.trim() ? data.topic.trim() : undefined;
+          const location = typeof data.location === "string" && data.location.trim() ? data.location.trim() : undefined;
           const title = data.title || "Meeting";
           
           console.log("=".repeat(80));
           console.log("📋📋📋 CREATING NEW BUILDER FROM AI RESPONSE 📋📋📋");
           console.log("   Old builder ID:", appointmentBuilderRef.current?.id);
           console.log("   Old askedForOptionalFields:", appointmentBuilderRef.current?.askedForOptionalFields);
-          console.log("   New data:", { title, datetime, durationMinutes, withWhom, topic });
+          console.log("   New data:", { title, datetime, durationMinutes, withWhom, topic, location });
           console.log("=".repeat(80));
           
           appointmentBuilderRef.current = {
@@ -1133,6 +1145,7 @@ export default function ChatInput({
             durationMinutes,
             withWhom,
             topic,
+            location,
             askedForOptionalFields: false,
           };
           
@@ -1154,24 +1167,32 @@ export default function ChatInput({
           const builder = appointmentBuilderRef.current;
           const hasWho = Boolean(builder.withWhom);
           const hasWhat = Boolean(builder.topic);
+          const hasWhere = Boolean(builder.location);
           
           // Only ask for missing optional fields
-          if (!hasWho || !hasWhat) {
+          if (!hasWho || !hasWhat || !hasWhere) {
             appointmentBuilderRef.current.askedForOptionalFields = true;
             let promptText = "";
             
-            if (!hasWho && !hasWhat) {
-              promptText = "Would you like to add who the meeting is with and what it's about?";
-            } else if (!hasWho) {
-              promptText = "Would you like to add who the meeting is with?";
-            } else if (!hasWhat) {
-              promptText = "Would you like to add what the meeting is about?";
+            // Build dynamic question based on what's missing
+            const missing = [];
+            if (!hasWho) missing.push("who the meeting is with");
+            if (!hasWhat) missing.push("what it's about");
+            if (!hasWhere) missing.push("where it's located");
+            
+            if (missing.length === 3) {
+              promptText = "Would you like to add who the meeting is with, what it's about, and where it's located?";
+            } else if (missing.length === 2) {
+              promptText = `Would you like to add ${missing[0]} and ${missing[1]}?`;
+            } else if (missing.length === 1) {
+              promptText = `Would you like to add ${missing[0]}?`;
             }
             
             console.log("=".repeat(80));
             console.log("🔔🔔🔔 CLIENT ASKING OPTIONAL FIELD QUESTION 🔔🔔🔔");
             console.log("   hasWho:", hasWho);
             console.log("   hasWhat:", hasWhat);
+            console.log("   hasWhere:", hasWhere);
             console.log("   promptText:", promptText);
             console.log("   🎯 SET askedForOptionalFields = TRUE");
             console.log("   Builder ID:", appointmentBuilderRef.current.id);
@@ -1195,6 +1216,7 @@ export default function ChatInput({
             durationMinutes: builder.durationMinutes!,
             withWhom: builder.withWhom || null,
             topic: builder.topic || null,
+            location: builder.location || null,
             createdAt: new Date(),
           };
           
@@ -1508,6 +1530,7 @@ export default function ChatInput({
               title: fallbackTitle,
               withWhom: fallbackWithWhom,
               topic: null,
+              location: null,
               datetime: fallbackDatetime,
               durationMinutes: fallbackDuration,
               createdAt: now,
@@ -2148,7 +2171,7 @@ export default function ChatInput({
         addHabit({ id, title, frequency: pendingAction.frequency || "daily", createdAt: now, completions: [] });
         break;
       case "appointment":
-        addAppointment({ id, title, withWhom: null, topic: null, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, durationMinutes: 30, createdAt: now });
+        addAppointment({ id, title, withWhom: null, topic: null, location: null, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, durationMinutes: 30, createdAt: now });
         break;
     }
 

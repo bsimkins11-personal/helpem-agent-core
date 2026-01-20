@@ -54,6 +54,7 @@ export function AppointmentDebugPanel() {
         title: testTitle,
         withWhom: null,
         topic: null,
+        location: null,
         datetime,
         durationMinutes: 30,
         createdAt,

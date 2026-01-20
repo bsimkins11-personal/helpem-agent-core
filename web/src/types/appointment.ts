@@ -3,6 +3,7 @@ export type Appointment = {
   title: string;
   withWhom: string | null;
   topic: string | null;
+  location: string | null;
   datetime: Date;
   durationMinutes: number;
   createdAt: Date;

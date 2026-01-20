@@ -99,6 +99,7 @@ export default function CaptureInput() {
           title: result.title || text,
           withWhom: null,
           topic: null,
+          location: null,
           datetime: result.dueDate ? new Date(result.dueDate) : now,
           durationMinutes: 30,
           createdAt: now,

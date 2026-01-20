@@ -16,6 +16,8 @@ async function ensureAppointmentsTable() {
       user_id UUID NOT NULL,
       title TEXT NOT NULL,
       with_whom TEXT,
+      topic TEXT,
+      location TEXT,
       datetime TIMESTAMP(3) NOT NULL,
       duration_minutes INTEGER NOT NULL DEFAULT 30,
       created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -27,6 +29,12 @@ async function ensureAppointmentsTable() {
   );
   await query(
     'ALTER TABLE appointments ADD COLUMN IF NOT EXISTS with_whom TEXT'
+  );
+  await query(
+    'ALTER TABLE appointments ADD COLUMN IF NOT EXISTS topic TEXT'
+  );
+  await query(
+    'ALTER TABLE appointments ADD COLUMN IF NOT EXISTS location TEXT'
   );
   await query('CREATE INDEX IF NOT EXISTS appointments_user_id_idx ON appointments(user_id)');
 }
@@ -123,7 +131,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log('📦 Request body:', body);
     
-    const { title, datetime, durationMinutes, withWhom } = body;
+    const { title, datetime, durationMinutes, withWhom, topic, location } = body;
     
     // 🛡️ Input validation
     if (!title || typeof title !== "string") {
@@ -147,8 +155,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Valid durationMinutes is required" }, { status: 400 });
     }
 
-    if (withWhom !== undefined && typeof withWhom !== "string") {
+    if (withWhom !== undefined && withWhom !== null && typeof withWhom !== "string") {
       return NextResponse.json({ error: "withWhom must be a string" }, { status: 400 });
+    }
+
+    if (topic !== undefined && topic !== null && typeof topic !== "string") {
+      return NextResponse.json({ error: "topic must be a string" }, { status: 400 });
+    }
+
+    if (location !== undefined && location !== null && typeof location !== "string") {
+      return NextResponse.json({ error: "location must be a string" }, { status: 400 });
     }
     
     // Sanitize title - remove HTML tags
@@ -161,6 +177,8 @@ export async function POST(req: Request) {
     console.log(`   Datetime: ${datetime}`);
     console.log(`   Duration: ${parsedDuration} minutes`);
     console.log(`   With: ${withWhom ?? "N/A"}`);
+    console.log(`   Topic: ${topic ?? "N/A"}`);
+    console.log(`   Location: ${location ?? "N/A"}`);
 
     const startTime = new Date(datetime);
     const endTime = new Date(startTime.getTime() + parsedDuration * 60 * 1000);
@@ -188,8 +206,8 @@ export async function POST(req: Request) {
     let result;
     try {
       result = await query(
-        'INSERT INTO appointments (user_id, title, with_whom, datetime, duration_minutes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [user.userId, sanitizedTitle, withWhom ?? null, datetime, parsedDuration]
+        'INSERT INTO appointments (user_id, title, with_whom, topic, location, datetime, duration_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [user.userId, sanitizedTitle, withWhom ?? null, topic ?? null, location ?? null, datetime, parsedDuration]
       );
     } catch (error) {
       const pgError = error as PgError;
@@ -197,8 +215,8 @@ export async function POST(req: Request) {
         console.warn("⚠️ Appointments table missing. Creating it now.");
         await ensureAppointmentsTable();
         result = await query(
-          'INSERT INTO appointments (user_id, title, with_whom, datetime, duration_minutes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-          [user.userId, sanitizedTitle, withWhom ?? null, datetime, parsedDuration]
+          'INSERT INTO appointments (user_id, title, with_whom, topic, location, datetime, duration_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+          [user.userId, sanitizedTitle, withWhom ?? null, topic ?? null, location ?? null, datetime, parsedDuration]
         );
       } else {
         throw error;
@@ -244,7 +262,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     console.log('📦 Request body:', body);
     
-    const { id, title, datetime, durationMinutes, withWhom } = body;
+    const { id, title, datetime, durationMinutes, withWhom, topic, location } = body;
     
     // Validation
     if (!id) {
@@ -270,8 +288,16 @@ export async function PATCH(req: Request) {
       }
     }
 
-    if (withWhom !== undefined && typeof withWhom !== "string") {
+    if (withWhom !== undefined && withWhom !== null && typeof withWhom !== "string") {
       return NextResponse.json({ error: "withWhom must be a string" }, { status: 400 });
+    }
+
+    if (topic !== undefined && topic !== null && typeof topic !== "string") {
+      return NextResponse.json({ error: "topic must be a string" }, { status: 400 });
+    }
+
+    if (location !== undefined && location !== null && typeof location !== "string") {
+      return NextResponse.json({ error: "location must be a string" }, { status: 400 });
     }
     
     // Build update query dynamically based on provided fields
@@ -298,6 +324,16 @@ export async function PATCH(req: Request) {
     if (withWhom !== undefined) {
       updates.push(`with_whom = $${paramIndex++}`);
       values.push(withWhom);
+    }
+
+    if (topic !== undefined) {
+      updates.push(`topic = $${paramIndex++}`);
+      values.push(topic);
+    }
+
+    if (location !== undefined) {
+      updates.push(`location = $${paramIndex++}`);
+      values.push(location);
     }
     
     if (updates.length === 0) {
