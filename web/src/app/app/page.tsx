@@ -211,12 +211,25 @@ export default function AppPage() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true);
   const [welcomeHeight, setWelcomeHeight] = useState(0);
   const welcomeRef = useRef<HTMLDivElement>(null);
-  const isNativeApp = typeof window !== "undefined" && (
-    navigator.userAgent.includes("helpem") ||
-    (window as any).webkit?.messageHandlers?.native ||
-    (window as any).__IS_HELPEM_APP__ ||
-    (window as any).nativeBridge?.isNative
-  );
+  const [isNativeApp, setIsNativeApp] = useState(false);
+
+  useEffect(() => {
+    const checkNative = () => {
+      if (typeof window === "undefined") return;
+      const native =
+        navigator.userAgent.includes("helpem") ||
+        (window as any).webkit?.messageHandlers?.native ||
+        (window as any).__IS_HELPEM_APP__ ||
+        (window as any).nativeBridge?.isNative;
+      setIsNativeApp(Boolean(native));
+    };
+    checkNative();
+    window.addEventListener("nativeBridgeInjected", checkNative);
+    return () => {
+      window.removeEventListener("nativeBridgeInjected", checkNative);
+    };
+  }, []);
+
   const headerOffsetPx = isNativeApp ? 0 : 60;
   const fixedStackRef = useRef<HTMLDivElement>(null);
   const [fixedStackHeight, setFixedStackHeight] = useState(0);
