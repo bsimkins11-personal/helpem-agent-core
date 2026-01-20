@@ -219,7 +219,7 @@ export default function AppPage() {
   );
   const headerOffsetPx = isNativeApp ? 0 : 60;
   const fixedStackRef = useRef<HTMLDivElement>(null);
-  const [fixedStackHeight, setFixedStackHeight] = useState(160);
+  const [fixedStackHeight, setFixedStackHeight] = useState(0);
   const fixedOffset = headerOffsetPx + fixedStackHeight;
 
   const measureFixedStackHeight = () => {
@@ -263,10 +263,14 @@ export default function AppPage() {
     if (!fixedStackRef.current) return;
     const element = fixedStackRef.current;
     measureFixedStackHeight();
+    const settle = window.setTimeout(() => {
+      measureFixedStackHeight();
+    }, 200);
     if (typeof ResizeObserver === "undefined") {
       window.addEventListener("resize", measureFixedStackHeight);
       return () => {
         window.removeEventListener("resize", measureFixedStackHeight);
+        window.clearTimeout(settle);
       };
     }
     const resizeObserver = new ResizeObserver(measureFixedStackHeight);
@@ -275,6 +279,7 @@ export default function AppPage() {
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", measureFixedStackHeight);
+      window.clearTimeout(settle);
     };
   }, []);
 
