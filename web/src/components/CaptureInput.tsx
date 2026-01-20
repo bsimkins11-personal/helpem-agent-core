@@ -98,6 +98,7 @@ export default function CaptureInput() {
           id,
           title: result.title || text,
           withWhom: null,
+          topic: null,
           datetime: result.dueDate ? new Date(result.dueDate) : now,
           durationMinutes: 30,
           createdAt: now,

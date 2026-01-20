@@ -1474,6 +1474,7 @@ export default function ChatInput({
               id,
               title: fallbackTitle,
               withWhom: fallbackWithWhom,
+              topic: null,
               datetime: fallbackDatetime,
               durationMinutes: fallbackDuration,
               createdAt: now,
@@ -2114,7 +2115,7 @@ export default function ChatInput({
         addHabit({ id, title, frequency: pendingAction.frequency || "daily", createdAt: now, completions: [] });
         break;
       case "appointment":
-        addAppointment({ id, title, withWhom: null, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, durationMinutes: 30, createdAt: now });
+        addAppointment({ id, title, withWhom: null, topic: null, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, durationMinutes: 30, createdAt: now });
         break;
     }
 

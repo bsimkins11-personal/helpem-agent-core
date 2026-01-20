@@ -53,6 +53,7 @@ export function AppointmentDebugPanel() {
         id,
         title: testTitle,
         withWhom: null,
+        topic: null,
         datetime,
         durationMinutes: 30,
         createdAt,

@@ -512,6 +512,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
       id: appointmentId,
       title: todo.title,
       withWhom: null,
+      topic: null,
       datetime,
       durationMinutes: 30,
       createdAt: now,
