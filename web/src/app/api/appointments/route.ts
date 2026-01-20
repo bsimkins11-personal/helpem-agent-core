@@ -8,6 +8,12 @@ type PgError = {
   message?: string;
 };
 
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string) {
+  return uuidRegex.test(value);
+}
+
 async function ensureAppointmentsTable() {
   await query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
   await query(
@@ -267,8 +273,8 @@ export async function PATCH(req: Request) {
     const { id, title, datetime, durationMinutes, withWhom, topic, location } = body;
     
     // Validation
-    if (!id) {
-      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 });
+    if (!id || typeof id !== "string" || !isUuid(id)) {
+      return NextResponse.json({ error: "Invalid appointment ID" }, { status: 400 });
     }
     
     if (title && typeof title !== "string") {
@@ -290,8 +296,10 @@ export async function PATCH(req: Request) {
       }
     }
 
-    if (withWhom !== undefined && withWhom !== null && typeof withWhom !== "string") {
-      return NextResponse.json({ error: "withWhom must be a string" }, { status: 400 });
+    if (withWhom !== undefined) {
+      if (withWhom === null || typeof withWhom !== "string" || withWhom.trim().length === 0) {
+        return NextResponse.json({ error: "withWhom is required - who is the meeting with?" }, { status: 400 });
+      }
     }
 
     if (topic !== undefined && topic !== null && typeof topic !== "string") {
@@ -399,6 +407,9 @@ export async function PATCH(req: Request) {
     console.error('🔴 ========================================');
     console.error("❌ Error updating appointment:", error);
     console.error('🔴 ========================================');
+    if (error instanceof Error && error.message.includes("invalid input syntax for type uuid")) {
+      return NextResponse.json({ error: "Invalid appointment ID" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to update appointment" }, { status: 500 });
   }
 }
@@ -422,8 +433,8 @@ export async function DELETE(req: Request) {
     
     console.log('🔍 Deleting appointment ID:', id);
     
-    if (!id) {
-      return NextResponse.json({ error: "Appointment ID is required" }, { status: 400 });
+    if (!id || !isUuid(id)) {
+      return NextResponse.json({ error: "Invalid appointment ID" }, { status: 400 });
     }
     
     console.log(`🗑️ Deleting appointment ${id} for user: ${user.userId}`);
@@ -444,6 +455,9 @@ export async function DELETE(req: Request) {
     console.error('🔴 ========================================');
     console.error("❌ Error deleting appointment:", error);
     console.error('🔴 ========================================');
+    if (error instanceof Error && error.message.includes("invalid input syntax for type uuid")) {
+      return NextResponse.json({ error: "Invalid appointment ID" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to delete appointment" }, { status: 500 });
   }
 }

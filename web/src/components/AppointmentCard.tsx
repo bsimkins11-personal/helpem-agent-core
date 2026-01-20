@@ -16,7 +16,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
     title: appointment.title,
     datetime: new Date(appointment.datetime).toISOString().slice(0, 16),
     durationMinutes: appointment.durationMinutes || 30,
-    withWhom: appointment.withWhom || '',
+    withWhom: appointment.withWhom || 'Just me',
     topic: appointment.topic || '',
     location: appointment.location || '',
   });
@@ -64,11 +64,12 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
   };
 
   const handleSaveEdit = async () => {
+    const trimmedWithWhom = editForm.withWhom.trim() || 'Just me';
     const updates: Partial<Appointment> = {
       title: editForm.title,
       datetime: new Date(editForm.datetime),
       durationMinutes: editForm.durationMinutes,
-      withWhom: editForm.withWhom || null,
+      withWhom: trimmedWithWhom,
       topic: editForm.topic || null,
       location: editForm.location || null,
     };
@@ -153,8 +154,11 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
 
       {/* Edit Modal */}
       {showEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white">
-          <div className="rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-200" style={{ backgroundColor: '#ffffff' }}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white"
+          style={{ backgroundColor: '#ffffff', opacity: 1 }}
+        >
+          <div className="rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-200 bg-white">
             <h3 className="text-lg font-semibold text-brandText mb-4">Edit Appointment</h3>
             
             <div className="space-y-4">
@@ -191,12 +195,13 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-brandText mb-1">With Whom (optional)</label>
+                <label className="block text-sm font-medium text-brandText mb-1">With Whom</label>
                 <input
                   type="text"
                   value={editForm.withWhom}
                   onChange={(e) => setEditForm({ ...editForm, withWhom: e.target.value })}
                   placeholder="e.g., John, AMS team"
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />
               </div>
@@ -245,7 +250,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
       {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
-          <div className="rounded-xl p-6 max-w-sm mx-4 shadow-2xl border border-gray-200" style={{ backgroundColor: '#ffffff' }}>
+          <div className="rounded-xl p-6 max-w-sm mx-4 shadow-2xl border border-gray-200 bg-white">
             <h3 className="text-lg font-semibold text-brandText mb-2">Delete Appointment</h3>
             <p className="text-brandTextLight mb-6">
               Confirm you want to remove <span className="font-semibold text-brandText">{appointment.title}</span> from your calendar?

@@ -511,7 +511,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
     addAppointment({
       id: appointmentId,
       title: todo.title,
-      withWhom: null,
+      withWhom: "Just me",
       topic: null,
       location: null,
       datetime,
@@ -524,7 +524,7 @@ export function LifeProvider({ children }: LifeProviderProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: todo.title,
-        withWhom: null,
+        withWhom: "Just me",
         datetime: datetime.toISOString(),
         durationMinutes: 30,
       }),

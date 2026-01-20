@@ -42,7 +42,7 @@ export function UsageModal({ isOpen, onClose }: UsageModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50" onClick={(e) => {
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-white" onClick={(e) => {
       if (e.target === e.currentTarget) {
         onClose();
       }

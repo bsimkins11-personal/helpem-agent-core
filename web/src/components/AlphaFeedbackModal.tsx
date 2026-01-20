@@ -57,7 +57,7 @@ export function AlphaFeedbackModal({ isOpen, onClose }: AlphaFeedbackModalProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white">
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative">
         {/* Close button */}
         <button
