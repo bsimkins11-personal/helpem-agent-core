@@ -1416,7 +1416,7 @@ export default function ChatInput({
       }
       stopTimerRef.current = window.setTimeout(() => {
         window.webkit?.messageHandlers?.native?.postMessage({ action: "stopRecording" });
-      }, 200);
+      }, 800);
     } else {
       // Web browser fallback
       stopWebRecording();
@@ -1519,7 +1519,7 @@ export default function ChatInput({
         setIsProcessing(false);
         setIsListening(false);
         sendMessageWithText(pendingTranscript, true);
-      }, 300);
+      }, 1200);
     }
     return () => {
       if (flushTimerRef.current) {
