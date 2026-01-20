@@ -1101,13 +1101,16 @@ export default function ChatInput({
           // Initialize appointment builder with data from AI
           const datetime = data.datetime ? parseAiDatetime(data.datetime) : getDefaultTomorrowReminder();
           const durationMinutes = Number.isFinite(data.durationMinutes) ? Number(data.durationMinutes) : 
-                                  Number.isFinite(data.duration) ? Number(data.duration) : 30;
+                                  Number.isFinite(data.duration) ? Number(data.duration) : undefined;
           const withWhom = typeof data.withWhom === "string" && data.withWhom.trim() ? data.withWhom.trim() : undefined;
-          const topic = data.title;
+          const topic = typeof data.topic === "string" && data.topic.trim() ? data.topic.trim() : undefined;
+          const title = data.title || "Meeting";
+          
+          console.log("📋 Building appointment from AI response:", { title, datetime, durationMinutes, withWhom, topic });
           
           appointmentBuilderRef.current = {
             id,
-            title: topic,
+            title,
             datetime,
             durationMinutes,
             withWhom,

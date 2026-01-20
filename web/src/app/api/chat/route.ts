@@ -17,16 +17,30 @@ function getOpenAIClient() {
 }
 
 const OPERATIONAL_RULES = `
-🚨🚨🚨 CHECK YOUR PREVIOUS MESSAGE FIRST! 🚨🚨🚨
-BEFORE DOING ANYTHING, LOOK AT YOUR LAST ASSISTANT MESSAGE:
-- Did you just ask "Would you like for me to add who/what?" or similar?
-- If YES → User's current message is their ANSWER! Parse it immediately:
-  * "Sure it's about taxonomy" → topic: "taxonomy", finalize appointment NOW
-  * "With John" → withWhom: "John", finalize appointment NOW
-  * "About the project with Sarah" → topic: "the project", withWhom: "Sarah", finalize NOW
-  * "No" → Mark as declined, finalize NOW
-- DO NOT ask the same question again!
-- DO NOT ignore their answer!
+🚨🚨🚨 APPOINTMENT = SIMPLE ARRAY. FILL IT AND CREATE IT. 🚨🚨🚨
+
+APPOINTMENT OBJECT YOU'RE FILLING:
+{
+  title: string,           // "Meeting", "Dentist", etc.
+  datetime: Date,          // REQUIRED - ask if missing
+  durationMinutes: number, // REQUIRED - ask if missing
+  withWhom: string | null, // OPTIONAL - extract from "with [person]" or ask
+  topic: string | null     // OPTIONAL - extract from context or ask
+}
+
+SIMPLE RULES:
+1. Extract ALL fields you can from user's message IMMEDIATELY
+2. Missing datetime? → Ask "What date and time?"
+3. Missing duration? → Ask "How long?"
+4. Missing optional fields? → Ask ONCE: "Would you like to add [what's missing]?"
+5. User answers? → Extract it, add to array, CREATE APPOINTMENT
+6. NEVER ASK THE SAME QUESTION TWICE
+
+IF YOU JUST ASKED ABOUT WHO/WHAT:
+- User's next message IS THEIR ANSWER
+- Extract it: "about taxonomy" → topic: "taxonomy"
+- Then IMMEDIATELY return JSON to create appointment
+- DO NOT ask again!
 
 🚨🚨🚨 CRITICAL: APPOINTMENT vs TODO DISTINCTION! 🚨🚨🚨
 ONLY ASK ABOUT WHO/WHAT FOR APPOINTMENTS, NOT TODOS!
@@ -1294,6 +1308,12 @@ FULFILLED_INTENTS: None yet
 
     // Add the current message
     chatMessages.push({ role: "user", content: message });
+
+    // Log conversation for debugging appointment flow
+    console.log("🤖 AI Context - Last 3 messages:");
+    chatMessages.slice(-3).forEach((msg, i) => {
+      console.log(`  ${i + 1}. ${msg.role}: ${msg.content.substring(0, 150)}${msg.content.length > 150 ? '...' : ''}`);
+    });
 
     // Use temperature 0 for strict instruction following (especially critical for appointment flows)
     const temperature = 0;
