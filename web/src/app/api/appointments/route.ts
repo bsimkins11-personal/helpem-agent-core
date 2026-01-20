@@ -191,16 +191,37 @@ export async function POST(req: Request) {
     const startTime = new Date(datetime);
     const endTime = new Date(startTime.getTime() + parsedDuration * 60 * 1000);
 
-    const conflicts = await query(
-      `SELECT id, title, datetime, duration_minutes
-       FROM appointments
-       WHERE user_id = $1
-         AND datetime < $2
-         AND (datetime + (COALESCE(duration_minutes, 30) || ' minutes')::interval) > $3
-       ORDER BY datetime ASC
-       LIMIT 1`,
-      [user.userId, endTime.toISOString(), startTime.toISOString()]
-    );
+    let conflicts;
+    try {
+      conflicts = await query(
+        `SELECT id, title, datetime, duration_minutes
+         FROM appointments
+         WHERE user_id = $1
+           AND datetime < $2
+           AND (datetime + (COALESCE(duration_minutes, 30) || ' minutes')::interval) > $3
+         ORDER BY datetime ASC
+         LIMIT 1`,
+        [user.userId, endTime.toISOString(), startTime.toISOString()]
+      );
+    } catch (error) {
+      const pgError = error as PgError;
+      if (isMissingTableError(pgError) || isMissingUuidFunction(pgError)) {
+        console.warn("⚠️ Appointments table missing. Creating it now.");
+        await ensureAppointmentsTable();
+        conflicts = await query(
+          `SELECT id, title, datetime, duration_minutes
+           FROM appointments
+           WHERE user_id = $1
+             AND datetime < $2
+             AND (datetime + (COALESCE(duration_minutes, 30) || ' minutes')::interval) > $3
+           ORDER BY datetime ASC
+           LIMIT 1`,
+          [user.userId, endTime.toISOString(), startTime.toISOString()]
+        );
+      } else {
+        throw error;
+      }
+    }
 
     if (conflicts.rows.length > 0) {
       const conflict = conflicts.rows[0];
