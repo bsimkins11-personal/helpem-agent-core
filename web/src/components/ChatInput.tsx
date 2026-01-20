@@ -239,31 +239,29 @@ export default function ChatInput({
   };
   
   // Check if user is trying to correct appointment details (time, date, duration)
+  // IMPORTANT: Only flag as correction if there are EXPLICIT correction phrases
+  // Do NOT flag simple time/duration answers as corrections (e.g., "30 minutes", "11 AM")
   const isCorrectionAttempt = (text: string) => {
     const normalized = text.trim().toLowerCase();
     if (!normalized) return false;
     
-    // Check for correction phrases
+    // EXPLICIT correction phrases (user is disagreeing or clarifying)
     const hasCorrectionPhrase = 
+      normalized.startsWith("no") ||
+      normalized.startsWith("actually") ||
       normalized.includes("i said") ||
-      normalized.includes("actually") ||
-      normalized.includes("correction") ||
-      normalized.includes("change") ||
+      normalized.includes("i meant") ||
       normalized.includes("meant to say") ||
-      normalized.includes("wrong") ||
-      normalized.includes("mistake");
+      normalized.includes("correction") ||
+      normalized.includes("that's wrong") ||
+      normalized.includes("that's incorrect") ||
+      normalized.includes("mistake") ||
+      (normalized.includes("not") && normalized.includes("said")) ||
+      (normalized.includes("didn't") && normalized.includes("say"));
     
-    // Check for time/date/duration keywords
-    const hasTimeKeywords = 
-      /\b(noon|midnight|morning|afternoon|evening|am|pm|o'clock)\b/i.test(text) ||
-      /\b\d{1,2}[:.]?\d{0,2}\s*(am|pm)?\b/i.test(text) ||
-      /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(text) ||
-      /\b\d+\s*(minute|min|hour|hr)s?\b/i.test(text) ||
-      /\bfor\s+\d+/i.test(text) ||
-      /\bat\s+\d/i.test(text);
-    
-    // If they mention correction phrases OR time keywords, it's likely a correction
-    return hasCorrectionPhrase || hasTimeKeywords;
+    // Only return true if explicit correction phrase is present
+    // Time/date keywords alone are NOT corrections (they're answers to questions)
+    return hasCorrectionPhrase;
   };
   
   const extractOptionalFields = (input: string) => {
