@@ -97,7 +97,9 @@ export default function CaptureInput() {
         addAppointment({
           id,
           title: result.title || text,
+          withWhom: null,
           datetime: result.dueDate ? new Date(result.dueDate) : now,
+          durationMinutes: 30,
           createdAt: now,
         });
         break;

@@ -58,6 +58,18 @@ DEFAULT VALUES (don't ask for these!):
 - Priority → medium (unless urgency keyword detected)
 - Time → undefined (create without datetime if not mentioned)
 
+APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED DETAILS PRESENT):
+- Appointments require these fields before creation:
+  * title (for what)
+  * date
+  * time
+  * durationMinutes
+- withWhom is OPTIONAL but you should ask once for clarity.
+  * If the user says "no particular person" or "not about anything specific", accept and proceed.
+  * Do NOT block creation if they decline to name a person or topic.
+- If any REQUIRED fields are missing, ask for them in plain text and DO NOT create.
+- Only return JSON when all required appointment details are present.
+
 CRITICAL PARSING RULES:
 - If there's ANY action verb → CREATE task immediately:
   * Common verbs: review, send, call, email, finish, follow up, plan, schedule, book, write, make, remember, prepare, update, fix, clean, pay, order, submit, research, compare, drop off, backup, text, remind
@@ -559,12 +571,21 @@ ACTION GATING - WHEN TO EMIT JSON:
   - "milk" (single word) → "Would you like to add that to your grocery list, or set a reminder?"
   - "handle that thing" (unclear) → "What would you like me to help you with?"
 
-- Appointments: need title + date + time
+- Appointments SOP: date + time + withWhom + for what (title) + duration
+- Appointments: need title + date + time + withWhom + duration
   * Step 1: SCAN initial message for time indicators (see TIME PARSING section)
   * Step 2: Check what's provided:
-    - Has title + date + time → IMMEDIATELY RETURN JSON (don't ask anything!)
+    - Has title + date + time + withWhom + duration → IMMEDIATELY RETURN JSON (don't ask anything!)
     - Missing date/time → ask "What date and time?" (STOP)
+    - Missing withWhom → ask "Who is the meeting with?" (STOP)
+    - Missing duration → ask "How long is the meeting?" (STOP)
   * Step 3: Once you have all info → RETURN JSON action
+
+  🚨 CONFLICT CHECK REQUIRED:
+  - Before creating an appointment, compare against existing appointments.
+  - Use the appointment start + duration to calculate an end time.
+  - If it overlaps any existing appointment, DO NOT CREATE.
+  - Instead ask: "That overlaps with [appointment]. Want to pick a different time or shorten it?"
   
   🚨🚨🚨 CRITICAL APPOINTMENT BUG FIX 🚨🚨🚨
   NEVER respond with plain text when user requests appointment!
@@ -590,18 +611,28 @@ ACTION GATING - WHEN TO EMIT JSON:
   - ALL appointments automatically notify 15 minutes before the appointment time
   - You don't need to mention this to the user
   - System handles notification scheduling automatically
+
+  WEEKLY AVAILABILITY RECOMMENDATIONS:
+  - When user asks for availability or time recommendations "this week", suggest times sequentially.
+  - Start with the current day, then move forward day-by-day.
+  - DO NOT suggest any time past the end of the current week (Saturday 11:59 PM).
+  - Use existing appointments + duration to avoid conflicts.
+  - Offer at most 3 recommendations, then say: "I will wait for you to find another time for me to schedule your meeting."
+  - If no availability remains this week, say so and ask about next week.
   
   EXAMPLES WITH FULL INFO (CREATE IMMEDIATELY):
-  ✅ "I have a dentist appointment tomorrow at 3pm" → CREATE NOW
-  ✅ "Doctor appointment next Tuesday at 2:30pm" → CREATE NOW
-  ✅ "Meeting with Sarah tomorrow at 10" → CREATE NOW (10am)
-  ✅ "Lunch with team at noon today" → CREATE NOW
-  ✅ "Flight leaves at 6:45am on January 25th" → CREATE NOW
-  ✅ "Dentist at 3pm Wednesday" → CREATE NOW (next Wednesday)
+  ✅ "I have a dentist appointment with Dr. Lee tomorrow at 3pm for 30 minutes" → CREATE NOW
+  ✅ "Doctor appointment with Dr. Patel next Tuesday at 2:30pm for 1 hour" → CREATE NOW
+  ✅ "Meeting with Sarah tomorrow at 10 for 45 minutes" → CREATE NOW (10am)
+  ✅ "Lunch with team at noon today for 90 minutes" → CREATE NOW
+  ✅ "Flight with United leaves at 6:45am on January 25th for 2 hours" → CREATE NOW
+  ✅ "Dentist with Dr. Smith at 3pm Wednesday for 30 minutes" → CREATE NOW (next Wednesday)
   
   EXAMPLES MISSING INFO (ASK ONCE):
   ❌ "I have a dentist appointment" → ask "What date and time?"
   ❌ "Schedule meeting with John" → ask "What date and time?"
+  ❌ "Meeting tomorrow at 3pm" → ask "Who is the meeting with?"
+  ❌ "Meeting with John tomorrow at 3pm" → ask "How long is the meeting?"
 
 - Routines: need title. Default to daily.
   * Detect patterns: "every day", "every morning", "every Monday", "daily", "weekly"
@@ -699,8 +730,10 @@ JSON for adding items:
   "action": "add",
   "type": "todo" | "routine" | "appointment",
   "title": "string",
+  "withWhom": "string (required for appointments)",
   "priority": "low" | "medium" | "high" (for todos),
   "datetime": "ISO string in user's local time, NO timezone or Z (e.g., 2026-01-19T10:00:00)",
+  "durationMinutes": number (for appointments, required),
   "frequency": "daily" | "weekly" (for routines),
   "daysOfWeek": ["monday","wednesday"] (optional for routines),
   "message": "REQUIRED - verbal confirmation to speak to user (e.g., 'Got it. I'll remind you to pick up eggs at Publix tomorrow before noon.')"
@@ -721,6 +754,8 @@ JSON for updating items:
     // For APPOINTMENTS:
     "newTitle": "string (optional)",
     "datetime": "ISO string in user's local time, NO timezone or Z (optional - to reschedule)",
+    "durationMinutes": number (optional - to change length),
+    "withWhom": "string (optional - to change who)",
     
     // For HABITS/ROUTINES:
     "newTitle": "string (optional)",
@@ -992,11 +1027,23 @@ export async function POST(req: Request) {
   console.log('   AI will see this as "RIGHT NOW" in user local time');
 
   // Format appointments with readable dates for the AI
-  const formattedAppointments = (userData.appointments || []).map((apt: { title: string; datetime: string | Date }) => ({
-    title: apt.title,
-    when: formatDateForAI(new Date(apt.datetime), now),
-    rawDatetime: apt.datetime,
-  }));
+  const formattedAppointments = (userData.appointments || []).map((apt: { title: string; datetime: string | Date; durationMinutes?: number; duration_minutes?: number; withWhom?: string; with_whom?: string | null }) => {
+    const durationMinutes = Number.isFinite(apt.durationMinutes)
+      ? Number(apt.durationMinutes)
+      : Number.isFinite(apt.duration_minutes)
+        ? Number(apt.duration_minutes)
+        : 30;
+    const start = new Date(apt.datetime);
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+    return {
+      title: apt.title,
+      withWhom: apt.withWhom ?? apt.with_whom ?? null,
+      when: formatDateForAI(start, now),
+      endsAt: formatDateForAI(end, now),
+      durationMinutes,
+      rawDatetime: apt.datetime,
+    };
+  });
 
   // Format todos with due dates
   const formattedTodos = (userData.todos || []).map((todo: { title: string; priority: string; dueDate?: string | Date; completedAt?: string | Date }) => ({
@@ -1025,7 +1072,10 @@ export async function POST(req: Request) {
 
   const formattedUserData = `
 === APPOINTMENTS (calendar events with specific times) ===
-${formattedAppointments.map((a: { title: string; when: string }) => `- ${a.when}: ${a.title}`).join("\n") || "None scheduled"}
+${formattedAppointments.map((a: { title: string; when: string; endsAt: string; durationMinutes: number; withWhom?: string | null }) => {
+  const withText = a.withWhom ? ` with ${a.withWhom}` : "";
+  return `- ${a.when} (duration: ${a.durationMinutes} min, ends ${a.endsAt})${withText}: ${a.title}`;
+}).join("\n") || "None scheduled"}
 
 === TODOS (tasks to complete - NOT calendar events) ===
 ${formattedTodos.filter((t: { completed: boolean }) => !t.completed).map((t: { title: string; priority: string; dueDate: string | null }) => `- ${t.title}${t.dueDate ? ` (due: ${t.dueDate})` : ""} (priority: ${t.priority})`).join("\n") || "None"}

@@ -15,10 +15,18 @@ async function ensureAppointmentsTable() {
       id UUID NOT NULL DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL,
       title TEXT NOT NULL,
+      with_whom TEXT,
       datetime TIMESTAMP(3) NOT NULL,
+      duration_minutes INTEGER NOT NULL DEFAULT 30,
       created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT appointments_pkey PRIMARY KEY (id)
     )`
+  );
+  await query(
+    'ALTER TABLE appointments ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 30'
+  );
+  await query(
+    'ALTER TABLE appointments ADD COLUMN IF NOT EXISTS with_whom TEXT'
   );
   await query('CREATE INDEX IF NOT EXISTS appointments_user_id_idx ON appointments(user_id)');
 }
@@ -115,7 +123,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log('📦 Request body:', body);
     
-    const { title, datetime } = body;
+    const { title, datetime, durationMinutes, withWhom } = body;
     
     // 🛡️ Input validation
     if (!title || typeof title !== "string") {
@@ -132,6 +140,16 @@ export async function POST(req: Request) {
       console.error('❌ Validation failed: Invalid datetime:', datetime);
       return NextResponse.json({ error: "Valid datetime is required" }, { status: 400 });
     }
+
+    const parsedDuration = Number.isFinite(durationMinutes) ? Number(durationMinutes) : 30;
+    if (!Number.isInteger(parsedDuration) || parsedDuration <= 0 || parsedDuration > 12 * 60) {
+      console.error('❌ Validation failed: Invalid durationMinutes:', durationMinutes);
+      return NextResponse.json({ error: "Valid durationMinutes is required" }, { status: 400 });
+    }
+
+    if (withWhom !== undefined && typeof withWhom !== "string") {
+      return NextResponse.json({ error: "withWhom must be a string" }, { status: 400 });
+    }
     
     // Sanitize title - remove HTML tags
     const sanitizedTitle = title.replace(/<[^>]*>/g, "").trim();
@@ -141,12 +159,37 @@ export async function POST(req: Request) {
     console.log(`   User ID: ${user.userId}`);
     console.log(`   Title: ${sanitizedTitle}`);
     console.log(`   Datetime: ${datetime}`);
+    console.log(`   Duration: ${parsedDuration} minutes`);
+    console.log(`   With: ${withWhom ?? "N/A"}`);
+
+    const startTime = new Date(datetime);
+    const endTime = new Date(startTime.getTime() + parsedDuration * 60 * 1000);
+
+    const conflicts = await query(
+      `SELECT id, title, datetime, duration_minutes
+       FROM appointments
+       WHERE user_id = $1
+         AND datetime < $2
+         AND (datetime + (COALESCE(duration_minutes, 30) || ' minutes')::interval) > $3
+       ORDER BY datetime ASC
+       LIMIT 1`,
+      [user.userId, endTime.toISOString(), startTime.toISOString()]
+    );
+
+    if (conflicts.rows.length > 0) {
+      const conflict = conflicts.rows[0];
+      console.warn('⚠️ Conflict detected with appointment:', conflict);
+      return NextResponse.json(
+        { error: "Conflicting appointment", conflict },
+        { status: 409 }
+      );
+    }
     
     let result;
     try {
       result = await query(
-        'INSERT INTO appointments (user_id, title, datetime) VALUES ($1, $2, $3) RETURNING *',
-        [user.userId, sanitizedTitle, datetime]
+        'INSERT INTO appointments (user_id, title, with_whom, datetime, duration_minutes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [user.userId, sanitizedTitle, withWhom ?? null, datetime, parsedDuration]
       );
     } catch (error) {
       const pgError = error as PgError;
@@ -154,8 +197,8 @@ export async function POST(req: Request) {
         console.warn("⚠️ Appointments table missing. Creating it now.");
         await ensureAppointmentsTable();
         result = await query(
-          'INSERT INTO appointments (user_id, title, datetime) VALUES ($1, $2, $3) RETURNING *',
-          [user.userId, sanitizedTitle, datetime]
+          'INSERT INTO appointments (user_id, title, with_whom, datetime, duration_minutes) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+          [user.userId, sanitizedTitle, withWhom ?? null, datetime, parsedDuration]
         );
       } else {
         throw error;
@@ -201,7 +244,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     console.log('📦 Request body:', body);
     
-    const { id, title, datetime } = body;
+    const { id, title, datetime, durationMinutes, withWhom } = body;
     
     // Validation
     if (!id) {
@@ -219,6 +262,17 @@ export async function PATCH(req: Request) {
     if (datetime && isNaN(Date.parse(datetime))) {
       return NextResponse.json({ error: "Invalid datetime" }, { status: 400 });
     }
+
+    if (durationMinutes !== undefined) {
+      const parsedDuration = Number(durationMinutes);
+      if (!Number.isInteger(parsedDuration) || parsedDuration <= 0 || parsedDuration > 12 * 60) {
+        return NextResponse.json({ error: "Invalid durationMinutes" }, { status: 400 });
+      }
+    }
+
+    if (withWhom !== undefined && typeof withWhom !== "string") {
+      return NextResponse.json({ error: "withWhom must be a string" }, { status: 400 });
+    }
     
     // Build update query dynamically based on provided fields
     const updates: string[] = [];
@@ -235,6 +289,16 @@ export async function PATCH(req: Request) {
       updates.push(`datetime = $${paramIndex++}`);
       values.push(datetime);
     }
+
+    if (durationMinutes !== undefined) {
+      updates.push(`duration_minutes = $${paramIndex++}`);
+      values.push(Number(durationMinutes));
+    }
+
+    if (withWhom !== undefined) {
+      updates.push(`with_whom = $${paramIndex++}`);
+      values.push(withWhom);
+    }
     
     if (updates.length === 0) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
@@ -245,6 +309,41 @@ export async function PATCH(req: Request) {
     values.push(id);
     
     console.log(`🔄 Updating appointment ${id} for user: ${user.userId}`);
+    if (datetime || durationMinutes !== undefined) {
+      const existing = await query(
+        'SELECT datetime, duration_minutes FROM appointments WHERE user_id = $1 AND id = $2',
+        [user.userId, id]
+      );
+      const existingRow = existing.rows[0];
+      if (!existingRow) {
+        return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+      }
+
+      const conflictStart = new Date(datetime ?? existingRow.datetime);
+      const durationForCheck =
+        durationMinutes !== undefined ? Number(durationMinutes) : Number(existingRow.duration_minutes || 30);
+      const conflictEnd = new Date(conflictStart.getTime() + durationForCheck * 60 * 1000);
+
+      const conflicts = await query(
+        `SELECT id, title, datetime, duration_minutes
+         FROM appointments
+         WHERE user_id = $1
+           AND id <> $2
+           AND datetime < $3
+           AND (datetime + (COALESCE(duration_minutes, 30) || ' minutes')::interval) > $4
+         ORDER BY datetime ASC
+         LIMIT 1`,
+        [user.userId, id, conflictEnd.toISOString(), conflictStart.toISOString()]
+      );
+
+      if (conflicts.rows.length > 0) {
+        return NextResponse.json(
+          { error: "Conflicting appointment", conflict: conflicts.rows[0] },
+          { status: 409 }
+        );
+      }
+    }
+
     const result = await query(
       `UPDATE appointments SET ${updates.join(', ')} WHERE user_id = $${paramIndex} AND id = $${paramIndex + 1} RETURNING *`,
       values

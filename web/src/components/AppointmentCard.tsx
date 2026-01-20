@@ -19,6 +19,14 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
     });
   };
 
+  const formatDuration = (minutes: number) => {
+    if (!minutes || minutes <= 0) return null;
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining ? `${hours}h ${remaining}m` : `${hours}h`;
+  };
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'short',
@@ -67,6 +75,16 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
               <span className="flex items-center gap-1">
                 📅 {isToday() ? 'Today' : formatDate(appointment.datetime)}
               </span>
+              {appointment.withWhom && (
+                <span className="flex items-center gap-1">
+                  👤 {appointment.withWhom}
+                </span>
+              )}
+              {formatDuration(appointment.durationMinutes) && (
+                <span className="flex items-center gap-1">
+                  ⏱️ {formatDuration(appointment.durationMinutes)}
+                </span>
+              )}
             </div>
           </div>
 

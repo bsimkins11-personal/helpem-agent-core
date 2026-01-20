@@ -649,10 +649,20 @@ export default function ChatInput({
             datetime = getDefaultTomorrowReminder(); // Fallback to tomorrow 9am
           }
           
+          const durationMinutes = Number.isFinite(data.durationMinutes)
+            ? Number(data.durationMinutes)
+            : Number.isFinite(data.duration)
+              ? Number(data.duration)
+              : 30;
+          const withWhom = typeof data.withWhom === "string" && data.withWhom.trim().length > 0
+            ? data.withWhom.trim()
+            : null;
+
           console.log("📅 Creating appointment:", {
             id,
             title: data.title,
             datetime: datetime.toISOString(),
+            durationMinutes,
             originalDatetime: data.datetime,
             isValid: !isNaN(datetime.getTime())
           });
@@ -671,7 +681,9 @@ export default function ChatInput({
           addAppointment({
             id,
             title: data.title,
+            withWhom,
             datetime,
+            durationMinutes,
             createdAt: now,
           });
           
@@ -686,7 +698,9 @@ export default function ChatInput({
             console.log('🌐 Preparing fetch to /api/appointments');
             console.log('🌐 Request payload:', {
               title: data.title,
+              withWhom,
               datetime: datetime.toISOString(),
+              durationMinutes,
             });
             
             const apiResponse = await fetch("/api/appointments", {
@@ -694,9 +708,26 @@ export default function ChatInput({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 title: data.title,
+                withWhom,
                 datetime: datetime.toISOString(),
+                durationMinutes,
               }),
             });
+
+            if (apiResponse.status === 409) {
+              const conflictData = await apiResponse.json().catch(() => null);
+              console.warn("⚠️ Appointment conflict detected:", conflictData);
+              deleteAppointment(id);
+              const conflictText = conflictData?.conflict
+                ? `That overlaps with "${conflictData.conflict.title}" at ${formatDateTimeForSpeech(new Date(conflictData.conflict.datetime))}. Want to pick a different time or shorten the meeting?`
+                : "That time overlaps with another appointment. Want to pick a different time or shorten the meeting?";
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: conflictText,
+              });
+              return;
+            }
             
             console.log('📡 API Response received');
             console.log('📡 Status:', apiResponse.status, apiResponse.statusText);
@@ -967,6 +998,15 @@ export default function ChatInput({
               
               if (updates.newTitle) appointmentUpdates.title = updates.newTitle;
               if (updates.datetime) appointmentUpdates.datetime = parseAiDatetime(updates.datetime);
+              if (typeof updates.withWhom === "string") {
+                appointmentUpdates.withWhom = updates.withWhom.trim();
+              }
+              if (updates.durationMinutes || updates.duration) {
+                const nextDuration = Number(updates.durationMinutes ?? updates.duration);
+                if (!Number.isNaN(nextDuration)) {
+                  appointmentUpdates.durationMinutes = nextDuration;
+                }
+              }
               
               updateAppointment(itemToUpdate.id, appointmentUpdates);
               
@@ -1449,7 +1489,7 @@ export default function ChatInput({
         addHabit({ id, title, frequency: pendingAction.frequency || "daily", createdAt: now, completions: [] });
         break;
       case "appointment":
-        addAppointment({ id, title, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, createdAt: now });
+        addAppointment({ id, title, withWhom: null, datetime: pendingAction.datetime ? parseAiDatetime(pendingAction.datetime) : now, durationMinutes: 30, createdAt: now });
         break;
     }
 

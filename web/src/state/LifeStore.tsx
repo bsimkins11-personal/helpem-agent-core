@@ -140,7 +140,9 @@ export function LifeProvider({ children }: LifeProviderProps) {
             const dbAppointments: Appointment[] = apptsData.appointments.map((a: any) => ({
               id: a.id,
               title: a.title,
+              withWhom: a.with_whom ?? null,
               datetime: new Date(a.datetime),
+              durationMinutes: typeof a.duration_minutes === "number" ? a.duration_minutes : 30,
               createdAt: new Date(a.created_at),
             }));
             setAppointments(dbAppointments);
@@ -458,6 +460,8 @@ export function LifeProvider({ children }: LifeProviderProps) {
       ...appt,
       datetime: appt.datetime instanceof Date ? appt.datetime : new Date(appt.datetime),
       createdAt: appt.createdAt instanceof Date ? appt.createdAt : new Date(appt.createdAt),
+      durationMinutes: typeof appt.durationMinutes === "number" ? appt.durationMinutes : 30,
+      withWhom: appt.withWhom ?? null,
     };
     
     console.log('📅 Normalized appointment:', {
@@ -507,7 +511,9 @@ export function LifeProvider({ children }: LifeProviderProps) {
     addAppointment({
       id: appointmentId,
       title: todo.title,
+      withWhom: null,
       datetime,
+      durationMinutes: 30,
       createdAt: now,
     });
 
@@ -516,7 +522,9 @@ export function LifeProvider({ children }: LifeProviderProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: todo.title,
+        withWhom: null,
         datetime: datetime.toISOString(),
+        durationMinutes: 30,
       }),
     }).catch((error) => {
       console.error("❌ Error creating appointment from todo:", error);

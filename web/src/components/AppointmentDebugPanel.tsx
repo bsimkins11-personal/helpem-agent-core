@@ -52,7 +52,9 @@ export function AppointmentDebugPanel() {
       addAppointment({
         id,
         title: testTitle,
+        withWhom: null,
         datetime,
+        durationMinutes: 30,
         createdAt,
       });
       

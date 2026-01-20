@@ -55,7 +55,9 @@ model Appointment {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId    String   @db.Uuid @map("user_id")
   title     String
+  withWhom  String?  @map("with_whom")
   datetime  DateTime
+  durationMinutes Int @default(30) @map("duration_minutes")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("appointments")
