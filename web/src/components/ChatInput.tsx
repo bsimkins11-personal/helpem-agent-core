@@ -559,10 +559,18 @@ export default function ChatInput({
     }
 
     // CLIENT-SIDE INTERCEPTION: If we're building an appointment and asked for optional fields
+    console.log("🔍 Checking interception:", {
+      hasBuilder: !!appointmentBuilderRef.current,
+      askedForOptionalFields: appointmentBuilderRef.current?.askedForOptionalFields,
+      userMessage: trimmedText
+    });
+    
     if (appointmentBuilderRef.current?.askedForOptionalFields) {
+      console.log("✅ INTERCEPTING - Client handling optional field response");
       const builder = appointmentBuilderRef.current;
       const declined = isDeclineReply(trimmedText);
       const { withWhom, topic } = extractOptionalFields(trimmedText);
+      console.log("📝 Extracted:", { declined, withWhom, topic });
       
       // Update builder with optional fields
       if (withWhom) builder.withWhom = withWhom;
@@ -626,6 +634,7 @@ export default function ChatInput({
       speakNative(responseText);
       
       // Clear builder
+      console.log("🧹 Clearing appointmentBuilderRef after finalization");
       appointmentBuilderRef.current = null;
       return;
     }
@@ -1147,6 +1156,9 @@ export default function ChatInput({
             } else if (!hasWhat) {
               promptText = "Would you like to add what the meeting is about?";
             }
+            
+            console.log("🔔 CLIENT asking about optional fields:", { hasWho, hasWhat, promptText });
+            console.log("🎯 Set askedForOptionalFields = true");
             
             addMessage({
               id: uuidv4(),
