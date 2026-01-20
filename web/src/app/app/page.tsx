@@ -8,7 +8,7 @@ import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
 import { useLife } from "@/state/LifeStore";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 type PriorityFilter = "all" | "high" | "medium" | "low";
@@ -226,6 +226,19 @@ export default function AppPage() {
     if (!fixedStackRef.current) return;
     setFixedStackHeight(Math.ceil(fixedStackRef.current.getBoundingClientRect().height));
   };
+
+  const measureTimersRef = useRef<number[]>([]);
+  const scheduleMeasure = useCallback(() => {
+    measureTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    measureTimersRef.current = [];
+    const delays = [0, 100, 250, 500, 1000];
+    delays.forEach((delay) => {
+      const id = window.setTimeout(() => {
+        measureFixedStackHeight();
+      }, delay);
+      measureTimersRef.current.push(id);
+    });
+  }, []);
   
   const scrollToChat = () => {
     // Scroll so chat appears directly below fixed buttons (140px from top)
@@ -262,15 +275,12 @@ export default function AppPage() {
   useEffect(() => {
     if (!fixedStackRef.current) return;
     const element = fixedStackRef.current;
-    measureFixedStackHeight();
-    const settle = window.setTimeout(() => {
-      measureFixedStackHeight();
-    }, 200);
+    scheduleMeasure();
     if (typeof ResizeObserver === "undefined") {
       window.addEventListener("resize", measureFixedStackHeight);
       return () => {
         window.removeEventListener("resize", measureFixedStackHeight);
-        window.clearTimeout(settle);
+        measureTimersRef.current.forEach((timer) => window.clearTimeout(timer));
       };
     }
     const resizeObserver = new ResizeObserver(measureFixedStackHeight);
@@ -279,9 +289,9 @@ export default function AppPage() {
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", measureFixedStackHeight);
-      window.clearTimeout(settle);
+      measureTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     };
-  }, []);
+  }, [scheduleMeasure]);
 
   useEffect(() => {
     if (!isWelcomeOpen) return;
@@ -302,14 +312,11 @@ export default function AppPage() {
   }, [inputMode, isWelcomeOpen]);
 
   useEffect(() => {
-    measureFixedStackHeight();
-    const settleTimer = window.setTimeout(() => {
-      measureFixedStackHeight();
-    }, 350);
+    scheduleMeasure();
     return () => {
-      window.clearTimeout(settleTimer);
+      measureTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [isWelcomeOpen]);
+  }, [isWelcomeOpen, scheduleMeasure]);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
@@ -330,8 +337,8 @@ export default function AppPage() {
       >
         {/* Alerts */}
         <div style={{ width: '100%', backgroundColor: 'white' }}>
-          <UsageAlertBanner onHeightChange={measureFixedStackHeight} />
-          <AlphaFeedbackBanner onHeightChange={measureFixedStackHeight} />
+          <UsageAlertBanner onHeightChange={scheduleMeasure} />
+          <AlphaFeedbackBanner onHeightChange={scheduleMeasure} />
         </div>
         
         {/* Welcome Banner */}

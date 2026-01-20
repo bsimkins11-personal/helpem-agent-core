@@ -186,6 +186,7 @@ export default function ChatInput({
   const pendingAppointmentDeclinedWhoRef = useRef(false);
   const pendingAppointmentDeclinedWhatRef = useRef(false);
   const pendingAppointmentQuestionRef = useRef<"who_what" | "what" | null>(null);
+  const pendingAppointmentUpdateRef = useRef<Partial<Appointment> | null>(null);
   const lastUserMessageRef = useRef<string | null>(null);
   const lastAppointmentIdRef = useRef<string | null>(null);
   const lastAppointmentTitleRef = useRef<string | null>(null);
@@ -265,6 +266,15 @@ export default function ChatInput({
       normalized.includes("not about") ||
       normalized.includes("not sure")
     );
+  };
+
+  const formatPendingUpdate = (update: Partial<Appointment>) => {
+    const parts: string[] = [];
+    if (update.title) parts.push(`title="${update.title}"`);
+    if (update.datetime instanceof Date) parts.push(`datetime="${update.datetime.toISOString()}"`);
+    if (typeof update.durationMinutes === "number") parts.push(`durationMinutes=${update.durationMinutes}`);
+    if (update.withWhom) parts.push(`withWhom="${update.withWhom}"`);
+    return parts.join(", ");
   };
 
   const extractFollowupDetails = (input: string) => {
@@ -638,7 +648,10 @@ export default function ChatInput({
             details.withWhom ? `withWhom="${details.withWhom}"` : null,
             details.topic ? `topic="${details.topic}"` : null,
           ].filter(Boolean).join(", ");
-          return `${pendingAppointmentContextRef.current}\nAdditional details: ${trimmedText}${parsed ? `\nParsed details: ${parsed}` : ""}\nIMPORTANT: This is follow-up info for the SAME appointment. Do NOT create a new appointment. Return an update action.`;
+          const pendingUpdate = pendingAppointmentUpdateRef.current
+            ? `\nPending update: ${formatPendingUpdate(pendingAppointmentUpdateRef.current)}`
+            : "";
+          return `${pendingAppointmentContextRef.current}${pendingUpdate}\nAdditional details: ${trimmedText}${parsed ? `\nParsed details: ${parsed}` : ""}\nIMPORTANT: This is follow-up info for the SAME appointment. Do NOT create a new appointment. Return an update action.`;
         })()
       : trimmedText;
 
@@ -805,6 +818,31 @@ export default function ChatInput({
                 updatePayload.withWhom = data.withWhom.trim();
               }
 
+              const pendingUpdate = pendingAppointmentUpdateRef.current;
+              if (pendingUpdate) {
+                updatePayload = { ...pendingUpdate, ...updatePayload };
+              }
+
+              const currentAppointment = appointments.find(a => a.id === lastAppointmentIdRef.current);
+              const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current || currentAppointment?.title;
+              const effectiveWithWhom = updatePayload.withWhom ?? currentAppointment?.withWhom ?? null;
+              const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
+
+              if (askText) {
+                pendingAppointmentUpdateRef.current = updatePayload;
+                pendingAppointmentQuestionRef.current = effectiveWithWhom ? "what" : "who_what";
+                if (askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
+                  askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
+                  addMessage({
+                    id: uuidv4(),
+                    role: "assistant",
+                    content: askText,
+                  });
+                }
+                speakNative(askText);
+                return;
+              }
+
               if (Object.keys(updatePayload).length > 0) {
                 updateAppointment(lastAppointmentIdRef.current, updatePayload);
                 try {
@@ -821,29 +859,17 @@ export default function ChatInput({
               pendingAppointmentContextRef.current = null;
               pendingAppointmentWithWhomRef.current = null;
               pendingAppointmentTopicRef.current = null;
-              const currentAppointment = appointments.find(a => a.id === lastAppointmentIdRef.current);
-              const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current || currentAppointment?.title;
-              const effectiveWithWhom = updatePayload.withWhom ?? currentAppointment?.withWhom ?? null;
-              const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
+              pendingAppointmentDeclinedWhoRef.current = false;
+              pendingAppointmentDeclinedWhatRef.current = false;
+              pendingAppointmentQuestionRef.current = null;
+              pendingAppointmentUpdateRef.current = null;
               const followupMessage = data.message || "Got it. I’ve updated that appointment with the extra details.";
-              if (askText) {
-                if (askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
-                  askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
-                  addMessage({
-                    id: uuidv4(),
-                    role: "assistant",
-                    content: askText,
-                  });
-                }
-                speakNative(askText);
-              } else {
-                addMessage({
-                  id: uuidv4(),
-                  role: "assistant",
-                  content: followupMessage,
-                });
-                speakNative(followupMessage);
-              }
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: followupMessage,
+              });
+              speakNative(followupMessage);
               return;
             }
             pendingAppointmentContextRef.current = null;
