@@ -187,6 +187,43 @@ export default function ChatInput({
   const pendingPriorityTodoIdRef = useRef<string | null>(null);
   const pendingPriorityTodoTitleRef = useRef<string | null>(null);
   const askedWhoWhatForAppointmentRef = useRef<string | null>(null);
+
+  const extractFollowupDetails = (input: string) => {
+    const text = input.trim();
+    const durationMatch = text.match(/(\d+)\s*(hours?|hrs?|minutes?|mins?)\b/i);
+    let durationMinutes: number | null = null;
+    if (durationMatch) {
+      const value = Number(durationMatch[1]);
+      const unit = durationMatch[2].toLowerCase();
+      if (Number.isFinite(value)) {
+        durationMinutes = unit.startsWith("hour") || unit.startsWith("hr")
+          ? Math.round(value * 60)
+          : Math.round(value);
+      }
+    }
+
+    let withWhom: string | null = null;
+    const notMatch = text.match(/\bnot\b\s+(.*)$/i);
+    if (notMatch && notMatch[1]) {
+      withWhom = notMatch[1].trim();
+    } else {
+      const withMatch = text.match(/\bwith\b\s+(.*?)(?:\s+\babout\b|$)/i);
+      if (withMatch && withMatch[1]) {
+        withWhom = withMatch[1].trim();
+      }
+    }
+
+    let topic: string | null = null;
+    const aboutMatch = text.match(/\babout\b\s+(.*)$/i);
+    if (aboutMatch && aboutMatch[1]) {
+      const candidate = aboutMatch[1].trim();
+      if (!/^\d+\s*(minutes?|mins?|hours?|hrs?)\b/i.test(candidate)) {
+        topic = candidate;
+      }
+    }
+
+    return { durationMinutes, withWhom, topic };
+  };
   
   // Web Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -444,7 +481,15 @@ export default function ChatInput({
     }
 
     const messageToSend = pendingAppointmentContextRef.current
-      ? `${pendingAppointmentContextRef.current}\nAdditional details: ${trimmedText}\nIMPORTANT: This is follow-up info for the SAME appointment. Do NOT create a new appointment. Return an update action.`
+      ? (() => {
+          const details = extractFollowupDetails(trimmedText);
+          const parsed = [
+            details.durationMinutes ? `durationMinutes=${details.durationMinutes}` : null,
+            details.withWhom ? `withWhom="${details.withWhom}"` : null,
+            details.topic ? `topic="${details.topic}"` : null,
+          ].filter(Boolean).join(", ");
+          return `${pendingAppointmentContextRef.current}\nAdditional details: ${trimmedText}${parsed ? `\nParsed details: ${parsed}` : ""}\nIMPORTANT: This is follow-up info for the SAME appointment. Do NOT create a new appointment. Return an update action.`;
+        })()
       : trimmedText;
 
     const userMessage: Message = {
