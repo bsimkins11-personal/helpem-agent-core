@@ -229,19 +229,19 @@ export default function AppPage() {
         </div>
         
         {/* Welcome Banner */}
-        <div className="w-full bg-white py-2 px-4 md:px-6 border-b border-gray-200" style={{ backgroundColor: '#ffffff' }}>
+        <div className="w-full bg-white py-1 px-4 md:px-6 border-b border-gray-200" style={{ backgroundColor: '#ffffff' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-3 text-white shadow-sm">
-              <h1 className="text-base font-bold">{greeting()}</h1>
-              <p className="text-white/90 text-sm">{formattedDate}</p>
+            <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white shadow-sm">
+              <h1 className="text-sm font-bold">{greeting()}</h1>
+              <p className="text-white/90 text-xs">{formattedDate}</p>
             </div>
           </div>
         </div>
         
         {/* Type/Hold to Talk Buttons */}
-        <div className="w-full bg-white py-3 px-4 md:px-6 border-b-4 border-gray-400" style={{ backgroundColor: '#ffffff' }}>
+        <div className="w-full bg-white py-2 px-4 md:px-6 border-b-4 border-gray-400" style={{ backgroundColor: '#ffffff' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg border border-gray-300 shadow-sm" style={{ backgroundColor: '#f3f4f6' }}>
+            <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-lg border border-gray-300 shadow-sm" style={{ backgroundColor: '#f3f4f6' }}>
             <button
               onClick={() => {
                 setInputMode("type");
@@ -317,7 +317,7 @@ export default function AppPage() {
       </div>
 
       {/* Content - starts well below fixed container */}
-      <div className="pt-[240px] bg-gray-50 relative z-0">
+      <div className="pt-[200px] bg-gray-50 relative z-0">
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
