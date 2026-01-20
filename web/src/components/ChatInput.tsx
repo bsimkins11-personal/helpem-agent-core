@@ -275,14 +275,25 @@ export default function ChatInput({
   const nativeAudio = useNativeAudio();
   const isNativeApp = nativeAudio.isNative;
 
+  const lastSpeakAtRef = useRef<number | null>(null);
+  const speakTimerRef = useRef<number | null>(null);
+
   const speakNative = useCallback((text: string, delayMs = 0) => {
     if (!isNativeApp) return;
-    window.setTimeout(() => {
+    const now = Date.now();
+    const lastAt = lastSpeakAtRef.current || 0;
+    const spacingDelay = Math.max(0, 900 - (now - lastAt));
+    const totalDelay = Math.max(delayMs, spacingDelay);
+    if (speakTimerRef.current) {
+      window.clearTimeout(speakTimerRef.current);
+    }
+    speakTimerRef.current = window.setTimeout(() => {
+      lastSpeakAtRef.current = Date.now();
       window.webkit?.messageHandlers?.native?.postMessage({
         action: "speak",
         text,
       });
-    }, delayMs);
+    }, totalDelay);
   }, [isNativeApp]);
 
   // Scroll to bottom when messages change
@@ -734,7 +745,7 @@ export default function ChatInput({
                   role: "assistant",
                   content: askText,
                 });
-                speakNative(askText, 250);
+                speakNative(askText, 900);
               }
               return;
             }
@@ -1092,7 +1103,7 @@ export default function ChatInput({
               role: "assistant",
               content: followup,
             });
-            speakNative(followup, 250);
+            speakNative(followup, 900);
           }
           pendingAppointmentWithWhomRef.current = null;
           pendingAppointmentTopicRef.current = null;
@@ -1450,7 +1461,7 @@ export default function ChatInput({
                 role: "assistant",
                 content: askText,
               });
-              speakNative(askText, 250);
+              speakNative(askText, 900);
             }
             return;
           }
@@ -1522,7 +1533,7 @@ export default function ChatInput({
                   role: "assistant",
                   content: responseText,
                 });
-                  speakNative(responseText, 250);
+                  speakNative(responseText, 900);
                 }
               }
               
