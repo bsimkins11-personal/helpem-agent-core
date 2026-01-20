@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Appointment } from '@/types/appointment';
 import { useLife } from '@/state/LifeStore';
 
@@ -12,6 +12,14 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
   const { deleteAppointment, updateAppointment } = useLife();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  useEffect(() => {
+    if (!showEdit && !showConfirm) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [showEdit, showConfirm]);
   const [editForm, setEditForm] = useState({
     title: appointment.title,
     datetime: new Date(appointment.datetime).toISOString().slice(0, 16),
@@ -155,7 +163,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
       {/* Edit Modal */}
       {showEdit && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-white"
           style={{ backgroundColor: '#ffffff', opacity: 1 }}
         >
           <div className="rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto border border-gray-200 bg-white">
@@ -249,7 +257,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
 
       {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white">
           <div className="rounded-xl p-6 max-w-sm mx-4 shadow-2xl border border-gray-200 bg-white">
             <h3 className="text-lg font-semibold text-brandText mb-2">Delete Appointment</h3>
             <p className="text-brandTextLight mb-6">

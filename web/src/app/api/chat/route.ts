@@ -133,8 +133,8 @@ APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED + OPTIONAL CONFIRMED):
   * date
   * time
   * durationMinutes
-- Appointments require OPTIONAL fields (client will ask about these):
   * withWhom (who the meeting is with)
+- Appointments require OPTIONAL fields (client will ask about these):
   * topic (what the meeting is about)
   * location (where the meeting is)
 
@@ -187,8 +187,9 @@ STEP 3: 🚨 Missing duration?
    STOP and wait.
 
 STEP 4: 🚨 Missing withWhom (WHO)?
-   Ask: "Who is this meeting with?" (vary phrasing)
+  Ask: "Who is this meeting with?" (vary phrasing)
    Examples: "Who's the meeting with?", "Who will you be meeting with?", "Who should I add?"
+  ⚠️ Never use "about" in the WHO question. This must only ask for WHO.
    Return: {"action": "respond", "message": "..."}
    STOP and wait.
    

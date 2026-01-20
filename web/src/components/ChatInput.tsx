@@ -650,7 +650,7 @@ export default function ChatInput({
       
       // Finalize appointment - we have everything we need now
       // withWhom is MANDATORY - if missing, use fallback
-      const finalWithWhom = builder.withWhom || "Meeting attendee";
+      const finalWithWhom = builder.withWhom?.trim() || "Just me";
       
       if (!builder.withWhom) {
         console.warn("⚠️⚠️⚠️ withWhom is MISSING at finalization! Using fallback.");
@@ -674,17 +674,22 @@ export default function ChatInput({
       
       // Save to database
       try {
-        await fetch("/api/appointments", {
+        const response = await fetch("/api/appointments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: finalAppointment.title,
             withWhom: finalAppointment.withWhom,
             topic: finalAppointment.topic,
+            location: finalAppointment.location,
             datetime: finalAppointment.datetime.toISOString(),
             durationMinutes: finalAppointment.durationMinutes,
           }),
         });
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Failed to save appointment:", response.status, errorText);
+        }
       } catch (error) {
         console.error("❌ Error saving appointment:", error);
       }
@@ -1281,7 +1286,7 @@ export default function ChatInput({
             title: builder.title || "Meeting",
             datetime: builder.datetime!,
             durationMinutes: builder.durationMinutes!,
-            withWhom: builder.withWhom || null,
+            withWhom: builder.withWhom?.trim() || "Just me",
             topic: builder.topic || null,
             location: builder.location || null,
             createdAt: new Date(),
@@ -1290,11 +1295,22 @@ export default function ChatInput({
           addAppointment(finalAppointment);
           
           try {
-            await fetch("/api/appointments", {
+            const response = await fetch("/api/appointments", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(finalAppointment),
+              body: JSON.stringify({
+                title: finalAppointment.title,
+                withWhom: finalAppointment.withWhom,
+                topic: finalAppointment.topic,
+                location: finalAppointment.location,
+                datetime: finalAppointment.datetime.toISOString(),
+                durationMinutes: finalAppointment.durationMinutes,
+              }),
             });
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("❌ Failed to save appointment:", response.status, errorText);
+            }
           } catch (error) {
             console.error("Error saving appointment:", error);
           }
