@@ -58,7 +58,7 @@ DEFAULT VALUES (don't ask for these!):
 - Priority → medium (unless urgency keyword detected)
 - Time → undefined (create without datetime if not mentioned)
 
-APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED DETAILS PRESENT):
+APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED + OPTIONAL CONFIRMED):
 - Appointments require these fields before creation:
   * title (for what)
   * date
@@ -66,13 +66,16 @@ APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED DETAILS PRESENT):
   * durationMinutes
 - Ask in this order:
   1) "How long is the meeting?" (mandatory)
-  2) AFTER the user answers duration, ALWAYS ask: "Would you like for me to add who the meeting is with and what it's about?"
+  2) AFTER the user answers duration, ALWAYS ask for any missing optional fields BEFORE creating:
+     - If who/what are missing → ask: "Would you like for me to add who the meeting is with and what it's about?"
+     - If who is present but what is missing → ask: "Would you like for me to add what the meeting is about?"
+     - If what is present but who is missing → ask: "Would you like for me to add who the meeting is with?"
   - If the user provides only "who" OR only "what it's about", ask for the missing one (natural follow-up).
 - withWhom/topic can be null ONLY after the user declines (e.g., "no particular person" or "not about anything specific").
-- Do NOT block creation if they explicitly decline to add who/what; set those fields to null and proceed.
+- Do NOT create the appointment until required fields are present AND optional fields are answered or explicitly declined.
 - NEVER default durationMinutes. If it's missing, you MUST ask how long.
 - If any REQUIRED fields are missing, ask for them in plain text and DO NOT create.
-- Only return JSON when all required appointment details are present or explicitly declined fields are null.
+- Only return JSON when all required appointment details are present and optional fields are answered or declined.
 - FOLLOW-UP DETAILS: If the user provides additional appointment details after a prior appointment request, return an UPDATE action (do NOT create a new appointment).
 
 CLARITY CHECKS (WHEN UNSURE):
