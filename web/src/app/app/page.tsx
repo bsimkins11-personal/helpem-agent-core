@@ -383,7 +383,19 @@ export default function AppPage() {
                   (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
                 }
               }}
+              onTouchMove={(event) => {
+                // Keep press active; prevent scroll from canceling the touch
+                event.preventDefault();
+              }}
               onTouchEnd={(event) => {
+                event.preventDefault();
+                setInputMode("type");
+                // Stop iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+                }
+              }}
+              onTouchCancel={(event) => {
                 event.preventDefault();
                 setInputMode("type");
                 // Stop iOS recording
