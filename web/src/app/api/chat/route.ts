@@ -75,6 +75,12 @@ APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED DETAILS PRESENT):
 - Only return JSON when all required appointment details are present or explicitly declined fields are null.
 - FOLLOW-UP DETAILS: If the user provides additional appointment details after a prior appointment request, return an UPDATE action (do NOT create a new appointment).
 
+CLARITY CHECKS (WHEN UNSURE):
+- If you inferred "with" or "what" from noisy input and are NOT confident, ask a quick confirmation first:
+  * "Is the meeting with X?"
+  * "Is this about Y?"
+- Keep it to ONE short question, then proceed based on the user's reply.
+
 CRITICAL PARSING RULES:
 - If there's ANY action verb → CREATE task immediately:
   * Common verbs: review, send, call, email, finish, follow up, plan, schedule, book, write, make, remember, prepare, update, fix, clean, pay, order, submit, research, compare, drop off, backup, text, remind
