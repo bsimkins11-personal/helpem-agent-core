@@ -358,10 +358,18 @@ extension AuthManager: ASAuthorizationControllerPresentationContextProviding {
         if let scene = windowScene {
             return UIWindow(windowScene: scene)
         }
-        // If all else fails, return any connected scene's window
-        return UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } ?? UIWindow()
+        // If all else fails, return any connected scene's window or create with first scene
+        if let keyWindow = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap({ $0.windows })
+            .first(where: { $0.isKeyWindow }) {
+            return keyWindow
+        }
+        // Last resort: create window with first available scene
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            return UIWindow(windowScene: scene)
+        }
+        // Absolute fallback
+        fatalError("No window scene available for Apple Sign In")
     }
 }
