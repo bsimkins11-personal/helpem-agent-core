@@ -194,8 +194,20 @@ export default function ChatInput({
     return ["meeting", "appointment", "call", "event", "lunch"].includes(normalized);
   };
 
+  const titleLooksLikeWithWhomOnly = (title?: string | null, withWhom?: string | null) => {
+    if (!title) return true;
+    const normalizedTitle = title.trim().toLowerCase();
+    const normalizedWith = withWhom?.trim().toLowerCase();
+    if (normalizedWith && normalizedTitle.includes(normalizedWith)) {
+      return true;
+    }
+    return /^(meeting|appointment|call|event)\s+with\b/.test(normalizedTitle);
+  };
+
   const getWhoWhatPrompt = (title?: string | null, withWhom?: string | null) => {
-    if (withWhom && !isGenericAppointmentTitle(title)) return null;
+    if (withWhom && !isGenericAppointmentTitle(title) && !titleLooksLikeWithWhomOnly(title, withWhom)) {
+      return null;
+    }
     if (withWhom) {
       return "Would you like for me to add what the meeting is about?";
     }
