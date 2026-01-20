@@ -582,10 +582,11 @@ export default function ChatInput({
       // Finalize appointment - we have everything we need now
       const finalAppointment: Appointment = {
         id: builder.id,
-        title: builder.topic || builder.title || "Meeting",
+        title: builder.title || "Meeting",
         datetime: builder.datetime!,
         durationMinutes: builder.durationMinutes!,
         withWhom: builder.withWhom || null,
+        topic: builder.topic || null,
         createdAt: new Date(),
       };
       
@@ -600,6 +601,7 @@ export default function ChatInput({
           body: JSON.stringify({
             title: finalAppointment.title,
             withWhom: finalAppointment.withWhom,
+            topic: finalAppointment.topic,
             datetime: finalAppointment.datetime.toISOString(),
             durationMinutes: finalAppointment.durationMinutes,
           }),
@@ -611,7 +613,7 @@ export default function ChatInput({
       // Build response
       const parts = [];
       if (finalAppointment.withWhom) parts.push(`with ${finalAppointment.withWhom}`);
-      if (topic) parts.push(`about ${topic}`);
+      if (finalAppointment.topic) parts.push(`about ${finalAppointment.topic}`);
       const responseText = parts.length > 0
         ? `Perfect. I've scheduled your meeting ${parts.join(" ")} for ${formatDateTimeForSpeech(finalAppointment.datetime)}.`
         : `Got it. Your meeting is scheduled for ${formatDateTimeForSpeech(finalAppointment.datetime)}.`;
@@ -1126,9 +1128,23 @@ export default function ChatInput({
           }
           
           // We have all mandatory fields - check if we need optional fields
-          if (needsOptionalFields(appointmentBuilderRef.current)) {
+          const builder = appointmentBuilderRef.current;
+          const hasWho = Boolean(builder.withWhom);
+          const hasWhat = Boolean(builder.topic);
+          
+          // Only ask for missing optional fields
+          if (!hasWho || !hasWhat) {
             appointmentBuilderRef.current.askedForOptionalFields = true;
-            const promptText = "Would you like for me to add who the meeting is with and what it's about?";
+            let promptText = "";
+            
+            if (!hasWho && !hasWhat) {
+              promptText = "Would you like to add who the meeting is with and what it's about?";
+            } else if (!hasWho) {
+              promptText = "Would you like to add who the meeting is with?";
+            } else if (!hasWhat) {
+              promptText = "Would you like to add what the meeting is about?";
+            }
+            
             addMessage({
               id: uuidv4(),
               role: "assistant",
@@ -1138,13 +1154,36 @@ export default function ChatInput({
             return;
           }
           
-          // Dead code path - we always ask for optional fields, so finalization happens in client interception
-          // If somehow we get here, just show error
+          // We have everything - finalize immediately without asking
+          const finalAppointment: Appointment = {
+            id: builder.id,
+            title: builder.title || "Meeting",
+            datetime: builder.datetime!,
+            durationMinutes: builder.durationMinutes!,
+            withWhom: builder.withWhom || null,
+            topic: builder.topic || null,
+            createdAt: new Date(),
+          };
+          
+          addAppointment(finalAppointment);
+          
+          try {
+            await fetch("/api/appointments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(finalAppointment),
+            });
+          } catch (error) {
+            console.error("Error saving appointment:", error);
+          }
+          
+          const confirmText = `Perfect. I've scheduled "${finalAppointment.title}" for ${formatDateTimeForSpeech(finalAppointment.datetime)}.`;
           addMessage({
             id: uuidv4(),
             role: "assistant",
-            content: "Sorry, something went wrong with appointment creation.",
+            content: confirmText,
           });
+          speakNative(confirmText);
           appointmentBuilderRef.current = null;
         } else if (internalType === "grocery") {
           // Support both single item and multiple items (array)
