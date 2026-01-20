@@ -275,6 +275,16 @@ export default function ChatInput({
   const nativeAudio = useNativeAudio();
   const isNativeApp = nativeAudio.isNative;
 
+  const speakNative = useCallback((text: string, delayMs = 0) => {
+    if (!isNativeApp) return;
+    window.setTimeout(() => {
+      window.webkit?.messageHandlers?.native?.postMessage({
+        action: "speak",
+        text,
+      });
+    }, delayMs);
+  }, [isNativeApp]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messages.length > 0 && messagesContainerRef.current) {
@@ -724,12 +734,7 @@ export default function ChatInput({
                   role: "assistant",
                   content: askText,
                 });
-                if (isNativeApp) {
-                  window.webkit?.messageHandlers?.native?.postMessage({
-                    action: "speak",
-                    text: askText,
-                  });
-                }
+                speakNative(askText, 250);
               }
               return;
             }
@@ -1087,12 +1092,7 @@ export default function ChatInput({
               role: "assistant",
               content: followup,
             });
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: followup,
-              });
-            }
+            speakNative(followup, 250);
           }
           pendingAppointmentWithWhomRef.current = null;
           pendingAppointmentTopicRef.current = null;
@@ -1450,12 +1450,7 @@ export default function ChatInput({
                 role: "assistant",
                 content: askText,
               });
-              if (isNativeApp) {
-                window.webkit?.messageHandlers?.native?.postMessage({
-                  action: "speak",
-                  text: askText,
-                });
-              }
+              speakNative(askText, 250);
             }
             return;
           }
@@ -1527,12 +1522,7 @@ export default function ChatInput({
                   role: "assistant",
                   content: responseText,
                 });
-                if (isNativeApp) {
-                  window.webkit?.messageHandlers?.native?.postMessage({
-                    action: "speak",
-                    text: responseText,
-                  });
-                }
+                  speakNative(responseText, 250);
                 }
               }
               
@@ -1736,7 +1726,7 @@ export default function ChatInput({
       setLoading(false);
       setIsProcessing(false);
     }
-  }, [loading, messages, todos, habits, appointments, addMessage, clearChat, updateTodoPriority, isNativeApp, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit, addTodo, addAppointment, addHabit, updateTodo, updateAppointment, updateHabit]);
+  }, [loading, messages, todos, habits, appointments, addMessage, clearChat, updateTodoPriority, isNativeApp, speakNative, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit, addTodo, addAppointment, addHabit, updateTodo, updateAppointment, updateHabit]);
 
   // Handle native transcription results (iOS native only)
   useEffect(() => {
