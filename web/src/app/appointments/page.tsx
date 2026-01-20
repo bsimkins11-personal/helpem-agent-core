@@ -1,11 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AppointmentCard } from '@/components/AppointmentCard';
 import { useLife } from '@/state/LifeStore';
 
 export default function AppointmentsPage() {
-  const { appointments } = useLife();
+  const { appointments, deleteAppointment } = useLife();
   
   console.log('📅 AppointmentsPage: Rendering with', appointments.length, 'appointments');
   appointments.forEach((apt, index) => {
@@ -70,6 +69,33 @@ export default function AppointmentsPage() {
     return dateString;
   };
 
+  const formatTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const formatDuration = (minutes: number) => {
+    if (!minutes || minutes <= 0) return '—';
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining ? `${hours}h ${remaining}m` : `${hours}h`;
+  };
+
+  const formatDateShort = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const isPast = (date: Date) => {
+    return new Date(date) < new Date();
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
@@ -96,10 +122,51 @@ export default function AppointmentsPage() {
                   {apts.length} {apts.length === 1 ? 'event' : 'events'}
                 </span>
               </h2>
-              <div className="space-y-2 md:space-y-3">
-                {apts.map((apt) => (
-                  <AppointmentCard key={apt.id} appointment={apt} />
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-brandTextLight">
+                      <th className="pb-2 pr-3 font-medium">Date</th>
+                      <th className="pb-2 pr-3 font-medium">Time</th>
+                      <th className="pb-2 pr-3 font-medium">Duration</th>
+                      <th className="pb-2 pr-3 font-medium">Who</th>
+                      <th className="pb-2 pr-3 font-medium">What</th>
+                      <th className="pb-2 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {apts.map((apt) => (
+                      <tr key={apt.id} className={isPast(apt.datetime) ? 'opacity-60' : ''}>
+                        <td className="py-2 pr-3 text-brandText">
+                          {formatDateShort(apt.datetime)}
+                        </td>
+                        <td className="py-2 pr-3 text-brandText">
+                          {formatTime(apt.datetime)}
+                        </td>
+                        <td className="py-2 pr-3 text-brandText">
+                          {formatDuration(apt.durationMinutes)}
+                        </td>
+                        <td className="py-2 pr-3 text-brandText">
+                          {apt.withWhom || '—'}
+                        </td>
+                        <td className="py-2 pr-3 text-brandText">
+                          {apt.title || '—'}
+                        </td>
+                        <td className="py-2 text-right">
+                          <button
+                            onClick={() => deleteAppointment(apt.id)}
+                            className="p-1 hover:bg-red-100 rounded"
+                            aria-label="Delete appointment"
+                          >
+                            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           ))}

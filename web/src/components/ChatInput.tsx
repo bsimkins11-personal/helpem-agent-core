@@ -188,6 +188,20 @@ export default function ChatInput({
   const pendingPriorityTodoTitleRef = useRef<string | null>(null);
   const askedWhoWhatForAppointmentRef = useRef<string | null>(null);
 
+  const isGenericAppointmentTitle = (title?: string | null) => {
+    if (!title) return true;
+    const normalized = title.trim().toLowerCase();
+    return ["meeting", "appointment", "call", "event", "lunch"].includes(normalized);
+  };
+
+  const getWhoWhatPrompt = (title?: string | null, withWhom?: string | null) => {
+    if (withWhom && !isGenericAppointmentTitle(title)) return null;
+    if (withWhom) {
+      return "Would you like for me to add what the meeting is about?";
+    }
+    return "Would you like for me to add who the meeting is with and what it's about?";
+  };
+
   const extractFollowupDetails = (input: string) => {
     const text = input.trim();
     const durationMatch = text.match(/(\d+)\s*(hours?|hrs?|minutes?|mins?)\b/i);
@@ -674,10 +688,11 @@ export default function ChatInput({
                 role: "assistant",
                 content: followupMessage,
               });
-              const shouldAskWhoWhat = !updatePayload.withWhom && !updatePayload.title;
-              if (shouldAskWhoWhat && askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
+              const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current || itemToUpdate.title;
+              const effectiveWithWhom = updatePayload.withWhom || itemToUpdate.withWhom || null;
+              const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
+              if (askText && askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
                 askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
-                const askText = "Would you like for me to add who the meeting is with and what it's about?";
                 addMessage({
                   id: uuidv4(),
                   role: "assistant",
@@ -1029,9 +1044,9 @@ export default function ChatInput({
             }
           }
 
-          if (!withWhom && askedWhoWhatForAppointmentRef.current != id) {
+          const followup = getWhoWhatPrompt(data.title, withWhom);
+          if (followup && askedWhoWhatForAppointmentRef.current != id) {
             askedWhoWhatForAppointmentRef.current = id;
-            const followup = "Would you like for me to add who the meeting is with and what it's about?";
             addMessage({
               id: uuidv4(),
               role: "assistant",
@@ -1309,9 +1324,9 @@ export default function ChatInput({
                 text: responseText,
               });
             }
-            if (!fallbackWithWhom && askedWhoWhatForAppointmentRef.current != id) {
+            const askText = getWhoWhatPrompt(fallbackTitle, fallbackWithWhom);
+            if (askText && askedWhoWhatForAppointmentRef.current != id) {
               askedWhoWhatForAppointmentRef.current = id;
-              const askText = "Would you like for me to add who the meeting is with and what it's about?";
               addMessage({
                 id: uuidv4(),
                 role: "assistant",
@@ -1381,11 +1396,14 @@ export default function ChatInput({
 
               const askedId = askedWhoWhatForAppointmentRef.current;
               const durationUpdated = Boolean(updates.durationMinutes || updates.duration);
-              const providedWho = typeof updates.withWhom === "string" && updates.withWhom.trim().length > 0;
-              const providedWhat = typeof updates.newTitle === "string" && updates.newTitle.trim().length > 0;
-              if (durationUpdated && !providedWho && !providedWhat && askedId !== itemToUpdate.id) {
-                askedWhoWhatForAppointmentRef.current = itemToUpdate.id;
-                const responseText = "Would you like for me to add who the meeting is with and what it's about?";
+              if (durationUpdated) {
+                const effectiveTitle = updates.newTitle || itemToUpdate.title;
+                const effectiveWithWhom = typeof updates.withWhom === "string" && updates.withWhom.trim().length > 0
+                  ? updates.withWhom.trim()
+                  : itemToUpdate.withWhom;
+                const responseText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
+                if (responseText && askedId !== itemToUpdate.id) {
+                  askedWhoWhatForAppointmentRef.current = itemToUpdate.id;
                 addMessage({
                   id: uuidv4(),
                   role: "assistant",
@@ -1396,6 +1414,7 @@ export default function ChatInput({
                     action: "speak",
                     text: responseText,
                   });
+                }
                 }
               }
               

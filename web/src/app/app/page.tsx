@@ -286,13 +286,15 @@ export default function AppPage() {
   }, [isWelcomeOpen]);
 
   useEffect(() => {
+    if (!isWelcomeOpen) return;
+    if (inputMode === "talk") return;
     const timer = window.setTimeout(() => {
       setIsWelcomeOpen(false);
-    }, 15000);
+    }, 7000);
     return () => {
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [inputMode, isWelcomeOpen]);
 
   useEffect(() => {
     measureFixedStackHeight();
