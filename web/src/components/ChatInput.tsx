@@ -195,6 +195,19 @@ export default function ChatInput({
     askedForOptionalFields: boolean;
   };
   const appointmentBuilderRef = useRef<AppointmentBuilder | null>(null);
+  
+  // Legacy refs - to be removed
+  const pendingAppointmentContextRef = useRef<string | null>(null);
+  const pendingAppointmentWithWhomRef = useRef<string | null>(null);
+  const pendingAppointmentTopicRef = useRef<string | null>(null);
+  const pendingAppointmentDeclinedWhoRef = useRef(false);
+  const pendingAppointmentDeclinedWhatRef = useRef(false);
+  const pendingAppointmentQuestionRef = useRef<"who_what" | "what" | null>(null);
+  const pendingAppointmentUpdateRef = useRef<any | null>(null);
+  const lastAppointmentIdRef = useRef<string | null>(null);
+  const lastAppointmentTitleRef = useRef<string | null>(null);
+  const askedWhoWhatForAppointmentRef = useRef<string | null>(null);
+  const waitingForOptionalFieldsRef = useRef(false);
 
   // Simple state checkers
   const hasAllMandatoryFields = (builder: AppointmentBuilder) => {
@@ -254,6 +267,41 @@ export default function ChatInput({
     }
     
     return { withWhom, topic };
+  };
+  
+  // Legacy helper functions
+  const titleHasTopic = (title?: string | null) => {
+    if (!title) return false;
+    return /\babout\b/i.test(title);
+  };
+  
+  const extractFollowupDetails = (input: string) => {
+    const text = input.trim();
+    const durationMatch = text.match(/(\d+)\s*(hours?|hrs?|minutes?|mins?)\b/i);
+    let durationMinutes: number | null = null;
+    if (durationMatch) {
+      const value = Number(durationMatch[1]);
+      const unit = durationMatch[2].toLowerCase();
+      if (Number.isFinite(value)) {
+        durationMinutes = unit.startsWith("hour") || unit.startsWith("hr")
+          ? Math.round(value * 60)
+          : Math.round(value);
+      }
+    }
+
+    let withWhom: string | null = null;
+    const withMatch = text.match(/\bwith\b\s+(.*?)(?:\s+\babout\b|$)/i);
+    if (withMatch && withMatch[1]) {
+      withWhom = withMatch[1].trim();
+    }
+
+    let topic: string | null = null;
+    const aboutMatch = text.match(/\babout\b\s+(.*)$/i);
+    if (aboutMatch && aboutMatch[1]) {
+      topic = aboutMatch[1].trim();
+    }
+
+    return { durationMinutes, withWhom, topic };
   };
   
   // Web Audio recording refs
@@ -493,8 +541,7 @@ export default function ChatInput({
     lastUserMessageRef.current = trimmedText;
 
     if (/^(cancel|nevermind|never mind|stop)$/i.test(trimmedText)) {
-      pendingAppointmentContextRef.current = null;
-      waitingForOptionalFieldsRef.current = false;
+      appointmentBuilderRef.current = null;
       return;
     }
 
@@ -638,36 +685,8 @@ export default function ChatInput({
       }
     }
 
-    const messageToSend = pendingAppointmentContextRef.current
-      ? (() => {
-          const details = extractFollowupDetails(trimmedText);
-          if (details.withWhom) {
-            pendingAppointmentWithWhomRef.current = details.withWhom;
-            pendingAppointmentDeclinedWhoRef.current = false;
-          }
-          if (details.topic) {
-            pendingAppointmentTopicRef.current = details.topic;
-            pendingAppointmentDeclinedWhatRef.current = false;
-          }
-          if (isDeclineReply(trimmedText)) {
-            if (pendingAppointmentQuestionRef.current === "who_what") {
-              pendingAppointmentDeclinedWhoRef.current = true;
-              pendingAppointmentDeclinedWhatRef.current = true;
-            } else if (pendingAppointmentQuestionRef.current === "what") {
-              pendingAppointmentDeclinedWhatRef.current = true;
-            }
-          }
-          const parsed = [
-            details.durationMinutes ? `durationMinutes=${details.durationMinutes}` : null,
-            details.withWhom ? `withWhom="${details.withWhom}"` : null,
-            details.topic ? `topic="${details.topic}"` : null,
-          ].filter(Boolean).join(", ");
-          const pendingUpdate = pendingAppointmentUpdateRef.current
-            ? `\nPending update: ${formatPendingUpdate(pendingAppointmentUpdateRef.current)}`
-            : "";
-          return `${pendingAppointmentContextRef.current}${pendingUpdate}\nAdditional details: ${trimmedText}${parsed ? `\nParsed details: ${parsed}` : ""}\nIMPORTANT: This is follow-up info for the SAME appointment. Do NOT create a new appointment. Return an update action.`;
-        })()
-      : trimmedText;
+    // No need for complex message rewriting - client intercepts appointment responses now
+    const messageToSend = trimmedText;
 
     const userMessage: Message = {
       id: uuidv4(),
