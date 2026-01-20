@@ -238,6 +238,34 @@ export default function ChatInput({
     );
   };
   
+  // Check if user is trying to correct appointment details (time, date, duration)
+  const isCorrectionAttempt = (text: string) => {
+    const normalized = text.trim().toLowerCase();
+    if (!normalized) return false;
+    
+    // Check for correction phrases
+    const hasCorrectionPhrase = 
+      normalized.includes("i said") ||
+      normalized.includes("actually") ||
+      normalized.includes("correction") ||
+      normalized.includes("change") ||
+      normalized.includes("meant to say") ||
+      normalized.includes("wrong") ||
+      normalized.includes("mistake");
+    
+    // Check for time/date/duration keywords
+    const hasTimeKeywords = 
+      /\b(noon|midnight|morning|afternoon|evening|am|pm|o'clock)\b/i.test(text) ||
+      /\b\d{1,2}[:.]?\d{0,2}\s*(am|pm)?\b/i.test(text) ||
+      /\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(text) ||
+      /\b\d+\s*(minute|min|hour|hr)s?\b/i.test(text) ||
+      /\bfor\s+\d+/i.test(text) ||
+      /\bat\s+\d/i.test(text);
+    
+    // If they mention correction phrases OR time keywords, it's likely a correction
+    return hasCorrectionPhrase || hasTimeKeywords;
+  };
+  
   const extractOptionalFields = (input: string) => {
     const text = input.trim();
     let withWhom: string | null = null;
@@ -569,15 +597,18 @@ export default function ChatInput({
     // CLIENT-SIDE INTERCEPTION: If we're building an appointment and asked for optional fields
     const builderExists = !!appointmentBuilderRef.current;
     const flagValue = appointmentBuilderRef.current?.askedForOptionalFields;
+    const isCorrection = isCorrectionAttempt(trimmedText);
     console.log("=".repeat(80));
     console.log("🔍 INTERCEPTION CHECK START");
     console.log("   hasBuilder:", builderExists);
     console.log("   askedForOptionalFields:", flagValue);
+    console.log("   isCorrection:", isCorrection);
     console.log("   userMessage:", trimmedText);
     console.log("   Builder state:", appointmentBuilderRef.current);
     console.log("=".repeat(80));
     
-    if (appointmentBuilderRef.current?.askedForOptionalFields) {
+    // If user is trying to correct appointment details, don't intercept - let AI handle it
+    if (appointmentBuilderRef.current?.askedForOptionalFields && !isCorrection) {
       console.log("✅✅✅ INTERCEPTING - Client handling optional field response ✅✅✅");
       const builder = appointmentBuilderRef.current;
       const declined = isDeclineReply(trimmedText);
@@ -652,6 +683,16 @@ export default function ChatInput({
       console.log("🧹 Clearing appointmentBuilderRef after finalization");
       appointmentBuilderRef.current = null;
       return;
+    }
+    
+    // If we have a builder and asked for optional fields, but user is making a correction
+    if (appointmentBuilderRef.current?.askedForOptionalFields && isCorrection) {
+      console.log("🔄🔄🔄 CORRECTION DETECTED - Resetting builder and sending to AI 🔄🔄🔄");
+      console.log("   User is trying to correct appointment details (time/date/duration)");
+      console.log("   Resetting askedForOptionalFields flag and clearing builder");
+      // Clear the builder so AI can re-process from scratch
+      appointmentBuilderRef.current = null;
+      // Let the message go through to AI below
     }
 
     const pendingPriorityTodoId = pendingPriorityTodoIdRef.current;
