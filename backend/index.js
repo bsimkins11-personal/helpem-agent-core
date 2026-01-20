@@ -11,6 +11,32 @@ const app = express();
 const port = process.env.PORT || 8080;
 const MAX_BIAS_ENTRIES = 200;
 const GLOBAL_RULE_KEY = "classification_biases_v1";
+const USER_INPUTS_TABLE = "user_inputs";
+
+const isMissingUserInputsTable = (err) => {
+  const message = typeof err?.message === "string" ? err.message : "";
+  return (
+    err?.code === "P2021" ||
+    err?.code === "42P01" ||
+    (message.includes(USER_INPUTS_TABLE) && message.includes("does not exist"))
+  );
+};
+
+const ensureUserInputsTable = async () => {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "user_inputs" (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content text NOT NULL,
+      type text NOT NULL DEFAULT 'text',
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "idx_user_inputs_user_id"
+    ON "user_inputs" ("user_id");
+  `);
+};
 
 // Middleware - Secure CORS configuration
 const allowedOrigins = [
@@ -172,13 +198,43 @@ app.post("/test-db", apiLimiter, async (req, res) => {
       return res.status(400).json({ error: "Missing message" });
     }
 
-    await prisma.userInput.create({
-      data: {
-        userId,
-        content: message,
-        type: type || "text",
-      },
-    });
+    try {
+      await prisma.userInput.create({
+        data: {
+          userId,
+          content: message,
+          type: type || "text",
+        },
+      });
+    } catch (err) {
+      if (isMissingUserInputsTable(err)) {
+        console.warn("⚠️ user_inputs table missing, creating...");
+        try {
+          await ensureUserInputsTable();
+          await prisma.userInput.create({
+            data: {
+              userId,
+              content: message,
+              type: type || "text",
+            },
+          });
+        } catch (retryErr) {
+          console.error("ERROR /test-db (log skipped):", retryErr);
+          return res.json({
+            success: false,
+            message: "Log skipped due to database error",
+            responseType: type === "text" ? "text" : "voice",
+          });
+        }
+      } else {
+        console.error("ERROR /test-db (log skipped):", err);
+        return res.json({
+          success: false,
+          message: "Log skipped due to database error",
+          responseType: type === "text" ? "text" : "voice",
+        });
+      }
+    }
 
     // Response mirrors production pattern
     if (type === "text") {
