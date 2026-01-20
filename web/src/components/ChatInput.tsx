@@ -180,6 +180,8 @@ export default function ChatInput({
   const pendingTranscriptRef = useRef<string | null>(null);
   const stopTimerRef = useRef<number | null>(null);
   const flushTimerRef = useRef<number | null>(null);
+  const pendingAppointmentContextRef = useRef<string | null>(null);
+  const lastUserMessageRef = useRef<string | null>(null);
   
   // Web Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -359,11 +361,21 @@ export default function ChatInput({
 
   const sendMessageWithText = useCallback(async (text: string, isVoiceInput: boolean = false) => {
     if (!text.trim() || loading) return;
+    const trimmedText = text.trim();
+    lastUserMessageRef.current = trimmedText;
+
+    if (/^(cancel|nevermind|never mind|stop)$/i.test(trimmedText)) {
+      pendingAppointmentContextRef.current = null;
+    }
+
+    const messageToSend = pendingAppointmentContextRef.current
+      ? `${pendingAppointmentContextRef.current}\nAdditional details: ${trimmedText}`
+      : trimmedText;
 
     const userMessage: Message = {
       id: uuidv4(),
       role: "user",
-      content: text,
+      content: trimmedText,
     };
 
     addMessage(userMessage);
@@ -465,11 +477,11 @@ export default function ChatInput({
         hour12: true
       });
 
-      const res = await fetch("/api/chat", {
+          const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            message: text,
+            message: messageToSend,
             conversationHistory: recentMessages,
             userData: { todos, habits, appointments, groceries },
             currentDateTime,
@@ -499,6 +511,9 @@ export default function ChatInput({
         const id = uuidv4();
         const now = new Date();
 
+          if (data.type === "appointment") {
+            pendingAppointmentContextRef.current = null;
+          }
         if (internalType === "todo") {
           const hasDate = !!data.datetime;
           const rawDate = hasDate ? parseAiDatetime(data.datetime) : null;
@@ -1171,6 +1186,12 @@ export default function ChatInput({
           role: "assistant",
           content: responseText,
         });
+
+        const appointmentPrompt = /(appointment|meeting|calendar|schedule)/i.test(lastUserMessageRef.current || "");
+        const askingForDetails = /(what date|what time|when is|when should|how long|duration|who is .* with|with whom|what's it about|what is it about)/i.test(responseText);
+        if (appointmentPrompt && askingForDetails && lastUserMessageRef.current) {
+          pendingAppointmentContextRef.current = lastUserMessageRef.current;
+        }
         // ALWAYS send to native for TTS when in native app
         if (isNativeApp) {
           window.webkit?.messageHandlers?.native?.postMessage({
