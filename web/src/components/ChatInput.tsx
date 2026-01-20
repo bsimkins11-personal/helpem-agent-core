@@ -966,6 +966,22 @@ export default function ChatInput({
               });
             }
           }
+
+          if (!withWhom && askedWhoWhatForAppointmentRef.current != id) {
+            askedWhoWhatForAppointmentRef.current = id;
+            const followup = "Would you like for me to add who the meeting is with and what it's about?";
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: followup,
+            });
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: followup,
+              });
+            }
+          }
         } else if (internalType === "grocery") {
           // Support both single item and multiple items (array)
           const items = data.items || [data.title || data.content];
