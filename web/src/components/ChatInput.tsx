@@ -275,6 +275,19 @@ export default function ChatInput({
     return /\babout\b/i.test(title);
   };
   
+  const getWhoWhatPrompt = (title?: string | null, withWhom?: string | null) => {
+    const hasTopic = titleHasTopic(title);
+    const needsWhat = Boolean(withWhom) && !hasTopic && !pendingAppointmentDeclinedWhatRef.current;
+    const needsWho = !withWhom && !pendingAppointmentDeclinedWhoRef.current;
+    
+    if (needsWho) {
+      return "Would you like for me to add who the meeting is with and what it's about?";
+    } else if (needsWhat) {
+      return "Would you like for me to add what the meeting is about?";
+    }
+    return null;
+  };
+  
   const extractFollowupDetails = (input: string) => {
     const text = input.trim();
     const durationMatch = text.match(/(\d+)\s*(hours?|hrs?|minutes?|mins?)\b/i);
