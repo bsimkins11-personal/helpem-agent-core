@@ -206,6 +206,9 @@ export default function AppPage() {
 
   const chatRef = useRef<HTMLDivElement>(null);
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(true);
+  const [welcomeHeight, setWelcomeHeight] = useState(0);
+  const welcomeRef = useRef<HTMLDivElement>(null);
   const isNativeApp = typeof window !== "undefined" && (
     navigator.userAgent.includes("helpem") ||
     (window as any).webkit?.messageHandlers?.native ||
@@ -217,6 +220,11 @@ export default function AppPage() {
   const [fixedStackHeight, setFixedStackHeight] = useState(160);
   const fixedOffset = headerOffsetPx + fixedStackHeight;
   const contentTopPadding = fixedStackHeight ? fixedOffset + STACK_GAP_PX : 200;
+
+  const measureFixedStackHeight = () => {
+    if (!fixedStackRef.current) return;
+    setFixedStackHeight(Math.ceil(fixedStackRef.current.getBoundingClientRect().height));
+  };
   
   const scrollToChat = () => {
     // Scroll so chat appears directly below fixed buttons (140px from top)
@@ -233,24 +241,47 @@ export default function AppPage() {
   useEffect(() => {
     if (!fixedStackRef.current) return;
     const element = fixedStackRef.current;
-    const updateHeight = () => {
-      setFixedStackHeight(Math.ceil(element.getBoundingClientRect().height));
-    };
-    updateHeight();
+    measureFixedStackHeight();
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", updateHeight);
+      window.addEventListener("resize", measureFixedStackHeight);
       return () => {
-        window.removeEventListener("resize", updateHeight);
+        window.removeEventListener("resize", measureFixedStackHeight);
       };
     }
-    const resizeObserver = new ResizeObserver(updateHeight);
+    const resizeObserver = new ResizeObserver(measureFixedStackHeight);
     resizeObserver.observe(element);
-    window.addEventListener("resize", updateHeight);
+    window.addEventListener("resize", measureFixedStackHeight);
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener("resize", updateHeight);
+      window.removeEventListener("resize", measureFixedStackHeight);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isWelcomeOpen) return;
+    if (welcomeRef.current) {
+      setWelcomeHeight(welcomeRef.current.scrollHeight);
+    }
+  }, [isWelcomeOpen]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setIsWelcomeOpen(false);
+    }, 5000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    measureFixedStackHeight();
+    const settleTimer = window.setTimeout(() => {
+      measureFixedStackHeight();
+    }, 350);
+    return () => {
+      window.clearTimeout(settleTimer);
+    };
+  }, [isWelcomeOpen]);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
@@ -276,11 +307,23 @@ export default function AppPage() {
         </div>
         
         {/* Welcome Banner */}
-        <div style={{ backgroundColor: 'white', paddingTop: '0px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', width: '100%' }}>
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
-              <h1 className="text-sm font-bold">{greeting()}</h1>
-              <p className="text-white/90 text-xs">{formattedDate}</p>
+        <div
+          className="overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-in-out"
+          style={{
+            maxHeight: isWelcomeOpen ? `${welcomeHeight}px` : "0px",
+            opacity: isWelcomeOpen ? 1 : 0,
+            transform: isWelcomeOpen ? "translateY(0)" : "translateY(-4px)"
+          }}
+        >
+          <div
+            ref={welcomeRef}
+            style={{ backgroundColor: 'white', paddingTop: '0px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', width: '100%' }}
+          >
+            <div className="max-w-7xl mx-auto">
+              <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
+                <h1 className="text-sm font-bold">{greeting()}</h1>
+                <p className="text-white/90 text-xs">{formattedDate}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -307,30 +350,22 @@ export default function AppPage() {
             </button>
             
             <button
-              onPointerDown={(event) => {
-                event.preventDefault();
+              onMouseDown={() => {
                 setInputMode("talk");
                 scrollToChat();
-                // Trigger iOS recording immediately
+                // Trigger iOS recording
                 if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
                   (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
                 }
               }}
-              onPointerUp={() => {
+              onMouseUp={() => {
                 setInputMode("type");
                 // Stop iOS recording
                 if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
                   (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
                 }
               }}
-              onPointerCancel={() => {
-                setInputMode("type");
-                // Stop iOS recording
-                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
-                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
-                }
-              }}
-              onPointerLeave={() => {
+              onMouseLeave={() => {
                 if (inputMode === "talk") {
                   setInputMode("type");
                   // Stop iOS recording
@@ -339,7 +374,22 @@ export default function AppPage() {
                   }
                 }
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none touch-none ${
+              onTouchStart={() => {
+                setInputMode("talk");
+                scrollToChat();
+                // Trigger iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
+                }
+              }}
+              onTouchEnd={() => {
+                setInputMode("type");
+                // Stop iOS recording
+                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
+                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+                }
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none ${
                 inputMode === "talk"
                   ? "bg-red-500 text-white"
                   : "bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
