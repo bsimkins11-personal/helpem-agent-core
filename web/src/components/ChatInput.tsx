@@ -239,28 +239,43 @@ export default function ChatInput({
   };
   
   // Check if user is trying to correct appointment details (time, date, duration)
-  // IMPORTANT: Only flag as correction if there are EXPLICIT correction phrases
-  // Do NOT flag simple time/duration answers as corrections (e.g., "30 minutes", "11 AM")
+  // IMPORTANT: Distinguish between DECLINING optional fields vs CORRECTING appointment details
   const isCorrectionAttempt = (text: string) => {
     const normalized = text.trim().toLowerCase();
     if (!normalized) return false;
     
-    // EXPLICIT correction phrases (user is disagreeing or clarifying)
+    // Check if this is a simple decline (answering optional field question)
+    const isSimpleDecline = 
+      normalized === "no" ||
+      normalized === "nope" ||
+      normalized === "nah" ||
+      normalized === "no thanks" ||
+      normalized === "no that's fine" ||
+      normalized === "no i don't need to" ||
+      normalized === "no that's okay" ||
+      normalized.match(/^no[,.]?\s*(thanks|that'?s\s*(fine|okay|good|alright))$/i);
+    
+    if (isSimpleDecline) return false; // NOT a correction, just declining
+    
+    // EXPLICIT correction phrases (user is providing NEW information or contradicting)
     const hasCorrectionPhrase = 
-      normalized.startsWith("no") ||
-      normalized.startsWith("actually") ||
       normalized.includes("i said") ||
       normalized.includes("i meant") ||
       normalized.includes("meant to say") ||
+      normalized.includes("actually") ||
       normalized.includes("correction") ||
       normalized.includes("that's wrong") ||
       normalized.includes("that's incorrect") ||
       normalized.includes("mistake") ||
       (normalized.includes("not") && normalized.includes("said")) ||
-      (normalized.includes("didn't") && normalized.includes("say"));
+      (normalized.includes("didn't") && normalized.includes("say")) ||
+      (normalized.startsWith("no") && (
+        normalized.includes("i said") ||
+        normalized.includes("it's") ||
+        normalized.includes("set it") ||
+        normalized.includes("supposed to")
+      ));
     
-    // Only return true if explicit correction phrase is present
-    // Time/date keywords alone are NOT corrections (they're answers to questions)
     return hasCorrectionPhrase;
   };
   
@@ -617,10 +632,12 @@ export default function ChatInput({
       if (withWhom) builder.withWhom = withWhom;
       if (topic) builder.topic = topic;
       if (location) builder.location = location;
+      
+      // If declined, only null out the MISSING fields (don't overwrite existing ones!)
       if (declined) {
-        builder.withWhom = null;
-        builder.topic = null;
-        builder.location = null;
+        if (!builder.withWhom) builder.withWhom = null;
+        if (!builder.topic) builder.topic = null;
+        if (!builder.location) builder.location = null;
       }
       
       // Add user message to chat
