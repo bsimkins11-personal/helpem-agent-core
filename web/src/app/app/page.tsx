@@ -219,35 +219,26 @@ export default function AppPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ONE FIXED CONTAINER: Alerts + Banner + Buttons - 100% OPAQUE WHITE */}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* FIXED HEADER STACK - SOLID WHITE BACKGROUND */}
       <div 
-        className="fixed top-[60px] left-0 right-0 z-[9999] bg-white shadow-2xl" 
+        className="fixed top-[60px] left-0 right-0 bg-white"
         style={{ 
+          zIndex: 10000,
           backgroundColor: '#ffffff',
-          WebkitBackfaceVisibility: 'hidden',
-          backfaceVisibility: 'hidden',
-          transform: 'translateZ(0)',
-          willChange: 'transform',
-          isolation: 'isolate'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         }}
       >
-        {/* Alerts Section */}
-        <div className="w-full bg-white">
+        {/* Alerts */}
+        <div style={{ backgroundColor: '#ffffff' }}>
           <UsageAlertBanner />
           <AlphaFeedbackBanner />
         </div>
         
         {/* Welcome Banner */}
-        <div 
-          className="w-full bg-white py-1 px-4 md:px-6 border-b border-gray-200" 
-          style={{ 
-            backgroundColor: '#ffffff',
-            transform: 'translateZ(0)'
-          }}
-        >
+        <div className="w-full bg-white py-1 px-4 md:px-6" style={{ backgroundColor: '#ffffff' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white shadow-sm">
+            <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
               <h1 className="text-sm font-bold">{greeting()}</h1>
               <p className="text-white/90 text-xs">{formattedDate}</p>
             </div>
@@ -255,15 +246,9 @@ export default function AppPage() {
         </div>
         
         {/* Type/Hold to Talk Buttons */}
-        <div 
-          className="w-full bg-white py-2 px-4 md:px-6 border-b-4 border-gray-400" 
-          style={{ 
-            backgroundColor: '#ffffff',
-            transform: 'translateZ(0)'
-          }}
-        >
+        <div className="w-full bg-white py-2 px-4 md:px-6 border-b-4 border-gray-400" style={{ backgroundColor: '#ffffff' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-lg border border-gray-300 shadow-sm" style={{ backgroundColor: '#f3f4f6' }}>
+            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
             <button
               onClick={() => {
                 setInputMode("type");
@@ -338,8 +323,15 @@ export default function AppPage() {
         </div>
       </div>
 
-      {/* Content - starts well below fixed container */}
-      <div className="pt-[200px] bg-gray-50 relative z-0">
+      {/* SCROLLABLE CONTENT - starts below fixed header */}
+      <div 
+        className="flex-1 bg-gray-50" 
+        style={{ 
+          marginTop: '200px',
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
