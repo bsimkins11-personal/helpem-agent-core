@@ -275,25 +275,21 @@ export default function ChatInput({
   const nativeAudio = useNativeAudio();
   const isNativeApp = nativeAudio.isNative;
 
-  const lastSpeakAtRef = useRef<number | null>(null);
-  const speakTimerRef = useRef<number | null>(null);
+  const nextSpeakAtRef = useRef<number | null>(null);
 
   const speakNative = useCallback((text: string, delayMs = 0) => {
     if (!isNativeApp) return;
     const now = Date.now();
-    const lastAt = lastSpeakAtRef.current || 0;
-    const spacingDelay = Math.max(0, 900 - (now - lastAt));
-    const totalDelay = Math.max(delayMs, spacingDelay);
-    if (speakTimerRef.current) {
-      window.clearTimeout(speakTimerRef.current);
-    }
-    speakTimerRef.current = window.setTimeout(() => {
-      lastSpeakAtRef.current = Date.now();
+    const baseTime = now + delayMs;
+    const nextAt = nextSpeakAtRef.current ?? now;
+    const scheduledAt = Math.max(baseTime, nextAt + 900);
+    nextSpeakAtRef.current = scheduledAt;
+    window.setTimeout(() => {
       window.webkit?.messageHandlers?.native?.postMessage({
         action: "speak",
         text,
       });
-    }, totalDelay);
+    }, Math.max(0, scheduledAt - now));
   }, [isNativeApp]);
 
   // Scroll to bottom when messages change
