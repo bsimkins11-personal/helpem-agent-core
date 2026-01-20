@@ -504,9 +504,9 @@ export default function AppPage() {
               </div>
             )}
           </div>
+          </div>
         </div>
         </div>
-      </div>
       </div>
     </div>
   );
