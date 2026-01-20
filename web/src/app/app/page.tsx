@@ -205,6 +205,7 @@ export default function AppPage() {
   const allExpanded = Object.values(expandedModules).every(v => v);
 
   const chatRef = useRef<HTMLDivElement>(null);
+  const isHoldingToTalkRef = useRef(false);
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true);
   const [welcomeHeight, setWelcomeHeight] = useState(0);
@@ -234,6 +235,16 @@ export default function AppPage() {
       window.scrollTo({
         top: offsetPosition,
         behavior: "smooth"
+      });
+    }
+  };
+  const scrollToChatInstant = () => {
+    if (chatRef.current) {
+      const elementPosition = chatRef.current.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - (fixedOffset + STACK_GAP_PX);
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "auto"
       });
     }
   };
@@ -357,31 +368,26 @@ export default function AppPage() {
             <button
               onPointerDown={(event) => {
                 event.preventDefault();
+                if (isHoldingToTalkRef.current) return;
+                isHoldingToTalkRef.current = true;
                 event.currentTarget.setPointerCapture(event.pointerId);
                 setInputMode("talk");
-                // Trigger iOS recording immediately
-                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
-                  (window as any).webkit.messageHandlers.native.postMessage({ action: "startRecording" });
-                }
-                scrollToChatSoon();
+                // Scroll without smooth animation to avoid canceling press
+                scrollToChatInstant();
               }}
               onPointerUp={(event) => {
                 event.preventDefault();
+                if (!isHoldingToTalkRef.current) return;
+                isHoldingToTalkRef.current = false;
                 event.currentTarget.releasePointerCapture(event.pointerId);
                 setInputMode("type");
-                // Stop iOS recording
-                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
-                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
-                }
               }}
               onPointerCancel={(event) => {
                 event.preventDefault();
+                if (!isHoldingToTalkRef.current) return;
+                isHoldingToTalkRef.current = false;
                 event.currentTarget.releasePointerCapture(event.pointerId);
                 setInputMode("type");
-                // Stop iOS recording
-                if (typeof window !== 'undefined' && (window as any).webkit?.messageHandlers?.native) {
-                  (window as any).webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
-                }
               }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none touch-none ${
                 inputMode === "talk"
