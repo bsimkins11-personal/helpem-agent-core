@@ -3,7 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { AlphaFeedbackModal } from "./AlphaFeedbackModal";
 
-export function AlphaFeedbackBanner() {
+type AlphaFeedbackBannerProps = {
+  onHeightChange?: () => void;
+};
+
+export function AlphaFeedbackBanner({ onHeightChange }: AlphaFeedbackBannerProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -33,7 +37,12 @@ export function AlphaFeedbackBanner() {
     if (bannerRef.current) {
       setBannerHeight(bannerRef.current.scrollHeight);
     }
-  }, [isMounted]);
+    onHeightChange?.();
+  }, [isMounted, onHeightChange]);
+
+  useEffect(() => {
+    onHeightChange?.();
+  }, [isOpen, onHeightChange]);
 
   if (!isMounted) return null;
 
@@ -48,6 +57,7 @@ export function AlphaFeedbackBanner() {
         }}
         onTransitionEnd={() => {
           if (!isOpen) setIsMounted(false);
+          onHeightChange?.();
         }}
       >
         <div

@@ -5,7 +5,11 @@ import { getUsageStatus, type UsageData } from "@/lib/mockUsageService";
 
 type AlertLevel = "warning" | "critical" | null;
 
-export function UsageAlertBanner() {
+type UsageAlertBannerProps = {
+  onHeightChange?: () => void;
+};
+
+export function UsageAlertBanner({ onHeightChange }: UsageAlertBannerProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [alertLevel, setAlertLevel] = useState<AlertLevel>(null);
@@ -68,7 +72,12 @@ export function UsageAlertBanner() {
     if (bannerRef.current) {
       setBannerHeight(bannerRef.current.scrollHeight);
     }
-  }, [isMounted]);
+    onHeightChange?.();
+  }, [isMounted, onHeightChange]);
+
+  useEffect(() => {
+    onHeightChange?.();
+  }, [isOpen, onHeightChange]);
 
   if (!isMounted || !alertLevel || !usageData) return null;
 
@@ -102,6 +111,7 @@ export function UsageAlertBanner() {
       }}
       onTransitionEnd={() => {
         if (!isOpen) setIsMounted(false);
+        onHeightChange?.();
       }}
     >
       <div

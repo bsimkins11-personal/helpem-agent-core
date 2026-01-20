@@ -325,8 +325,8 @@ export default function AppPage() {
       >
         {/* Alerts */}
         <div style={{ width: '100%', backgroundColor: 'white' }}>
-          <UsageAlertBanner />
-          <AlphaFeedbackBanner />
+          <UsageAlertBanner onHeightChange={measureFixedStackHeight} />
+          <AlphaFeedbackBanner onHeightChange={measureFixedStackHeight} />
         </div>
         
         {/* Welcome Banner */}

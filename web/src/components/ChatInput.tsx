@@ -183,6 +183,9 @@ export default function ChatInput({
   const pendingAppointmentContextRef = useRef<string | null>(null);
   const pendingAppointmentWithWhomRef = useRef<string | null>(null);
   const pendingAppointmentTopicRef = useRef<string | null>(null);
+  const pendingAppointmentDeclinedWhoRef = useRef(false);
+  const pendingAppointmentDeclinedWhatRef = useRef(false);
+  const pendingAppointmentQuestionRef = useRef<"who_what" | "what" | null>(null);
   const lastUserMessageRef = useRef<string | null>(null);
   const lastAppointmentIdRef = useRef<string | null>(null);
   const lastAppointmentTitleRef = useRef<string | null>(null);
@@ -214,15 +217,54 @@ export default function ChatInput({
     return candidate.length > 0 ? candidate : null;
   };
 
+  const titleHasTopic = (title?: string | null) => {
+    if (!title) return false;
+    return /\babout\b/i.test(title);
+  };
+
   const getWhoWhatPrompt = (title?: string | null, withWhom?: string | null) => {
     const inferredWithWhom = withWhom || extractWithWhomFromTitle(title);
-    if (inferredWithWhom && !isGenericAppointmentTitle(title) && !titleLooksLikeWithWhomOnly(title, inferredWithWhom)) {
+    const hasTopic = Boolean(pendingAppointmentTopicRef.current) || titleHasTopic(title);
+    const declinedWho = pendingAppointmentDeclinedWhoRef.current;
+    const declinedWhat = pendingAppointmentDeclinedWhatRef.current;
+    if (declinedWho && declinedWhat) {
       return null;
     }
     if (inferredWithWhom) {
+      if (!hasTopic && !declinedWhat) {
+        return "Would you like for me to add what the meeting is about?";
+      }
+      if (!isGenericAppointmentTitle(title) && !titleLooksLikeWithWhomOnly(title, inferredWithWhom)) {
+        return null;
+      }
+      return declinedWhat ? null : "Would you like for me to add what the meeting is about?";
+    }
+    if (declinedWho && !declinedWhat) {
       return "Would you like for me to add what the meeting is about?";
     }
+    if (!declinedWho && declinedWhat) {
+      return "Would you like for me to add who the meeting is with?";
+    }
     return "Would you like for me to add who the meeting is with and what it's about?";
+  };
+
+  const isDeclineReply = (text: string) => {
+    const normalized = text.trim().toLowerCase();
+    if (!normalized) return false;
+    return (
+      normalized === "no" ||
+      normalized === "nope" ||
+      normalized === "nah" ||
+      normalized.startsWith("no ") ||
+      normalized.startsWith("not ") ||
+      normalized.includes("no thanks") ||
+      normalized.includes("don't") ||
+      normalized.includes("do not") ||
+      normalized.includes("doesn't matter") ||
+      normalized.includes("no particular") ||
+      normalized.includes("not about") ||
+      normalized.includes("not sure")
+    );
   };
 
   const extractFollowupDetails = (input: string) => {
@@ -577,9 +619,19 @@ export default function ChatInput({
           const details = extractFollowupDetails(trimmedText);
           if (details.withWhom) {
             pendingAppointmentWithWhomRef.current = details.withWhom;
+            pendingAppointmentDeclinedWhoRef.current = false;
           }
           if (details.topic) {
             pendingAppointmentTopicRef.current = details.topic;
+            pendingAppointmentDeclinedWhatRef.current = false;
+          }
+          if (isDeclineReply(trimmedText)) {
+            if (pendingAppointmentQuestionRef.current === "who_what") {
+              pendingAppointmentDeclinedWhoRef.current = true;
+              pendingAppointmentDeclinedWhatRef.current = true;
+            } else if (pendingAppointmentQuestionRef.current === "what") {
+              pendingAppointmentDeclinedWhatRef.current = true;
+            }
           }
           const parsed = [
             details.durationMinutes ? `durationMinutes=${details.durationMinutes}` : null,
@@ -797,6 +849,9 @@ export default function ChatInput({
             pendingAppointmentContextRef.current = null;
             pendingAppointmentWithWhomRef.current = null;
             pendingAppointmentTopicRef.current = null;
+            pendingAppointmentDeclinedWhoRef.current = false;
+            pendingAppointmentDeclinedWhatRef.current = false;
+            pendingAppointmentQuestionRef.current = null;
           }
         if (internalType === "todo") {
           const hasDate = !!data.datetime;
@@ -1001,6 +1056,7 @@ export default function ChatInput({
             if (!isGenericAppointmentTitle(title)) {
               pendingAppointmentTopicRef.current = title;
             }
+            pendingAppointmentQuestionRef.current = withWhom ? "what" : "who_what";
             addMessage({
               id: uuidv4(),
               role: "assistant",
@@ -1156,6 +1212,9 @@ export default function ChatInput({
           }
           pendingAppointmentWithWhomRef.current = null;
           pendingAppointmentTopicRef.current = null;
+          pendingAppointmentDeclinedWhoRef.current = false;
+          pendingAppointmentDeclinedWhatRef.current = false;
+          pendingAppointmentQuestionRef.current = null;
         } else if (internalType === "grocery") {
           // Support both single item and multiple items (array)
           const items = data.items || [data.title || data.content];
