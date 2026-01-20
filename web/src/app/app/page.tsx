@@ -216,8 +216,8 @@ export default function AppPage() {
       <AlphaFeedbackBanner />
       
       {/* DIV 2: Welcome Banner - Fixed */}
-      <div className="fixed top-[60px] left-0 right-0 z-40 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-2">
+      <div className="fixed top-[60px] left-0 right-0 z-50 bg-white">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-1 pb-1.5">
           <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2.5 text-white">
             <h1 className="text-base font-bold">{greeting()}</h1>
             <p className="text-white/90 text-xs">{formattedDate}</p>
@@ -226,8 +226,8 @@ export default function AppPage() {
       </div>
       
       {/* DIV 3: Type/Hold to Talk Buttons - Fixed */}
-      <div className="fixed top-[120px] left-0 right-0 z-40 bg-white border-b-2 border-gray-300 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-2">
+      <div className="fixed top-[115px] left-0 right-0 z-50 bg-white border-b-4 border-gray-300 pb-2">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-lg">
             <button
               onClick={() => {
@@ -303,7 +303,7 @@ export default function AppPage() {
       </div>
 
       {/* DIV 4: Content Modules - Scrollable, starts BELOW div 3 */}
-      <div className="pt-[180px]">
+      <div className="pt-[170px] bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
