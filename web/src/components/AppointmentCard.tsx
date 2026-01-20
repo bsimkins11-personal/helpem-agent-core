@@ -153,8 +153,8 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
 
       {/* Edit Modal */}
       {showEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-white opacity-100 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+          <div className="rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: '#ffffff' }}>
             <h3 className="text-lg font-semibold text-brandText mb-4">Edit Appointment</h3>
             
             <div className="space-y-4">
@@ -244,8 +244,8 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
 
       {/* Confirmation Modal */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-white opacity-100 rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+          <div className="rounded-xl p-6 max-w-sm mx-4 shadow-2xl" style={{ backgroundColor: '#ffffff' }}>
             <h3 className="text-lg font-semibold text-brandText mb-2">Delete Appointment</h3>
             <p className="text-brandTextLight mb-6">
               Confirm you want to remove <span className="font-semibold text-brandText">{appointment.title}</span> from your calendar?
