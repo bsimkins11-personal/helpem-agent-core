@@ -275,22 +275,33 @@ export default function ChatInput({
   const nativeAudio = useNativeAudio();
   const isNativeApp = nativeAudio.isNative;
 
-  const nextSpeakAtRef = useRef<number | null>(null);
+  const speakQueueRef = useRef<string[]>([]);
+  const isSpeakingRef = useRef(false);
+
+  const flushSpeakQueue = useCallback(() => {
+    if (!isNativeApp) return;
+    if (isSpeakingRef.current) return;
+    const nextText = speakQueueRef.current.shift();
+    if (!nextText) return;
+    isSpeakingRef.current = true;
+    window.webkit?.messageHandlers?.native?.postMessage({
+      action: "speak",
+      text: nextText,
+    });
+  }, [isNativeApp]);
 
   const speakNative = useCallback((text: string, delayMs = 0) => {
     if (!isNativeApp) return;
-    const now = Date.now();
-    const baseTime = now + delayMs;
-    const nextAt = nextSpeakAtRef.current ?? now;
-    const scheduledAt = Math.max(baseTime, nextAt + 900);
-    nextSpeakAtRef.current = scheduledAt;
-    window.setTimeout(() => {
-      window.webkit?.messageHandlers?.native?.postMessage({
-        action: "speak",
-        text,
-      });
-    }, Math.max(0, scheduledAt - now));
-  }, [isNativeApp]);
+    const enqueue = () => {
+      speakQueueRef.current.push(text);
+      flushSpeakQueue();
+    };
+    if (delayMs > 0) {
+      window.setTimeout(enqueue, delayMs);
+      return;
+    }
+    enqueue();
+  }, [isNativeApp, flushSpeakQueue]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -299,6 +310,16 @@ export default function ChatInput({
     }
     saveSessionMessages(messages);
   }, [messages]);
+
+  useEffect(() => {
+    if (!isNativeApp) return;
+    if (!nativeAudio.isPlaying && isSpeakingRef.current) {
+      isSpeakingRef.current = false;
+    }
+    if (!nativeAudio.isPlaying) {
+      flushSpeakQueue();
+    }
+  }, [isNativeApp, nativeAudio.isPlaying, flushSpeakQueue]);
 
   const addMessage = useCallback((message: Message) => {
     setMessages(prev => {
