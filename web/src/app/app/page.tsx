@@ -220,22 +220,24 @@ export default function AppPage() {
 
   return (
     <>
-      {/* ========== LAYER 1: ALERTS (top-0) ========== */}
-      <div className="fixed top-0 left-0 right-0" style={{ zIndex: 9999 }}>
-        <UsageAlertBanner />
-        <AlphaFeedbackBanner />
-      </div>
-
-      {/* ========== LAYER 2: BANNER + BUTTONS (top-60px) ========== */}
+      {/* ========== ONE SOLID FIXED BLOCK: ALERTS + BANNER + BUTTONS ========== */}
       <div 
-        className="fixed left-0 right-0"
         style={{ 
+          position: 'fixed',
           top: '60px',
-          zIndex: 9998,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
           backgroundColor: 'white'
         }}
       >
-        {/* Welcome Banner - WHITE BACKGROUND */}
+        {/* Alerts at top of fixed block */}
+        <div style={{ backgroundColor: 'white' }}>
+          <UsageAlertBanner />
+          <AlphaFeedbackBanner />
+        </div>
+        
+        {/* Welcome Banner */}
         <div style={{ backgroundColor: 'white', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px' }}>
           <div className="max-w-7xl mx-auto">
             <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
@@ -245,7 +247,7 @@ export default function AppPage() {
           </div>
         </div>
         
-        {/* Type/Hold to Talk Buttons - WHITE BACKGROUND */}
+        {/* Type/Hold to Talk Buttons */}
         <div style={{ backgroundColor: 'white', paddingTop: '8px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px', borderBottom: '4px solid #9ca3af' }}>
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-2 p-2 rounded-lg border border-gray-200" style={{ backgroundColor: '#f9fafb' }}>
