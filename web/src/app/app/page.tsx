@@ -207,7 +207,15 @@ export default function AppPage() {
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
   
   const scrollToChat = () => {
-    chatRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Scroll so chat appears directly below fixed buttons (140px from top)
+    if (chatRef.current) {
+      const elementPosition = chatRef.current.getBoundingClientRect().top + window.scrollY;
+      const offsetPosition = elementPosition - 140; // Account for fixed header + banner + buttons
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
   };
 
   return (
