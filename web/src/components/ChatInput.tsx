@@ -180,76 +180,31 @@ export default function ChatInput({
   const pendingTranscriptRef = useRef<string | null>(null);
   const stopTimerRef = useRef<number | null>(null);
   const flushTimerRef = useRef<number | null>(null);
-  const pendingAppointmentContextRef = useRef<string | null>(null);
-  const pendingAppointmentWithWhomRef = useRef<string | null>(null);
-  const pendingAppointmentTopicRef = useRef<string | null>(null);
-  const pendingAppointmentDeclinedWhoRef = useRef(false);
-  const pendingAppointmentDeclinedWhatRef = useRef(false);
-  const pendingAppointmentQuestionRef = useRef<"who_what" | "what" | null>(null);
-  const pendingAppointmentUpdateRef = useRef<Partial<Appointment> | null>(null);
   const lastUserMessageRef = useRef<string | null>(null);
-  const lastAppointmentIdRef = useRef<string | null>(null);
-  const lastAppointmentTitleRef = useRef<string | null>(null);
   const pendingPriorityTodoIdRef = useRef<string | null>(null);
   const pendingPriorityTodoTitleRef = useRef<string | null>(null);
-  const askedWhoWhatForAppointmentRef = useRef<string | null>(null);
-  const waitingForOptionalFieldsRef = useRef(false);
-
-  const isGenericAppointmentTitle = (title?: string | null) => {
-    if (!title) return true;
-    const normalized = title.trim().toLowerCase();
-    return ["meeting", "appointment", "call", "event", "lunch"].includes(normalized);
+  
+  // Simple appointment state tracker
+  type AppointmentBuilder = {
+    id: string;
+    title?: string;
+    datetime?: Date;
+    durationMinutes?: number;
+    withWhom?: string | null;
+    topic?: string | null;
+    askedForOptionalFields: boolean;
   };
+  const appointmentBuilderRef = useRef<AppointmentBuilder | null>(null);
 
-  const titleLooksLikeWithWhomOnly = (title?: string | null, withWhom?: string | null) => {
-    if (!title) return true;
-    const normalizedTitle = title.trim().toLowerCase();
-    const normalizedWith = withWhom?.trim().toLowerCase();
-    if (normalizedWith && normalizedTitle.includes(normalizedWith)) {
-      return true;
-    }
-    return /^(meeting|appointment|call|event)\s+with\b/.test(normalizedTitle);
+  // Simple state checkers
+  const hasAllMandatoryFields = (builder: AppointmentBuilder) => {
+    return !!(builder.title && builder.datetime && builder.durationMinutes);
   };
-
-  const extractWithWhomFromTitle = (title?: string | null) => {
-    if (!title) return null;
-    const match = title.match(/\bwith\b\s+(.+?)(?:\s+\babout\b|$)/i);
-    if (!match || !match[1]) return null;
-    const candidate = match[1].trim();
-    return candidate.length > 0 ? candidate : null;
+  
+  const needsOptionalFields = (builder: AppointmentBuilder) => {
+    return !builder.askedForOptionalFields;
   };
-
-  const titleHasTopic = (title?: string | null) => {
-    if (!title) return false;
-    return /\babout\b/i.test(title);
-  };
-
-  const getWhoWhatPrompt = (title?: string | null, withWhom?: string | null) => {
-    const inferredWithWhom = withWhom || extractWithWhomFromTitle(title);
-    const hasTopic = Boolean(pendingAppointmentTopicRef.current) || titleHasTopic(title);
-    const declinedWho = pendingAppointmentDeclinedWhoRef.current;
-    const declinedWhat = pendingAppointmentDeclinedWhatRef.current;
-    if (declinedWho && declinedWhat) {
-      return null;
-    }
-    if (inferredWithWhom) {
-      if (!hasTopic && !declinedWhat) {
-        return "Would you like for me to add what the meeting is about?";
-      }
-      if (!isGenericAppointmentTitle(title) && !titleLooksLikeWithWhomOnly(title, inferredWithWhom)) {
-        return null;
-      }
-      return declinedWhat ? null : "Would you like for me to add what the meeting is about?";
-    }
-    if (declinedWho && !declinedWhat) {
-      return "Would you like for me to add what the meeting is about?";
-    }
-    if (!declinedWho && declinedWhat) {
-      return "Would you like for me to add who the meeting is with?";
-    }
-    return "Would you like for me to add who the meeting is with and what it's about?";
-  };
-
+  
   const isDeclineReply = (text: string) => {
     const normalized = text.trim().toLowerCase();
     if (!normalized) return false;
@@ -268,51 +223,37 @@ export default function ChatInput({
       normalized.includes("not sure")
     );
   };
-
-  const formatPendingUpdate = (update: Partial<Appointment>) => {
-    const parts: string[] = [];
-    if (update.title) parts.push(`title="${update.title}"`);
-    if (update.datetime instanceof Date) parts.push(`datetime="${update.datetime.toISOString()}"`);
-    if (typeof update.durationMinutes === "number") parts.push(`durationMinutes=${update.durationMinutes}`);
-    if (update.withWhom) parts.push(`withWhom="${update.withWhom}"`);
-    return parts.join(", ");
-  };
-
-  const extractFollowupDetails = (input: string) => {
+  
+  const extractOptionalFields = (input: string) => {
     const text = input.trim();
-    const durationMatch = text.match(/(\d+)\s*(hours?|hrs?|minutes?|mins?)\b/i);
-    let durationMinutes: number | null = null;
-    if (durationMatch) {
-      const value = Number(durationMatch[1]);
-      const unit = durationMatch[2].toLowerCase();
-      if (Number.isFinite(value)) {
-        durationMinutes = unit.startsWith("hour") || unit.startsWith("hr")
-          ? Math.round(value * 60)
-          : Math.round(value);
-      }
-    }
-
     let withWhom: string | null = null;
-    const notMatch = text.match(/\bnot\b\s+(.*)$/i);
-    if (notMatch && notMatch[1]) {
-      withWhom = notMatch[1].trim();
-    } else {
-      const withMatch = text.match(/\bwith\b\s+(.*?)(?:\s+\babout\b|$)/i);
-      if (withMatch && withMatch[1]) {
-        withWhom = withMatch[1].trim();
-      }
-    }
-
     let topic: string | null = null;
+    
+    // Extract "with [person]"
+    const withMatch = text.match(/\bwith\b\s+(.*?)(?:\s+\babout\b|$)/i);
+    if (withMatch && withMatch[1]) {
+      withWhom = withMatch[1].trim();
+    }
+    
+    // Extract "about [topic]"
     const aboutMatch = text.match(/\babout\b\s+(.*)$/i);
     if (aboutMatch && aboutMatch[1]) {
-      const candidate = aboutMatch[1].trim();
-      if (!/^\d+\s*(minutes?|mins?|hours?|hrs?)\b/i.test(candidate)) {
-        topic = candidate;
+      topic = aboutMatch[1].trim();
+    }
+    
+    // If no "about" keyword, try to extract topic after affirmatives
+    if (!topic) {
+      const topicMatch = text.match(/(?:yeah|yes|sure|okay)\s+(?:the\s+)?(?:meeting|appointment)?\s*(?:is\s+)?(?:about\s+)?(.+)/i);
+      if (topicMatch && topicMatch[1]) {
+        const extracted = topicMatch[1].trim();
+        // Make sure it's not just filler words
+        if (extracted && !/(yeah|yes|sure|okay|the|meeting|appointment|is|about|with)/i.test(extracted)) {
+          topic = extracted;
+        }
       }
     }
-
-    return { durationMinutes, withWhom, topic };
+    
+    return { withWhom, topic };
   };
   
   // Web Audio recording refs
@@ -557,13 +498,19 @@ export default function ChatInput({
       return;
     }
 
-    // CLIENT-SIDE INTERCEPTION: If we just asked about optional fields, parse the answer NOW
-    if (waitingForOptionalFieldsRef.current && lastAppointmentIdRef.current) {
-      waitingForOptionalFieldsRef.current = false;
-      
-      // Extract details from user's response
-      const details = extractFollowupDetails(trimmedText);
+    // CLIENT-SIDE INTERCEPTION: If we're building an appointment and asked for optional fields
+    if (appointmentBuilderRef.current?.askedForOptionalFields) {
+      const builder = appointmentBuilderRef.current;
       const declined = isDeclineReply(trimmedText);
+      const { withWhom, topic } = extractOptionalFields(trimmedText);
+      
+      // Update builder with optional fields
+      if (withWhom) builder.withWhom = withWhom;
+      if (topic) builder.topic = topic;
+      if (declined) {
+        builder.withWhom = null;
+        builder.topic = null;
+      }
       
       // Add user message to chat
       addMessage({
@@ -572,78 +519,52 @@ export default function ChatInput({
         content: trimmedText,
       });
       
-      // If declined, finalize appointment with no optional fields
-      if (declined) {
-        const responseText = "Got it. Your appointment is all set.";
-        addMessage({
-          id: uuidv4(),
-          role: "assistant",
-          content: responseText,
+      // Finalize appointment - we have everything we need now
+      const finalAppointment: Appointment = {
+        id: builder.id,
+        title: builder.topic || builder.title || "Meeting",
+        datetime: builder.datetime!,
+        durationMinutes: builder.durationMinutes!,
+        withWhom: builder.withWhom || null,
+        createdAt: new Date(),
+      };
+      
+      // Add to local state
+      addAppointment(finalAppointment);
+      
+      // Save to database
+      try {
+        await fetch("/api/appointments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: finalAppointment.title,
+            withWhom: finalAppointment.withWhom,
+            datetime: finalAppointment.datetime.toISOString(),
+            durationMinutes: finalAppointment.durationMinutes,
+          }),
         });
-        speakNative(responseText);
-        lastAppointmentIdRef.current = null;
-        return;
+      } catch (error) {
+        console.error("❌ Error saving appointment:", error);
       }
       
-      // If details provided, update the appointment
-      if (details.withWhom || details.topic) {
-        const updatePayload: Partial<Appointment> = {};
-        if (details.withWhom) updatePayload.withWhom = details.withWhom;
-        
-        // Parse topic from response (handles "about X", "it's about X", "X" patterns)
-        if (details.topic) {
-          updatePayload.title = details.topic;
-        } else {
-          // Try to extract topic from response without "about" keyword
-          const topicMatch = trimmedText.match(/(?:yeah|yes|sure|okay)\s+(?:the\s+)?(?:meeting|appointment)?\s*(?:is\s+)?(?:about\s+)?(.+)/i);
-          if (topicMatch && topicMatch[1]) {
-            const extractedTopic = topicMatch[1].trim();
-            // Make sure it's not just affirmative words
-            if (extractedTopic && !/(yeah|yes|sure|okay|the|meeting|appointment|is|about)/i.test(extractedTopic)) {
-              updatePayload.title = extractedTopic;
-            }
-          }
-        }
-        
-        if (Object.keys(updatePayload).length > 0) {
-          updateAppointment(lastAppointmentIdRef.current, updatePayload);
-          try {
-            await fetch("/api/appointments", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id: lastAppointmentIdRef.current, ...updatePayload }),
-            });
-          } catch (error) {
-            console.error("❌ Error updating appointment:", error);
-          }
-        }
-        
-        const parts = [];
-        if (details.withWhom) parts.push(`with ${details.withWhom}`);
-        if (updatePayload.title) parts.push(`about ${updatePayload.title}`);
-        const responseText = parts.length > 0 
-          ? `Perfect. I've updated your appointment ${parts.join(" ")}.`
-          : "Got it. Your appointment is all set.";
-        
-        addMessage({
-          id: uuidv4(),
-          role: "assistant",
-          content: responseText,
-        });
-        speakNative(responseText);
-        lastAppointmentIdRef.current = null;
-        return;
-      }
+      // Build response
+      const parts = [];
+      if (finalAppointment.withWhom) parts.push(`with ${finalAppointment.withWhom}`);
+      if (topic) parts.push(`about ${topic}`);
+      const responseText = parts.length > 0
+        ? `Perfect. I've scheduled your meeting ${parts.join(" ")} for ${formatDateTimeForSpeech(finalAppointment.datetime)}.`
+        : `Got it. Your meeting is scheduled for ${formatDateTimeForSpeech(finalAppointment.datetime)}.`;
       
-      // If no details extracted, ask them to clarify
-      const clarifyText = "I didn't catch that. Can you tell me who the meeting is with or what it's about?";
       addMessage({
         id: uuidv4(),
         role: "assistant",
-        content: clarifyText,
+        content: responseText,
       });
-      speakNative(clarifyText);
-      waitingForOptionalFieldsRef.current = true; // Keep waiting
+      speakNative(responseText);
+      
+      // Clear builder
+      appointmentBuilderRef.current = null;
       return;
     }
 
