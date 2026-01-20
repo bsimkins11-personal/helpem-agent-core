@@ -231,6 +231,7 @@ struct RootView: View {
                 // Main app view with custom header
                     GeometryReader { geometry in
                         ZStack {
+                            Color.white.ignoresSafeArea()
                             VStack(spacing: 0) {
                                 // Custom header bar
                                 VStack(spacing: 0) {
@@ -332,6 +333,7 @@ struct RootView: View {
                     }
             } else {
                 SignInView(authManager: authManager)
+                    .background(Color.white)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)

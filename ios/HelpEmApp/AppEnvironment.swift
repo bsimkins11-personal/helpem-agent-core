@@ -24,8 +24,16 @@ struct AppEnvironment {
     /// Current active environment
     /// Auto-detects based on build configuration
     static var current: Environment {
+        if let override = ProcessInfo.processInfo.environment["HELPEM_ENV"],
+           let env = Environment(rawValue: override.lowercased()) {
+            return env
+        }
         #if DEBUG
+        #if targetEnvironment(simulator)
         return .development
+        #else
+        return .production
+        #endif
         #else
         return .production
         #endif

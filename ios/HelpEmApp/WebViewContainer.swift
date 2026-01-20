@@ -58,6 +58,9 @@ struct WebViewContainer: UIViewRepresentable {
         
         // Create WebView
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.isOpaque = false
+        webView.backgroundColor = .white
+        webView.scrollView.backgroundColor = .white
         webView.navigationDelegate = context.coordinator
         webView.customUserAgent = "\(webView.value(forKey: "userAgent") as? String ?? "Safari") \(userAgentSuffix)"
         
