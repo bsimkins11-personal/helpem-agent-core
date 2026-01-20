@@ -220,16 +220,16 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Alerts - show above everything */}
-      <div className="fixed top-0 left-0 right-0 z-50">
-        <UsageAlertBanner />
-        <AlphaFeedbackBanner />
-      </div>
-      
-      {/* Banner + Buttons Container - OPAQUE SOLID BACKGROUND */}
-      <div className="fixed top-[60px] left-0 right-0 z-40 bg-white shadow-lg">
+      {/* ONE FIXED CONTAINER: Alerts + Banner + Buttons - 100% OPAQUE WHITE */}
+      <div className="fixed top-[60px] left-0 right-0 z-[9999] bg-white opacity-100 shadow-2xl" style={{ backgroundColor: '#ffffff' }}>
+        {/* Alerts Section */}
+        <div className="w-full bg-white">
+          <UsageAlertBanner />
+          <AlphaFeedbackBanner />
+        </div>
+        
         {/* Welcome Banner */}
-        <div className="w-full bg-white py-2 px-4 md:px-6">
+        <div className="w-full bg-white py-2 px-4 md:px-6 border-b border-gray-200" style={{ backgroundColor: '#ffffff' }}>
           <div className="max-w-7xl mx-auto">
             <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-3 text-white shadow-sm">
               <h1 className="text-base font-bold">{greeting()}</h1>
@@ -239,9 +239,9 @@ export default function AppPage() {
         </div>
         
         {/* Type/Hold to Talk Buttons */}
-        <div className="w-full bg-white border-t-2 border-gray-300 py-2 px-4 md:px-6 shadow-inner">
+        <div className="w-full bg-white py-3 px-4 md:px-6 border-b-4 border-gray-400" style={{ backgroundColor: '#ffffff' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-lg border border-gray-300 shadow-sm" style={{ backgroundColor: '#f3f4f6' }}>
             <button
               onClick={() => {
                 setInputMode("type");
@@ -316,8 +316,8 @@ export default function AppPage() {
         </div>
       </div>
 
-      {/* Content - starts below fixed elements, scrolls normally */}
-      <div className="pt-[210px] bg-gray-50">
+      {/* Content - starts well below fixed container */}
+      <div className="pt-[240px] bg-gray-50 relative z-0">
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
