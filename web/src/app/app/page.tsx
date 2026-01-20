@@ -283,7 +283,7 @@ export default function AppPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setIsWelcomeOpen(false);
-    }, 5000);
+    }, 15000);
     return () => {
       window.clearTimeout(timer);
     };
@@ -355,7 +355,7 @@ export default function AppPage() {
               }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all ${
                 inputMode === "type"
-                  ? "bg-brandBlue text-white"
+                  ? "bg-brandBlue text-white border border-brandBlue"
                   : "bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
               }`}
             >

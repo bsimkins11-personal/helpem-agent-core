@@ -178,6 +178,8 @@ export default function ChatInput({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pendingTranscriptRef = useRef<string | null>(null);
+  const stopTimerRef = useRef<number | null>(null);
+  const flushTimerRef = useRef<number | null>(null);
   
   // Web Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1409,7 +1411,12 @@ export default function ChatInput({
     
     if (window.webkit?.messageHandlers?.native) {
       // Native iOS path - trigger Swift userContentController
-      window.webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+      if (stopTimerRef.current) {
+        window.clearTimeout(stopTimerRef.current);
+      }
+      stopTimerRef.current = window.setTimeout(() => {
+        window.webkit?.messageHandlers?.native?.postMessage({ action: "stopRecording" });
+      }, 200);
     } else {
       // Web browser fallback
       stopWebRecording();
@@ -1504,11 +1511,21 @@ export default function ChatInput({
     if (externalInputMode !== "type") return;
     const pendingTranscript = pendingTranscriptRef.current;
     if (pendingTranscript && pendingTranscript.trim()) {
-      pendingTranscriptRef.current = null;
-      setIsProcessing(false);
-      setIsListening(false);
-      sendMessageWithText(pendingTranscript, true);
+      if (flushTimerRef.current) {
+        window.clearTimeout(flushTimerRef.current);
+      }
+      flushTimerRef.current = window.setTimeout(() => {
+        pendingTranscriptRef.current = null;
+        setIsProcessing(false);
+        setIsListening(false);
+        sendMessageWithText(pendingTranscript, true);
+      }, 300);
     }
+    return () => {
+      if (flushTimerRef.current) {
+        window.clearTimeout(flushTimerRef.current);
+      }
+    };
   }, [externalInputMode, sendMessageWithText]);
 
   return (
