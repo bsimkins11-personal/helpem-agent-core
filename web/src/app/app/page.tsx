@@ -233,11 +233,27 @@ export default function AppPage() {
   const headerOffsetPx = isNativeApp ? 0 : 60;
   const fixedStackRef = useRef<HTMLDivElement>(null);
   const [fixedStackHeight, setFixedStackHeight] = useState(0);
+  const pendingHeightRef = useRef<number | null>(null);
   const fixedOffset = headerOffsetPx + fixedStackHeight;
 
   const measureFixedStackHeight = () => {
     if (!fixedStackRef.current) return;
-    setFixedStackHeight(Math.ceil(fixedStackRef.current.getBoundingClientRect().height));
+    const newHeight = Math.ceil(fixedStackRef.current.getBoundingClientRect().height);
+    
+    // If user is holding talk button, defer the height update
+    if (isHoldingToTalkRef.current) {
+      pendingHeightRef.current = newHeight;
+      return;
+    }
+    
+    setFixedStackHeight(newHeight);
+  };
+  
+  const applyPendingHeight = () => {
+    if (pendingHeightRef.current !== null) {
+      setFixedStackHeight(pendingHeightRef.current);
+      pendingHeightRef.current = null;
+    }
   };
 
   const measureTimersRef = useRef<number[]>([]);
@@ -420,6 +436,8 @@ export default function AppPage() {
                 isHoldingToTalkRef.current = false;
                 event.currentTarget.releasePointerCapture(event.pointerId);
                 setInputMode("type");
+                // Apply any pending height changes now that user released button
+                applyPendingHeight();
               }}
               onPointerCancel={(event) => {
                 event.preventDefault();
@@ -427,6 +445,8 @@ export default function AppPage() {
                 isHoldingToTalkRef.current = false;
                 event.currentTarget.releasePointerCapture(event.pointerId);
                 setInputMode("type");
+                // Apply any pending height changes now that user released button
+                applyPendingHeight();
               }}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none touch-none ${
                 inputMode === "talk"
