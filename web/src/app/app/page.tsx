@@ -224,10 +224,10 @@ export default function AppPage() {
       <AlphaFeedbackBanner />
       
       {/* COMBINED: Banner + Buttons in ONE fixed container */}
-      <div className="fixed top-[60px] left-0 right-0 z-50 bg-white shadow-lg border-b-4 border-gray-300">
+      <div className="fixed top-[60px] left-0 right-0 z-50 bg-gray-50 shadow-md">
         {/* Welcome Banner */}
-        <div className="border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 md:px-6 pt-1 pb-1.5">
+        <div>
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-1">
             <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-md p-2 text-white">
               <h1 className="text-sm font-bold">{greeting()}</h1>
               <p className="text-white/90 text-xs">{formattedDate}</p>
@@ -236,9 +236,8 @@ export default function AppPage() {
         </div>
         
         {/* Type/Hold to Talk Buttons */}
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-1.5">
-          <div className="bg-gray-100 p-2 rounded-md">
-            <div className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-1">
+          <div className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-sm border-t border-gray-200">
             <button
               onClick={() => {
                 setInputMode("type");
@@ -313,7 +312,7 @@ export default function AppPage() {
       </div>
 
       {/* DIV 4: Content Modules - Scrollable */}
-      <div className="pt-[140px]">
+      <div className="pt-[130px] min-h-screen overflow-y-auto">
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -514,7 +513,6 @@ export default function AppPage() {
               </div>
             )}
           </div>
-        </div>
         </div>
         </div>
         </div>
