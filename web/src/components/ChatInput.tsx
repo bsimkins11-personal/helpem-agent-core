@@ -826,11 +826,18 @@ export default function ChatInput({
               const currentAppointment = appointments.find(a => a.id === lastAppointmentIdRef.current);
               const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current || currentAppointment?.title;
               const effectiveWithWhom = updatePayload.withWhom ?? currentAppointment?.withWhom ?? null;
-              const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
+              const hasTopic = Boolean(pendingAppointmentTopicRef.current) || titleHasTopic(effectiveTitle);
+              const needsWhat = Boolean(effectiveWithWhom) && !hasTopic && !pendingAppointmentDeclinedWhatRef.current;
+              const needsWho = !effectiveWithWhom && !pendingAppointmentDeclinedWhoRef.current;
+              const askText = needsWho
+                ? "Would you like for me to add who the meeting is with and what it's about?"
+                : needsWhat
+                  ? "Would you like for me to add what the meeting is about?"
+                  : null;
 
               if (askText) {
                 pendingAppointmentUpdateRef.current = updatePayload;
-                pendingAppointmentQuestionRef.current = effectiveWithWhom ? "what" : "who_what";
+                pendingAppointmentQuestionRef.current = needsWho ? "who_what" : "what";
                 if (askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
                   askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
                   addMessage({

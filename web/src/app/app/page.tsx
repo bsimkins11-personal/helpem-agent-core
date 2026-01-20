@@ -8,7 +8,7 @@ import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
 import { useLife } from "@/state/LifeStore";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 type PriorityFilter = "all" | "high" | "medium" | "low";
@@ -231,7 +231,7 @@ export default function AppPage() {
   const scheduleMeasure = useCallback(() => {
     measureTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     measureTimersRef.current = [];
-    const delays = [0, 100, 250, 500, 1000];
+    const delays = [0, 100, 250, 500, 1000, 1500, 2000];
     delays.forEach((delay) => {
       const id = window.setTimeout(() => {
         measureFixedStackHeight();
@@ -271,6 +271,13 @@ export default function AppPage() {
       requestAnimationFrame(scrollToChat);
     });
   };
+
+  useLayoutEffect(() => {
+    scheduleMeasure();
+    return () => {
+      measureTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [scheduleMeasure]);
 
   useEffect(() => {
     if (!fixedStackRef.current) return;
