@@ -220,27 +220,27 @@ export default function AppPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      {/* ========== FIXED CONTAINER: ALERTS + BANNER + BUTTONS ========== */}
+      {/* ========== FIXED CONTAINER - STARTS AT HEADER, BLOCKS ALL CONTENT ========== */}
       <div 
         style={{ 
           position: 'fixed',
           top: '60px',
           left: 0,
           right: 0,
-          zIndex: 9999,
+          zIndex: 99999,
           backgroundColor: 'white',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           transition: 'all 0.3s ease'
         }}
       >
-        {/* Alerts at top - when dismissed, container shrinks */}
-        <div>
+        {/* Alerts */}
+        <div style={{ width: '100%', backgroundColor: 'white' }}>
           <UsageAlertBanner />
           <AlphaFeedbackBanner />
         </div>
         
-        {/* Welcome Banner - tight below alerts (or header if no alerts) */}
-        <div style={{ backgroundColor: 'white', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px' }}>
+        {/* Welcome Banner */}
+        <div style={{ backgroundColor: 'white', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', width: '100%' }}>
           <div className="max-w-7xl mx-auto">
             <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
               <h1 className="text-sm font-bold">{greeting()}</h1>
