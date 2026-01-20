@@ -1,0 +1,614 @@
+[33m
+================================================================================[0m
+[33mAPPOINTMENT FLOW QA TEST - 50+ SCENARIOS[0m
+[33m================================================================================
+[0m
+[36m
+### SECTION 1: Complete Information Upfront ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 1.1 - All fields provided upfront[0m
+[36m================================================================================[0m
+[34mMessages: [user] Set a meeting tomorrow at 2pm for 30 minutes with John about Q1 planning[0m
+[31m❌ FAIL: 1.1 - All fields provided upfront[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 1.2 - No topic, should ask as optional[0m
+[36m================================================================================[0m
+[34mMessages: [user] Schedule appointment Friday at 10am for 1 hour with Dr. Smith[0m
+[31m❌ FAIL: 1.2 - No topic, should ask as optional[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 1.3 - No withWhom, should ask as optional[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Monday at 3pm for 45 minutes about budget review[0m
+[31m❌ FAIL: 1.3 - No withWhom, should ask as optional[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 1.4 - Only mandatory fields, optionals should be null[0m
+[36m================================================================================[0m
+[34mMessages: [user] Dentist appointment tomorrow at noon for 30 minutes[0m
+[31m❌ FAIL: 1.4 - Only mandatory fields, optionals should be null[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 2: Missing Time ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 2.1 - Missing time, should ask "What time?"[0m
+[36m================================================================================[0m
+[34mMessages: [user] Set a meeting tomorrow with Sarah for 15 minutes[0m
+[31m❌ FAIL: 2.1 - Missing time, should ask "What time?"[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 2.2 - Missing time and duration, should ask "What time?" first[0m
+[36m================================================================================[0m
+[34mMessages: [user] Schedule appointment Friday with Dr. Jones[0m
+[31m❌ FAIL: 2.2 - Missing time and duration, should ask "What time?" first[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 3: Missing Duration ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 3.1 - After time provided, should ask "How long?"[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow with Alex → [assistant] {"action": "respond", "message": "What time?"} → [user] 2pm[0m
+[31m❌ FAIL: 3.1 - After time provided, should ask "How long?"[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 3.2 - After time, should ask duration[0m
+[36m================================================================================[0m
+[34mMessages: [user] Set appointment Friday → [assistant] {"action": "respond", "message": "What time?"} → [user] At 11am[0m
+[31m❌ FAIL: 3.2 - After time, should ask duration[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 4: Complete Mandatory Field Flow ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 4.1 - Full flow: missing time → missing duration → create[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow with the team → [assistant] {"action": "respond", "message": "What time?"} → [user] 3pm → [assistant] {"action": "respond", "message": "How long?"} → [user] 1 hour[0m
+[31m❌ FAIL: 4.1 - Full flow: missing time → missing duration → create[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 4.2 - Vague time ("morning") should default to 9am[0m
+[36m================================================================================[0m
+[34mMessages: [user] Schedule appointment Friday → [assistant] {"action": "respond", "message": "What time?"} → [user] Morning → [assistant] {"action": "respond", "message": "How long?"} → [user] 30 minutes[0m
+[31m❌ FAIL: 4.2 - Vague time ("morning") should default to 9am[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 5: Ambiguous "at" Patterns ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 5.1 - "at the AMS team" is ambiguous, should ask "Did you mean WITH the AMS team?"[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at the AMS team[0m
+[31m❌ FAIL: 5.1 - "at the AMS team" is ambiguous, should ask "Did you mean WITH the AMS team?"[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 5.2 - "at Google" is ambiguous, should ask clarification[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment Friday at Google[0m
+[31m❌ FAIL: 5.2 - "at Google" is ambiguous, should ask clarification[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 5.3 - "at Conference Room A" is clear location, should extract immediately[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting at Conference Room A at 2pm for 30 minutes[0m
+[31m❌ FAIL: 5.3 - "at Conference Room A" is clear location, should extract immediately[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 6: Filler Words ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 6.1 - "um" and "like" should be filtered out[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at um 2pm for like 30 minutes with John[0m
+[31m❌ FAIL: 6.1 - "um" and "like" should be filtered out[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 6.2 - Multiple filler words should be ignored[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment uh Friday at you know 3pm for uh 1 hour[0m
+[31m❌ FAIL: 6.2 - Multiple filler words should be ignored[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 7: Time Parsing ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 7.1 - "noon" should be 12:00 PM[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at noon for 15 minutes[0m
+[31m❌ FAIL: 7.1 - "noon" should be 12:00 PM[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 7.2 - "midnight" should be 12:00 AM[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment Friday at midnight for 30 minutes[0m
+[31m❌ FAIL: 7.2 - "midnight" should be 12:00 AM[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 7.3 - "morning" should default to 9am[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Monday morning for 1 hour[0m
+[31m❌ FAIL: 7.3 - "morning" should default to 9am[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 7.4 - "evening" should default to 6pm[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment Thursday evening for 45 minutes[0m
+[31m❌ FAIL: 7.4 - "evening" should default to 6pm[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 7.5 - Time with minutes (2:30pm) should parse correctly[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 2:30pm for 90 minutes[0m
+[31m❌ FAIL: 7.5 - Time with minutes (2:30pm) should parse correctly[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 8: Duration Parsing ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 8.1 - "1 hour" = 60 minutes[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 3pm for 1 hour[0m
+[31m❌ FAIL: 8.1 - "1 hour" = 60 minutes[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 8.2 - "2 hours" = 120 minutes[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment Friday at 2pm for 2 hours[0m
+[31m❌ FAIL: 8.2 - "2 hours" = 120 minutes[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 8.3 - "45 mins" = 45 minutes[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Monday at 10am for 45 mins[0m
+[31m❌ FAIL: 8.3 - "45 mins" = 45 minutes[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 8.4 - "1.5 hours" = 90 minutes[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment Thursday at 1pm for 1.5 hours[0m
+[31m❌ FAIL: 8.4 - "1.5 hours" = 90 minutes[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 9: "with" Extraction ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 9.1 - "with Sarah" should extract withWhom[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 2pm for 30 minutes with Sarah[0m
+[31m❌ FAIL: 9.1 - "with Sarah" should extract withWhom[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 9.2 - "with Dr. Smith" should extract withWhom[0m
+[36m================================================================================[0m
+[34mMessages: [user] Call with Dr. Smith Friday at 3pm for 15 minutes[0m
+[31m❌ FAIL: 9.2 - "with Dr. Smith" should extract withWhom[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 9.3 - "with the marketing team" should extract full entity name[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting with the marketing team Monday at 10am for 1 hour[0m
+[31m❌ FAIL: 9.3 - "with the marketing team" should extract full entity name[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 9.4 - Multiple people should extract as single string[0m
+[36m================================================================================[0m
+[34mMessages: [user] Lunch with Sarah and Mike tomorrow at noon for 30 minutes[0m
+[31m❌ FAIL: 9.4 - Multiple people should extract as single string[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 10: "about" Extraction ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 10.1 - "about budget review" should extract topic[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 2pm for 30 minutes about budget review[0m
+[31m❌ FAIL: 10.1 - "about budget review" should extract topic[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 10.2 - "about the Q4 report" should extract topic[0m
+[36m================================================================================[0m
+[34mMessages: [user] Call Friday at 3pm for 15 minutes about the Q4 report[0m
+[31m❌ FAIL: 10.2 - "about the Q4 report" should extract topic[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 11: Combined with + about ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 11.1 - Should extract both withWhom and topic[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 2pm for 30 minutes with John about project planning[0m
+[31m❌ FAIL: 11.1 - Should extract both withWhom and topic[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 11.2 - Order: with + about (before time)[0m
+[36m================================================================================[0m
+[34mMessages: [user] Call with Sarah about the budget Friday at 3pm for 20 minutes[0m
+[31m❌ FAIL: 11.2 - Order: with + about (before time)[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 11.3 - Order: about + with (before time)[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting about Q1 goals with the team Monday at 10am for 1 hour[0m
+[31m❌ FAIL: 11.3 - Order: about + with (before time)[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 12: Location Extraction ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 12.1 - Clear location "at Conference Room A"[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 2pm for 30 minutes at Conference Room A[0m
+[31m❌ FAIL: 12.1 - Clear location "at Conference Room A"[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 12.2 - Street address as location[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment Friday at 3pm for 1 hour at 123 Main Street[0m
+[31m❌ FAIL: 12.2 - Street address as location[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 12.3 - Both withWhom and location[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting with John at Google HQ Monday at 10am for 30 minutes[0m
+[31m❌ FAIL: 12.3 - Both withWhom and location[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 13: Corrections ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 13.1 - Correction with "No I said" should re-process[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 2pm → [assistant] {"action": "respond", "message": "How long?"} → [user] No I said 3pm for 30 minutes[0m
+[31m❌ FAIL: 13.1 - Correction with "No I said" should re-process[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 13.2 - Correction with "Actually" should update date[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment Friday → [assistant] {"action": "respond", "message": "What time?"} → [user] Actually make it Monday at 10am for 1 hour[0m
+[31m❌ FAIL: 13.2 - Correction with "Actually" should update date[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 14: Multi-turn Flows ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 14.1 - Multi-turn: when → time → duration[0m
+[36m================================================================================[0m
+[34mMessages: [user] Set a meeting → [assistant] {"action": "respond", "message": "When?"} → [user] Tomorrow → [assistant] {"action": "respond", "message": "What time?"} → [user] 2pm → [assistant] {"action": "respond", "message": "How long?"} → [user] 30 minutes[0m
+[31m❌ FAIL: 14.1 - Multi-turn: when → time → duration[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 15: Edge Cases ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 15.1 - 11:59pm time parsing[0m
+[36m================================================================================[0m
+[34mMessages: [user] Set a meeting tomorrow at 11:59pm for 1 minute[0m
+[31m❌ FAIL: 15.1 - 11:59pm time parsing[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 15.2 - 12:01am (just after midnight)[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow at 12:01am for 5 minutes[0m
+[31m❌ FAIL: 15.2 - 12:01am (just after midnight)[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 15.3 - Duration before time (reversed order)[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment tomorrow for 15 minutes at 2pm[0m
+[31m❌ FAIL: 15.3 - Duration before time (reversed order)[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 15.4 - Duration at start of sentence[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting for 30 minutes tomorrow at 2pm with John[0m
+[31m❌ FAIL: 15.4 - Duration at start of sentence[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 16: Relative Dates ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 16.1 - "today" should be today[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting today at 5pm for 30 minutes[0m
+[31m❌ FAIL: 16.1 - "today" should be today[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 16.2 - "tomorrow" should be tomorrow[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment tomorrow at 9am for 1 hour[0m
+[31m❌ FAIL: 16.2 - "tomorrow" should be tomorrow[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 16.3 - "next Monday" should be next week[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting next Monday at 10am for 45 minutes[0m
+[31m❌ FAIL: 16.3 - "next Monday" should be next week[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 16.4 - "this Friday" should be this week[0m
+[36m================================================================================[0m
+[34mMessages: [user] Appointment this Friday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 16.4 - "this Friday" should be this week[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 17: Days of Week ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 17.1 - Monday should be next Monday[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Monday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 17.1 - Monday should be next Monday[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 17.2 - Tuesday should be next Tuesday[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Tuesday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 17.2 - Tuesday should be next Tuesday[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 17.3 - Wednesday should be next Wednesday[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Wednesday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 17.3 - Wednesday should be next Wednesday[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 17.4 - Thursday should be next Thursday[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Thursday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 17.4 - Thursday should be next Thursday[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 17.5 - Friday should be next Friday[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Friday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 17.5 - Friday should be next Friday[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 17.6 - Saturday should be next Saturday[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Saturday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 17.6 - Saturday should be next Saturday[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 17.7 - Sunday should be next Sunday[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting Sunday at 2pm for 30 minutes[0m
+[31m❌ FAIL: 17.7 - Sunday should be next Sunday[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+### SECTION 18: Special Characters ###[0m
+[36m
+================================================================================[0m
+[36mTEST: 18.1 - Shorthand: @, w/, re:[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow @ 2pm for 30min w/ John re: budget[0m
+[31m❌ FAIL: 18.1 - Shorthand: @, w/, re:[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[36m
+================================================================================[0m
+[36mTEST: 18.2 - Comma-separated format[0m
+[36m================================================================================[0m
+[34mMessages: [user] Meeting tomorrow, 2pm, 30 minutes, with Sarah, about Q4[0m
+[31m❌ FAIL: 18.2 - Comma-separated format[0m
+[31m   Error: HTTP 401: Unauthorized[0m
+[33m
+================================================================================[0m
+[33mTEST SUMMARY[0m
+[33m================================================================================[0m
+[34mTotal Tests: 56[0m
+[32m✅ Passed: 0[0m
+[31m❌ Failed: 56[0m
+[36mSuccess Rate: 0.0%[0m
+[31m
+### ERRORS ###[0m
+[31m
+1. 1.1 - All fields provided upfront[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+2. 1.2 - No topic, should ask as optional[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+3. 1.3 - No withWhom, should ask as optional[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+4. 1.4 - Only mandatory fields, optionals should be null[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+5. 2.1 - Missing time, should ask "What time?"[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+6. 2.2 - Missing time and duration, should ask "What time?" first[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+7. 3.1 - After time provided, should ask "How long?"[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+8. 3.2 - After time, should ask duration[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+9. 4.1 - Full flow: missing time → missing duration → create[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+10. 4.2 - Vague time ("morning") should default to 9am[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+11. 5.1 - "at the AMS team" is ambiguous, should ask "Did you mean WITH the AMS team?"[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+12. 5.2 - "at Google" is ambiguous, should ask clarification[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+13. 5.3 - "at Conference Room A" is clear location, should extract immediately[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+14. 6.1 - "um" and "like" should be filtered out[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+15. 6.2 - Multiple filler words should be ignored[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+16. 7.1 - "noon" should be 12:00 PM[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+17. 7.2 - "midnight" should be 12:00 AM[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+18. 7.3 - "morning" should default to 9am[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+19. 7.4 - "evening" should default to 6pm[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+20. 7.5 - Time with minutes (2:30pm) should parse correctly[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+21. 8.1 - "1 hour" = 60 minutes[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+22. 8.2 - "2 hours" = 120 minutes[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+23. 8.3 - "45 mins" = 45 minutes[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+24. 8.4 - "1.5 hours" = 90 minutes[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+25. 9.1 - "with Sarah" should extract withWhom[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+26. 9.2 - "with Dr. Smith" should extract withWhom[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+27. 9.3 - "with the marketing team" should extract full entity name[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+28. 9.4 - Multiple people should extract as single string[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+29. 10.1 - "about budget review" should extract topic[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+30. 10.2 - "about the Q4 report" should extract topic[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+31. 11.1 - Should extract both withWhom and topic[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+32. 11.2 - Order: with + about (before time)[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+33. 11.3 - Order: about + with (before time)[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+34. 12.1 - Clear location "at Conference Room A"[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+35. 12.2 - Street address as location[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+36. 12.3 - Both withWhom and location[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+37. 13.1 - Correction with "No I said" should re-process[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+38. 13.2 - Correction with "Actually" should update date[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+39. 14.1 - Multi-turn: when → time → duration[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+40. 15.1 - 11:59pm time parsing[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+41. 15.2 - 12:01am (just after midnight)[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+42. 15.3 - Duration before time (reversed order)[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+43. 15.4 - Duration at start of sentence[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+44. 16.1 - "today" should be today[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+45. 16.2 - "tomorrow" should be tomorrow[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+46. 16.3 - "next Monday" should be next week[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+47. 16.4 - "this Friday" should be this week[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+48. 17.1 - Monday should be next Monday[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+49. 17.2 - Tuesday should be next Tuesday[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+50. 17.3 - Wednesday should be next Wednesday[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+51. 17.4 - Thursday should be next Thursday[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+52. 17.5 - Friday should be next Friday[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+53. 17.6 - Saturday should be next Saturday[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+54. 17.7 - Sunday should be next Sunday[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+55. 18.1 - Shorthand: @, w/, re:[0m
+[31m   HTTP 401: Unauthorized[0m
+[31m
+56. 18.2 - Comma-separated format[0m
+[31m   HTTP 401: Unauthorized[0m
+[33m
+================================================================================
+[0m

@@ -211,8 +211,9 @@ export default function ChatInput({
   const waitingForOptionalFieldsRef = useRef(false);
 
   // Simple state checkers
+  // Check if appointment has ALL 4 mandatory fields
   const hasAllMandatoryFields = (builder: AppointmentBuilder) => {
-    return !!(builder.title && builder.datetime && builder.durationMinutes);
+    return !!(builder.title && builder.datetime && builder.durationMinutes && builder.withWhom);
   };
   
   const needsOptionalFields = (builder: AppointmentBuilder) => {
@@ -245,15 +246,18 @@ export default function ChatInput({
     if (!normalized) return false;
     
     // Check if this is a simple decline (answering optional field question)
+    // These are responses to "Would you like to add [optional fields]?"
     const isSimpleDecline = 
       normalized === "no" ||
       normalized === "nope" ||
       normalized === "nah" ||
       normalized === "no thanks" ||
-      normalized === "no that's fine" ||
-      normalized === "no i don't need to" ||
-      normalized === "no that's okay" ||
-      normalized.match(/^no[,.]?\s*(thanks|that'?s\s*(fine|okay|good|alright))$/i);
+      normalized.startsWith("no that") ||  // "no that's fine", "no that's okay"
+      normalized.startsWith("no i don't") ||  // "no i don't need to", "no i don't want to"
+      normalized.startsWith("no i do not") ||
+      normalized.startsWith("not needed") ||
+      normalized.startsWith("not necessary") ||
+      normalized.match(/^no[,.]?\s*(thanks|that'?s\s*(fine|okay|good|alright|unnecessary)|i\s+don'?t|not\s+(needed|necessary))$/i);
     
     if (isSimpleDecline) return false; // NOT a correction, just declining
     
@@ -279,17 +283,12 @@ export default function ChatInput({
     return hasCorrectionPhrase;
   };
   
+  // Extract OPTIONAL fields only (topic and location)
+  // withWhom is MANDATORY and handled by AI, so we don't extract it here
   const extractOptionalFields = (input: string) => {
     const text = input.trim();
-    let withWhom: string | null = null;
     let topic: string | null = null;
     let location: string | null = null;
-    
-    // Extract "with [person]"
-    const withMatch = text.match(/\bwith\b\s+(.*?)(?:\s+\b(?:about|at|in)\b|$)/i);
-    if (withMatch && withMatch[1]) {
-      withWhom = withMatch[1].trim();
-    }
     
     // Extract "about [topic]"
     const aboutMatch = text.match(/\babout\b\s+(.*?)(?:\s+\b(?:at|in)\b|$)/i);
@@ -304,18 +303,20 @@ export default function ChatInput({
     }
     
     // If no "about" keyword, try to extract topic after affirmatives
+    // e.g., "Yeah the quarterly review" or "Yes project planning"
     if (!topic && !location) {
-      const topicMatch = text.match(/(?:yeah|yes|sure|okay)\s+(?:the\s+)?(?:meeting|appointment)?\s*(?:is\s+)?(?:about\s+)?(.+)/i);
+      const topicMatch = text.match(/(?:yeah|yes|sure|okay|it'?s)\s+(?:the\s+)?(?:meeting|appointment)?\s*(?:is\s+)?(?:about\s+)?(.+)/i);
       if (topicMatch && topicMatch[1]) {
         const extracted = topicMatch[1].trim();
         // Make sure it's not just filler words
-        if (extracted && !/(yeah|yes|sure|okay|the|meeting|appointment|is|about|with|at|in)/i.test(extracted)) {
+        const fillerWords = /(yeah|yes|sure|okay|the|meeting|appointment|is|about|with|at|in|and|or|it)/i;
+        if (extracted && !fillerWords.test(extracted)) {
           topic = extracted;
         }
       }
     }
     
-    return { withWhom, topic, location };
+    return { topic, location };
   };
   
   // Legacy helper functions
@@ -625,17 +626,17 @@ export default function ChatInput({
       console.log("✅✅✅ INTERCEPTING - Client handling optional field response ✅✅✅");
       const builder = appointmentBuilderRef.current;
       const declined = isDeclineReply(trimmedText);
-      const { withWhom, topic, location } = extractOptionalFields(trimmedText);
-      console.log("📝 Extracted:", { declined, withWhom, topic, location });
+      const { topic, location } = extractOptionalFields(trimmedText);
+      console.log("📝 Extracted:", { declined, topic, location });
       
-      // Update builder with optional fields
-      if (withWhom) builder.withWhom = withWhom;
+      // Update builder with OPTIONAL fields only (topic and location)
+      // withWhom is MANDATORY and should already be set by AI - don't touch it!
       if (topic) builder.topic = topic;
       if (location) builder.location = location;
       
-      // If declined, only null out the MISSING fields (don't overwrite existing ones!)
+      // If declined, only null out the MISSING OPTIONAL fields
+      // DO NOT touch withWhom - it's mandatory and already set!
       if (declined) {
-        if (!builder.withWhom) builder.withWhom = null;
         if (!builder.topic) builder.topic = null;
         if (!builder.location) builder.location = null;
       }
@@ -648,14 +649,23 @@ export default function ChatInput({
       });
       
       // Finalize appointment - we have everything we need now
+      // withWhom is MANDATORY - if missing, use fallback
+      const finalWithWhom = builder.withWhom || "Meeting attendee";
+      
+      if (!builder.withWhom) {
+        console.warn("⚠️⚠️⚠️ withWhom is MISSING at finalization! Using fallback.");
+        console.warn("   This means AI didn't ask for mandatory 'who' field.");
+        console.warn("   Builder:", builder);
+      }
+      
       const finalAppointment: Appointment = {
         id: builder.id,
         title: builder.title || "Meeting",
         datetime: builder.datetime!,
         durationMinutes: builder.durationMinutes!,
-        withWhom: builder.withWhom || null,
-        topic: builder.topic || null,
-        location: builder.location || null,
+        withWhom: finalWithWhom,  // MANDATORY - always has a value
+        topic: builder.topic || null,  // OPTIONAL
+        location: builder.location || null,  // OPTIONAL
         createdAt: new Date(),
       };
       
@@ -1219,34 +1229,35 @@ export default function ChatInput({
             return;
           }
           
-          // We have all mandatory fields - check if we need optional fields
+          // We have all mandatory fields (date, time, duration, who)
+          // Now check if we need OPTIONAL fields (what, where)
           const builder = appointmentBuilderRef.current;
-          const hasWho = Boolean(builder.withWhom);
           const hasWhat = Boolean(builder.topic);
           const hasWhere = Boolean(builder.location);
           
-          // Only ask for missing optional fields
-          if (!hasWho || !hasWhat || !hasWhere) {
+          // ⚠️ withWhom is MANDATORY and should already be present from AI
+          // If it's missing, that's an AI error - log warning but proceed
+          if (!builder.withWhom) {
+            console.warn("⚠️⚠️⚠️ withWhom is MISSING but it's MANDATORY! AI should have asked for it.");
+            console.warn("   Builder:", builder);
+          }
+          
+          // Only ask for missing OPTIONAL fields (topic and location)
+          if (!hasWhat || !hasWhere) {
             appointmentBuilderRef.current.askedForOptionalFields = true;
             let promptText = "";
             
             // Build dynamic question based on what's missing
-            const missing = [];
-            if (!hasWho) missing.push("who the meeting is with");
-            if (!hasWhat) missing.push("what it's about");
-            if (!hasWhere) missing.push("where it's located");
-            
-            if (missing.length === 3) {
-              promptText = "Would you like to add who the meeting is with, what it's about, and where it's located?";
-            } else if (missing.length === 2) {
-              promptText = `Would you like to add ${missing[0]} and ${missing[1]}?`;
-            } else if (missing.length === 1) {
-              promptText = `Would you like to add ${missing[0]}?`;
+            if (!hasWhat && !hasWhere) {
+              promptText = "Would you like to add what it's about and where it's located?";
+            } else if (!hasWhat) {
+              promptText = "Would you like to add what it's about?";
+            } else if (!hasWhere) {
+              promptText = "Would you like to add where it's located?";
             }
             
             console.log("=".repeat(80));
             console.log("🔔🔔🔔 CLIENT ASKING OPTIONAL FIELD QUESTION 🔔🔔🔔");
-            console.log("   hasWho:", hasWho);
             console.log("   hasWhat:", hasWhat);
             console.log("   hasWhere:", hasWhere);
             console.log("   promptText:", promptText);

@@ -155,8 +155,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Valid durationMinutes is required" }, { status: 400 });
     }
 
-    if (withWhom !== undefined && withWhom !== null && typeof withWhom !== "string") {
-      return NextResponse.json({ error: "withWhom must be a string" }, { status: 400 });
+    // withWhom is MANDATORY
+    if (!withWhom || typeof withWhom !== "string") {
+      console.error('❌ Validation failed: withWhom is required (mandatory field)');
+      return NextResponse.json({ error: "withWhom is required - who is the meeting with?" }, { status: 400 });
     }
 
     if (topic !== undefined && topic !== null && typeof topic !== "string") {
