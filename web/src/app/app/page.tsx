@@ -219,8 +219,23 @@ export default function AppPage() {
   };
 
   return (
-    <>
-      {/* ========== ONE SOLID FIXED BLOCK: ALERTS + BANNER + BUTTONS ========== */}
+    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      {/* ========== ALERTS LAYER (slides up when dismissed) ========== */}
+      <div 
+        style={{ 
+          position: 'fixed',
+          top: '60px',
+          left: 0,
+          right: 0,
+          zIndex: 10000,
+          transition: 'all 0.3s ease'
+        }}
+      >
+        <UsageAlertBanner />
+        <AlphaFeedbackBanner />
+      </div>
+      
+      {/* ========== BANNER + BUTTONS (fixed below alerts) ========== */}
       <div 
         style={{ 
           position: 'fixed',
@@ -228,15 +243,12 @@ export default function AppPage() {
           left: 0,
           right: 0,
           zIndex: 9999,
-          backgroundColor: 'white'
+          backgroundColor: 'white',
+          paddingTop: '60px',
+          transition: 'padding-top 0.3s ease',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         }}
       >
-        {/* Alerts at top of fixed block */}
-        <div style={{ backgroundColor: 'white' }}>
-          <UsageAlertBanner />
-          <AlphaFeedbackBanner />
-        </div>
-        
         {/* Welcome Banner */}
         <div style={{ backgroundColor: 'white', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px' }}>
           <div className="max-w-7xl mx-auto">
@@ -325,14 +337,13 @@ export default function AppPage() {
         </div>
       </div>
 
-      {/* ========== LAYER 3: MAIN CONTENT (scrollable, below fixed elements) ========== */}
+      {/* ========== SCROLLABLE CONTENT ========== */}
       <div 
         style={{ 
-          paddingTop: '200px',
+          paddingTop: '240px',
           position: 'relative',
           zIndex: 1,
-          backgroundColor: '#f9fafb',
-          minHeight: '100vh'
+          backgroundColor: '#f9fafb'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
@@ -540,6 +551,6 @@ export default function AppPage() {
         </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
