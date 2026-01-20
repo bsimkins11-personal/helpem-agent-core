@@ -39,6 +39,23 @@ struct RootView: View {
         webViewHandler?.triggerSupport()
     }
     
+    private func openConnectorsModal() {
+        // Show coming soon alert
+        print("📱 iOS: openConnectorsModal called - showing coming soon alert")
+        
+        let alert = UIAlertController(
+            title: "Connectors",
+            message: "Connectors coming soon to help you manage your personal tech portfolio.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            rootViewController.present(alert, animated: true)
+        }
+    }
+    
     private func openClearDataModal() {
         // Trigger clear data modal in WebView
         print("📱 iOS: openClearDataModal called")
@@ -256,6 +273,12 @@ struct RootView: View {
                                                 openUsageModal()
                                             }) {
                                                 Label("View Usage", systemImage: "chart.bar.fill")
+                                            }
+                                            
+                                            Button(action: {
+                                                openConnectorsModal()
+                                            }) {
+                                                Label("Connectors", systemImage: "link.circle")
                                             }
                                             
                                             Button(action: {

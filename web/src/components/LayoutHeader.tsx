@@ -292,6 +292,15 @@ export function LayoutHeader() {
                   </button>
                   <button
                     onClick={() => {
+                      setMobileMenuOpen(false);
+                      alert("Connectors coming soon to help you manage your personal tech portfolio.");
+                    }}
+                    className="px-4 py-3 text-left text-purple-600 hover:bg-purple-50 rounded-lg transition-colors font-medium"
+                  >
+                    Connectors
+                  </button>
+                  <button
+                    onClick={() => {
                       console.log("Get Support clicked");
                       setMobileMenuOpen(false);
                       setShowSupportModal(true);
