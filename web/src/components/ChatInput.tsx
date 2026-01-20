@@ -559,14 +559,18 @@ export default function ChatInput({
     }
 
     // CLIENT-SIDE INTERCEPTION: If we're building an appointment and asked for optional fields
-    console.log("🔍 Checking interception:", {
-      hasBuilder: !!appointmentBuilderRef.current,
-      askedForOptionalFields: appointmentBuilderRef.current?.askedForOptionalFields,
-      userMessage: trimmedText
-    });
+    const builderExists = !!appointmentBuilderRef.current;
+    const flagValue = appointmentBuilderRef.current?.askedForOptionalFields;
+    console.log("=".repeat(80));
+    console.log("🔍 INTERCEPTION CHECK START");
+    console.log("   hasBuilder:", builderExists);
+    console.log("   askedForOptionalFields:", flagValue);
+    console.log("   userMessage:", trimmedText);
+    console.log("   Builder state:", appointmentBuilderRef.current);
+    console.log("=".repeat(80));
     
     if (appointmentBuilderRef.current?.askedForOptionalFields) {
-      console.log("✅ INTERCEPTING - Client handling optional field response");
+      console.log("✅✅✅ INTERCEPTING - Client handling optional field response ✅✅✅");
       const builder = appointmentBuilderRef.current;
       const declined = isDeclineReply(trimmedText);
       const { withWhom, topic } = extractOptionalFields(trimmedText);
@@ -1115,7 +1119,12 @@ export default function ChatInput({
           const topic = typeof data.topic === "string" && data.topic.trim() ? data.topic.trim() : undefined;
           const title = data.title || "Meeting";
           
-          console.log("📋 Building appointment from AI response:", { title, datetime, durationMinutes, withWhom, topic });
+          console.log("=".repeat(80));
+          console.log("📋📋📋 CREATING NEW BUILDER FROM AI RESPONSE 📋📋📋");
+          console.log("   Old builder ID:", appointmentBuilderRef.current?.id);
+          console.log("   Old askedForOptionalFields:", appointmentBuilderRef.current?.askedForOptionalFields);
+          console.log("   New data:", { title, datetime, durationMinutes, withWhom, topic });
+          console.log("=".repeat(80));
           
           appointmentBuilderRef.current = {
             id,
@@ -1126,6 +1135,8 @@ export default function ChatInput({
             topic,
             askedForOptionalFields: false,
           };
+          
+          console.log("   ⚠️ NEW BUILDER CREATED - askedForOptionalFields reset to FALSE");
           
           // Check if we have all mandatory fields
           if (!hasAllMandatoryFields(appointmentBuilderRef.current)) {
@@ -1157,8 +1168,15 @@ export default function ChatInput({
               promptText = "Would you like to add what the meeting is about?";
             }
             
-            console.log("🔔 CLIENT asking about optional fields:", { hasWho, hasWhat, promptText });
-            console.log("🎯 Set askedForOptionalFields = true");
+            console.log("=".repeat(80));
+            console.log("🔔🔔🔔 CLIENT ASKING OPTIONAL FIELD QUESTION 🔔🔔🔔");
+            console.log("   hasWho:", hasWho);
+            console.log("   hasWhat:", hasWhat);
+            console.log("   promptText:", promptText);
+            console.log("   🎯 SET askedForOptionalFields = TRUE");
+            console.log("   Builder ID:", appointmentBuilderRef.current.id);
+            console.log("   Full builder:", appointmentBuilderRef.current);
+            console.log("=".repeat(80));
             
             addMessage({
               id: uuidv4(),
