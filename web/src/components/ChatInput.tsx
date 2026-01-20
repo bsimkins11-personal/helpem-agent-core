@@ -177,6 +177,7 @@ export default function ChatInput({
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const pendingTranscriptRef = useRef<string | null>(null);
   
   // Web Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -204,6 +205,11 @@ export default function ChatInput({
       const updated = [...prev, message];
       return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
     });
+  }, []);
+
+  const queueTranscript = useCallback((text: string) => {
+    pendingTranscriptRef.current = text;
+    setInput(text);
   }, []);
 
   const handleFeedback = useCallback(async (feedbackId: string, feedback: "up" | "down") => {
@@ -1158,7 +1164,13 @@ export default function ChatInput({
     const handleTranscription = (payload: unknown) => {
       const text = (payload as { text?: string })?.text;
       if (text && text.length > 0) {
+        if (externalInputMode === "talk") {
+          queueTranscript(text);
+          return;
+        }
         setInput(text);
+        setIsProcessing(false);
+        setIsListening(false);
         // Note: isListening state is controlled by Talk button only
         setTimeout(() => sendMessageWithText(text, true), 300);
       }
@@ -1167,7 +1179,13 @@ export default function ChatInput({
     const handleUserTranscript = (payload: unknown) => {
       const data = payload as { text?: string };
       if (data.text && data.text.length > 0) {
+        if (externalInputMode === "talk") {
+          queueTranscript(data.text);
+          return;
+        }
         setInput(data.text);
+        setIsProcessing(false);
+        setIsListening(false);
         sendMessageWithText(data.text, true);
       }
     };
@@ -1177,7 +1195,13 @@ export default function ChatInput({
       const detail = (e as CustomEvent).detail;
       const text = detail?.text;
       if (text && text.length > 0) {
+        if (externalInputMode === "talk") {
+          queueTranscript(text);
+          return;
+        }
         setInput(text);
+        setIsProcessing(false);
+        setIsListening(false);
         sendMessageWithText(text, true);
       }
     };
@@ -1191,13 +1215,18 @@ export default function ChatInput({
       window.nativeBridge?.off("USER_TRANSCRIPT", handleUserTranscript);
       window.removeEventListener("TRANSCRIPTION_RESULT", handleTranscriptionResult);
     };
-  }, [isNativeApp, sendMessageWithText]);
+  }, [isNativeApp, sendMessageWithText, externalInputMode, queueTranscript]);
 
   // Global function for Swift to inject transcription directly
   useEffect(() => {
     // Define the global function that Swift calls via evaluateJavaScript
     (window as unknown as Record<string, unknown>).onNativeTranscription = (text: string) => {
       console.log("Received from Swift:", text);
+      
+      if (externalInputMode === "talk") {
+        queueTranscript(text);
+        return;
+      }
       
       // Update the input field with the transcribed text
       setInput(text);
@@ -1216,6 +1245,11 @@ export default function ChatInput({
     (window as unknown as Record<string, unknown>).handleNativeSpeech = (text: string) => {
       console.log("🎙️ Native speech:", text);
       
+      if (externalInputMode === "talk") {
+        queueTranscript(text);
+        return;
+      }
+      
       // Update input and clear states
       setInput(text);
       setIsProcessing(false);
@@ -1231,7 +1265,7 @@ export default function ChatInput({
       delete (window as unknown as Record<string, unknown>).onNativeTranscription;
       delete (window as unknown as Record<string, unknown>).handleNativeSpeech;
     };
-  }, [sendMessageWithText]);
+  }, [sendMessageWithText, externalInputMode, queueTranscript]);
 
   // Native iOS listening controls
   const startListening = useCallback(async () => {
@@ -1465,6 +1499,17 @@ export default function ChatInput({
       handleTalkStop();
     }
   }, [externalInputMode, isListening]);
+
+  useEffect(() => {
+    if (externalInputMode !== "type") return;
+    const pendingTranscript = pendingTranscriptRef.current;
+    if (pendingTranscript && pendingTranscript.trim()) {
+      pendingTranscriptRef.current = null;
+      setIsProcessing(false);
+      setIsListening(false);
+      sendMessageWithText(pendingTranscript, true);
+    }
+  }, [externalInputMode, sendMessageWithText]);
 
   return (
     <div ref={chatContainerRef} className="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[350px] md:h-[500px]">
