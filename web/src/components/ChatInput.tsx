@@ -705,6 +705,7 @@ export default function ChatInput({
             currentDateTime,
             currentDateTimeISO: now.toISOString(),
             fulfilledIntents,
+            connectionInfo: (window as any).__connectionInfo || null,
           }),
         });
       

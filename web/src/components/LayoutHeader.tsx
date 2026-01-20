@@ -8,6 +8,7 @@ import { UsageModal } from './UsageModal';
 import SupportModal from './SupportModal';
 import ClearDataModal from './ClearDataModal';
 import { useLife } from '@/state/LifeStore';
+import { useConnectionQuality } from '@/hooks/useConnectionQuality';
 
 const navItems = [
   { href: '/app', label: 'Today', icon: '◐' },
@@ -26,6 +27,7 @@ export function LayoutHeader() {
   const [showClearDataModal, setShowClearDataModal] = useState(false);
   const [isFromiOSApp, setIsFromiOSApp] = useState(false);
   const { clearAllData } = useLife();
+  const connectionInfo = useConnectionQuality();
 
   // Debug state changes
   useEffect(() => {
@@ -102,6 +104,12 @@ export function LayoutHeader() {
       delete (window as any).__clearAllData;
     };
   }, []);
+
+  useEffect(() => {
+    (window as any).__connectionInfo = connectionInfo;
+    document.documentElement.dataset.connection = connectionInfo.isSlow ? "slow" : "normal";
+    window.dispatchEvent(new CustomEvent("connectionInfo", { detail: connectionInfo }));
+  }, [connectionInfo]);
 
   const isAppRoute = pathname?.startsWith('/app') || 
                      pathname?.startsWith('/appointments') || 

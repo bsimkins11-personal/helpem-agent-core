@@ -76,7 +76,7 @@ final class APIClient {
     
     private func execute<T: Decodable>(request: URLRequest) async throws -> T {
         // Check network connectivity first
-        if await !NetworkMonitor.shared.isConnected {
+        if !NetworkMonitor.shared.isConnected {
             AppLogger.warning("API request attempted while offline", logger: AppLogger.network)
             throw APIError.networkError(URLError(.notConnectedToInternet))
         }

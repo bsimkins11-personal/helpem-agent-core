@@ -10,16 +10,16 @@ struct AppLogger {
     
     // MARK: - Subsystem & Categories
     
-    private static let subsystem = "ai.helpem.app"
+    nonisolated private static let subsystem = "ai.helpem.app"
     
-    static let auth = Logger(subsystem: subsystem, category: "auth")
-    static let network = Logger(subsystem: subsystem, category: "network")
-    static let speech = Logger(subsystem: subsystem, category: "speech")
-    static let webview = Logger(subsystem: subsystem, category: "webview")
-    static let storage = Logger(subsystem: subsystem, category: "storage")
-    static let notification = Logger(subsystem: subsystem, category: "notification")
-    static let ui = Logger(subsystem: subsystem, category: "ui")
-    static let general = Logger(subsystem: subsystem, category: "general")
+    nonisolated static let auth = Logger(subsystem: subsystem, category: "auth")
+    nonisolated static let network = Logger(subsystem: subsystem, category: "network")
+    nonisolated static let speech = Logger(subsystem: subsystem, category: "speech")
+    nonisolated static let webview = Logger(subsystem: subsystem, category: "webview")
+    nonisolated static let storage = Logger(subsystem: subsystem, category: "storage")
+    nonisolated static let notification = Logger(subsystem: subsystem, category: "notification")
+    nonisolated static let ui = Logger(subsystem: subsystem, category: "ui")
+    nonisolated static let general = Logger(subsystem: subsystem, category: "general")
     
     // MARK: - Convenience Methods
     
