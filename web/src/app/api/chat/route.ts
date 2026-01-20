@@ -17,6 +17,17 @@ function getOpenAIClient() {
 }
 
 const OPERATIONAL_RULES = `
+🚨🚨🚨 CHECK YOUR PREVIOUS MESSAGE FIRST! 🚨🚨🚨
+BEFORE DOING ANYTHING, LOOK AT YOUR LAST ASSISTANT MESSAGE:
+- Did you just ask "Would you like for me to add who/what?" or similar?
+- If YES → User's current message is their ANSWER! Parse it immediately:
+  * "Sure it's about taxonomy" → topic: "taxonomy", finalize appointment NOW
+  * "With John" → withWhom: "John", finalize appointment NOW
+  * "About the project with Sarah" → topic: "the project", withWhom: "Sarah", finalize NOW
+  * "No" → Mark as declined, finalize NOW
+- DO NOT ask the same question again!
+- DO NOT ignore their answer!
+
 🚨🚨🚨 ABSOLUTE RULE: CRUD OPERATIONS MUST RETURN JSON ACTIONS 🚨🚨🚨
 THIS RULE CANNOT BE VIOLATED UNDER ANY CIRCUMSTANCES!
 
@@ -110,17 +121,27 @@ APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED + OPTIONAL CONFIRMED):
 - RIGHT: User says "30 minutes" → You ask about optional fields → Then update
 
 🚨 CRITICAL: NEVER ASK THE SAME QUESTION TWICE!
-- If you JUST asked about who/what in your PREVIOUS response → DO NOT ask again!
-- User's NEXT message is their answer! Parse it immediately:
-  * "Yeah the meeting is about taxonomies" → topic: "taxonomies", withWhom: null (not mentioned)
+- STEP 1: CHECK YOUR PREVIOUS MESSAGE - Did you ask about who/what? YES/NO
+- STEP 2: If YES → User's message IS THEIR ANSWER! Extract immediately:
+  
+  EXTRACTION PATTERNS (apply in order):
+  1. Check for "about [topic]" or "it's about [topic]" → Extract topic
+  2. Check for "with [person]" or "it's with [person]" → Extract withWhom
+  3. Check for standalone words after affirmative (Yes/Yeah/Sure) → That's the topic
+  4. Check for decline words (No/Not sure/Doesn't matter) → Mark declined
+  
+  EXAMPLES:
+  * "Yeah the meeting is about taxonomies" → Extract "about taxonomies" → topic: "taxonomies"
+  * "Sure it's about taxonomy" → Extract "about taxonomy" → topic: "taxonomy"
   * "With John about the project" → withWhom: "John", topic: "the project"
-  * "It's with Sarah" → withWhom: "Sarah", topic: null (not mentioned)
-  * "About Q1 planning" → topic: "Q1 planning", withWhom: null (not mentioned)
-  * "No" / "Not sure" / "Doesn't matter" → Both null (declined)
-- Extract whatever they provide, leave the rest null if not mentioned
-- After parsing their answer → IMMEDIATELY FINALIZE (create or update the appointment)
-- WRONG: Ask "who/what?" → User: "About taxonomies" → Ask "who/what?" again
-- RIGHT: Ask "who/what?" → User: "About taxonomies" → Parse topic="taxonomies", withWhom=null → Finalize immediately
+  * "It's with Sarah" → withWhom: "Sarah", topic: null
+  * "About Q1 planning" → topic: "Q1 planning", withWhom: null
+  * "Sure taxonomy" → topic: "taxonomy" (word after affirmative)
+  * "No" / "Not sure" → Both null (declined)
+  
+- STEP 3: After extraction → IMMEDIATELY FINALIZE (create or update appointment)
+- FORBIDDEN: Ask "who/what?" → User answers → Ask "who/what?" again
+- REQUIRED: Ask "who/what?" → User answers → Extract → Finalize
 
 PARSING "WITH" AS withWhom:
 🚨 CRITICAL: "with [person/entity]" = withWhom field
@@ -716,6 +737,8 @@ ACTION GATING - WHEN TO EMIT JSON:
   🚨 CRITICAL: PARSE USER'S ANSWER - DON'T ASK AGAIN!
   ❌ Agent: "Would you like to add who/what?" → User: "Yeah the meeting is about taxonomies" → Agent: "Would you like to add what it's about?" (WRONG! Asked twice!)
   ✅ Agent: "Would you like to add who/what?" → User: "Yeah the meeting is about taxonomies" → Agent: Extract topic="taxonomies", withWhom=null → {"action": "update", ...} (RIGHT! Finalized!)
+  ❌ Agent: "Would you like to add who/what?" → User: "Sure it's about taxonomy" → Agent: "Would you like to add what it's about?" (WRONG! Asked twice!)
+  ✅ Agent: "Would you like to add who/what?" → User: "Sure it's about taxonomy" → Agent: Extract topic="taxonomy", withWhom=null → {"action": "update", ...} (RIGHT! Finalized!)
   ✅ Agent: "Would you like to add who/what?" → User: "With Sarah about the budget" → Agent: Extract withWhom="Sarah", topic="the budget" → Finalize (RIGHT!)
   ✅ Agent: "Would you like to add who/what?" → User: "No" → Agent: Mark both declined → Finalize (RIGHT!)
 
