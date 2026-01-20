@@ -558,6 +558,12 @@ export default function ChatInput({
     const messageToSend = pendingAppointmentContextRef.current
       ? (() => {
           const details = extractFollowupDetails(trimmedText);
+          if (details.withWhom) {
+            pendingAppointmentWithWhomRef.current = details.withWhom;
+          }
+          if (details.topic) {
+            pendingAppointmentTopicRef.current = details.topic;
+          }
           const parsed = [
             details.durationMinutes ? `durationMinutes=${details.durationMinutes}` : null,
             details.withWhom ? `withWhom="${details.withWhom}"` : null,
