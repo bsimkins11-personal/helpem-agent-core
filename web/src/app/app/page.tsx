@@ -220,22 +220,7 @@ export default function AppPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      {/* ========== ALERTS LAYER (slides up when dismissed) ========== */}
-      <div 
-        style={{ 
-          position: 'fixed',
-          top: '60px',
-          left: 0,
-          right: 0,
-          zIndex: 10000,
-          transition: 'all 0.3s ease'
-        }}
-      >
-        <UsageAlertBanner />
-        <AlphaFeedbackBanner />
-      </div>
-      
-      {/* ========== BANNER + BUTTONS (fixed below alerts) ========== */}
+      {/* ========== FIXED CONTAINER: ALERTS + BANNER + BUTTONS ========== */}
       <div 
         style={{ 
           position: 'fixed',
@@ -244,12 +229,17 @@ export default function AppPage() {
           right: 0,
           zIndex: 9999,
           backgroundColor: 'white',
-          paddingTop: '60px',
-          transition: 'padding-top 0.3s ease',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          transition: 'all 0.3s ease'
         }}
       >
-        {/* Welcome Banner */}
+        {/* Alerts at top - when dismissed, container shrinks */}
+        <div>
+          <UsageAlertBanner />
+          <AlphaFeedbackBanner />
+        </div>
+        
+        {/* Welcome Banner - tight below alerts (or header if no alerts) */}
         <div style={{ backgroundColor: 'white', paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px' }}>
           <div className="max-w-7xl mx-auto">
             <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-lg p-2 text-white">
@@ -340,7 +330,7 @@ export default function AppPage() {
       {/* ========== SCROLLABLE CONTENT ========== */}
       <div 
         style={{ 
-          paddingTop: '240px',
+          paddingTop: '200px',
           position: 'relative',
           zIndex: 1,
           backgroundColor: '#f9fafb'
