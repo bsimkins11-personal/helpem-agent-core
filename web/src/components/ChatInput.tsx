@@ -668,11 +668,28 @@ export default function ChatInput({
               }
 
               pendingAppointmentContextRef.current = null;
+              const followupMessage = data.message || "Got it. I’ve updated that appointment with the extra details.";
               addMessage({
                 id: uuidv4(),
                 role: "assistant",
-                content: data.message || "Got it. I’ve updated that appointment with the extra details.",
+                content: followupMessage,
               });
+              const shouldAskWhoWhat = !updatePayload.withWhom && !updatePayload.title;
+              if (shouldAskWhoWhat && askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
+                askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
+                const askText = "Would you like for me to add who the meeting is with and what it's about?";
+                addMessage({
+                  id: uuidv4(),
+                  role: "assistant",
+                  content: askText,
+                });
+                if (isNativeApp) {
+                  window.webkit?.messageHandlers?.native?.postMessage({
+                    action: "speak",
+                    text: askText,
+                  });
+                }
+              }
               return;
             }
             pendingAppointmentContextRef.current = null;
@@ -1291,6 +1308,21 @@ export default function ChatInput({
                 action: "speak",
                 text: responseText,
               });
+            }
+            if (!fallbackWithWhom && askedWhoWhatForAppointmentRef.current != id) {
+              askedWhoWhatForAppointmentRef.current = id;
+              const askText = "Would you like for me to add who the meeting is with and what it's about?";
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: askText,
+              });
+              if (isNativeApp) {
+                window.webkit?.messageHandlers?.native?.postMessage({
+                  action: "speak",
+                  text: askText,
+                });
+              }
             }
             return;
           }
