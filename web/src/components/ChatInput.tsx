@@ -277,6 +277,15 @@ export default function ChatInput({
 
   const speakQueueRef = useRef<string[]>([]);
   const isSpeakingRef = useRef(false);
+  const speakReleaseTimerRef = useRef<number | null>(null);
+
+  const estimateSpeechMs = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return 800;
+    const perCharMs = 45;
+    const baseMs = 600;
+    return Math.min(12000, baseMs + trimmed.length * perCharMs);
+  };
 
   const flushSpeakQueue = useCallback(() => {
     if (!isNativeApp) return;
@@ -288,7 +297,15 @@ export default function ChatInput({
       action: "speak",
       text: nextText,
     });
-  }, [isNativeApp]);
+    if (speakReleaseTimerRef.current) {
+      window.clearTimeout(speakReleaseTimerRef.current);
+    }
+    const estimatedMs = estimateSpeechMs(nextText);
+    speakReleaseTimerRef.current = window.setTimeout(() => {
+      isSpeakingRef.current = false;
+      flushSpeakQueue();
+    }, estimatedMs + 250);
+  }, [isNativeApp, estimateSpeechMs]);
 
   const speakNative = useCallback((text: string, delayMs = 0) => {
     if (!isNativeApp) return;
