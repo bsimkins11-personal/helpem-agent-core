@@ -1125,26 +1125,29 @@ export default function ChatInput({
             userMessage: userMessageForFeedback,
           });
 
+          if (!userMentionedPriority) {
+            pendingPriorityTodoIdRef.current = id;
+            pendingPriorityTodoTitleRef.current = data.title;
+            const followup = "Would you like to set a priority level for this?";
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: followup,
+            });
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: followup,
+              });
+            }
+          }
+
           if (isNativeApp) {
             // Also speak the confirmation for native app
             window.webkit?.messageHandlers?.native?.postMessage({
               action: "speak",
               text: responseText,
             });
-            if (!userMentionedPriority) {
-              pendingPriorityTodoIdRef.current = id;
-              pendingPriorityTodoTitleRef.current = data.title;
-              const followup = "Would you like to set a priority level for this?";
-              addMessage({
-                id: uuidv4(),
-                role: "assistant",
-                content: followup,
-              });
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: followup,
-              });
-            }
             
             // Schedule notification ONLY for reminders (todos with specific time/date)
             // Regular todos/tasks without time do NOT get notifications

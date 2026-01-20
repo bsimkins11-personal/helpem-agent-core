@@ -87,17 +87,48 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
       topic: editForm.topic || null,
       location: editForm.location || null,
     };
+    const apiPayload = {
+      id: appointment.id,
+      title: updates.title,
+      datetime: updates.datetime?.toISOString(),
+      durationMinutes: updates.durationMinutes,
+      withWhom: updates.withWhom,
+      topic: updates.topic,
+      location: updates.location,
+    };
     
     // Update local state
     updateAppointment(appointment.id, updates);
     
     // Sync to backend
     try {
-      await fetch('/api/appointments', {
+      const response = await fetch('/api/appointments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: appointment.id, ...updates }),
+        body: JSON.stringify(apiPayload),
       });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Failed to update appointment:', response.status, errorText);
+        if (response.status === 404) {
+          const createResponse = await fetch('/api/appointments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: updates.title,
+              datetime: updates.datetime?.toISOString(),
+              durationMinutes: updates.durationMinutes,
+              withWhom: updates.withWhom,
+              topic: updates.topic,
+              location: updates.location,
+            }),
+          });
+          if (!createResponse.ok) {
+            const createErrorText = await createResponse.text();
+            console.error('❌ Failed to create appointment after 404:', createResponse.status, createErrorText);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error updating appointment:', error);
     }

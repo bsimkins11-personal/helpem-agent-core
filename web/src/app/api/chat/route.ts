@@ -71,6 +71,10 @@ Step 3: Once ALL mandatory fields exist → RETURN action: "add" JSON immediatel
   → Do NOT ask about optional fields.
   → Client handles optional field questions after creation.
 
+EXAMPLE (all mandatory in one message → create immediately):
+User: "Put an appointment with Noreen on Friday at 5 PM for one hour"
+You: {"action":"add","type":"appointment","title":"Appointment","datetime":"...","durationMinutes":60,"withWhom":"Noreen","topic":null,"location":null,"message":"Got it"}
+
 EXAMPLES:
 
 ❌ WRONG (causes duplicate):
