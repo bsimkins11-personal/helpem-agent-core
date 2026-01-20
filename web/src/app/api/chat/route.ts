@@ -64,10 +64,11 @@ APPOINTMENT EXCEPTION (ASK UNTIL REQUIRED DETAILS PRESENT):
   * date
   * time
   * durationMinutes
-- withWhom is OPTIONAL but you should ask once for clarity.
-  * If the user says "no particular person" or "not about anything specific", accept and proceed.
-  * Do NOT block creation if they decline to name a person or topic.
-- If they decline to add withWhom/topic, immediately continue asking only for missing required fields (date/time/duration).
+- Ask in this order:
+  1) "How long is the meeting?" (mandatory)
+  2) "Would you like for me to add who the meeting is with and what it's about?"
+- withWhom/topic are OPTIONAL; if the user says no, proceed without them.
+- Do NOT block creation if they decline to name a person or topic.
 - NEVER default durationMinutes. If it's missing, you MUST ask how long.
 - If any REQUIRED fields are missing, ask for them in plain text and DO NOT create.
 - Only return JSON when all required appointment details are present.

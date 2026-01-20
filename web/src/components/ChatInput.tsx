@@ -1125,6 +1125,114 @@ export default function ChatInput({
         }
         
         if (!itemToUpdate) {
+          if (actualType === "appointment" && pendingAppointmentContextRef.current) {
+            const fallbackTitle = updates.newTitle || searchTitle || "Meeting";
+            const fallbackDatetime = updates.datetime ? parseAiDatetime(updates.datetime) : null;
+            const fallbackDuration = Number.isFinite(updates.durationMinutes)
+              ? Number(updates.durationMinutes)
+              : Number.isFinite(updates.duration)
+                ? Number(updates.duration)
+                : null;
+            const fallbackWithWhom = typeof updates.withWhom === "string" ? updates.withWhom.trim() : null;
+
+            if (!fallbackDatetime) {
+              const responseText = "What date and time should I use?";
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: responseText,
+              });
+              if (isNativeApp) {
+                window.webkit?.messageHandlers?.native?.postMessage({
+                  action: "speak",
+                  text: responseText,
+                });
+              }
+              return;
+            }
+
+            if (!fallbackDuration || fallbackDuration <= 0) {
+              const responseText = "How long is the meeting?";
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: responseText,
+              });
+              if (isNativeApp) {
+                window.webkit?.messageHandlers?.native?.postMessage({
+                  action: "speak",
+                  text: responseText,
+                });
+              }
+              return;
+            }
+
+            const id = uuidv4();
+            const now = new Date();
+            addAppointment({
+              id,
+              title: fallbackTitle,
+              withWhom: fallbackWithWhom,
+              datetime: fallbackDatetime,
+              durationMinutes: fallbackDuration,
+              createdAt: now,
+            });
+            lastAppointmentIdRef.current = id;
+            lastAppointmentTitleRef.current = fallbackTitle;
+
+            try {
+              const apiResponse = await fetch("/api/appointments", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  title: fallbackTitle,
+                  withWhom: fallbackWithWhom,
+                  datetime: fallbackDatetime.toISOString(),
+                  durationMinutes: fallbackDuration,
+                }),
+              });
+
+              if (apiResponse.status === 409) {
+                const conflictData = await apiResponse.json().catch(() => null);
+                deleteAppointment(id);
+                lastAppointmentIdRef.current = null;
+                lastAppointmentTitleRef.current = null;
+                const conflictText = conflictData?.conflict
+                  ? `That overlaps with "${conflictData.conflict.title}" at ${formatDateTimeForSpeech(new Date(conflictData.conflict.datetime))}. Want to pick a different time or shorten the meeting?`
+                  : "That time overlaps with another appointment. Want to pick a different time or shorten the meeting?";
+                addMessage({
+                  id: uuidv4(),
+                  role: "assistant",
+                  content: conflictText,
+                });
+                if (isNativeApp) {
+                  window.webkit?.messageHandlers?.native?.postMessage({
+                    action: "speak",
+                    text: conflictText,
+                  });
+                }
+                return;
+              }
+            } catch (error) {
+              console.error("❌ Error creating appointment from follow-up:", error);
+            }
+
+            pendingAppointmentContextRef.current = null;
+            const responseText = data.message || `Got it. I've scheduled "${fallbackTitle}" for ${formatDateTimeForSpeech(fallbackDatetime)}.`;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: responseText,
+            });
+            if (isNativeApp) {
+              window.webkit?.messageHandlers?.native?.postMessage({
+                action: "speak",
+                text: responseText,
+              });
+            }
+            return;
+          }
+
           const responseText = `I couldn't find a ${itemType} called "${searchTitle}".`;
           addMessage({
             id: uuidv4(),
