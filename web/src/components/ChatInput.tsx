@@ -193,6 +193,7 @@ export default function ChatInput({
   const pendingPriorityTodoIdRef = useRef<string | null>(null);
   const pendingPriorityTodoTitleRef = useRef<string | null>(null);
   const askedWhoWhatForAppointmentRef = useRef<string | null>(null);
+  const waitingForOptionalFieldsRef = useRef(false);
 
   const isGenericAppointmentTitle = (title?: string | null) => {
     if (!title) return true;
@@ -552,6 +553,98 @@ export default function ChatInput({
 
     if (/^(cancel|nevermind|never mind|stop)$/i.test(trimmedText)) {
       pendingAppointmentContextRef.current = null;
+      waitingForOptionalFieldsRef.current = false;
+      return;
+    }
+
+    // CLIENT-SIDE INTERCEPTION: If we just asked about optional fields, parse the answer NOW
+    if (waitingForOptionalFieldsRef.current && lastAppointmentIdRef.current) {
+      waitingForOptionalFieldsRef.current = false;
+      
+      // Extract details from user's response
+      const details = extractFollowupDetails(trimmedText);
+      const declined = isDeclineReply(trimmedText);
+      
+      // Add user message to chat
+      addMessage({
+        id: uuidv4(),
+        role: "user",
+        content: trimmedText,
+      });
+      
+      // If declined, finalize appointment with no optional fields
+      if (declined) {
+        const responseText = "Got it. Your appointment is all set.";
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        speakNative(responseText);
+        lastAppointmentIdRef.current = null;
+        return;
+      }
+      
+      // If details provided, update the appointment
+      if (details.withWhom || details.topic) {
+        const updatePayload: Partial<Appointment> = {};
+        if (details.withWhom) updatePayload.withWhom = details.withWhom;
+        
+        // Parse topic from response (handles "about X", "it's about X", "X" patterns)
+        if (details.topic) {
+          updatePayload.title = details.topic;
+        } else {
+          // Try to extract topic from response without "about" keyword
+          const topicMatch = trimmedText.match(/(?:yeah|yes|sure|okay)\s+(?:the\s+)?(?:meeting|appointment)?\s*(?:is\s+)?(?:about\s+)?(.+)/i);
+          if (topicMatch && topicMatch[1]) {
+            const extractedTopic = topicMatch[1].trim();
+            // Make sure it's not just affirmative words
+            if (extractedTopic && !/(yeah|yes|sure|okay|the|meeting|appointment|is|about)/i.test(extractedTopic)) {
+              updatePayload.title = extractedTopic;
+            }
+          }
+        }
+        
+        if (Object.keys(updatePayload).length > 0) {
+          updateAppointment(lastAppointmentIdRef.current, updatePayload);
+          try {
+            await fetch("/api/appointments", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: lastAppointmentIdRef.current, ...updatePayload }),
+            });
+          } catch (error) {
+            console.error("❌ Error updating appointment:", error);
+          }
+        }
+        
+        const parts = [];
+        if (details.withWhom) parts.push(`with ${details.withWhom}`);
+        if (updatePayload.title) parts.push(`about ${updatePayload.title}`);
+        const responseText = parts.length > 0 
+          ? `Perfect. I've updated your appointment ${parts.join(" ")}.`
+          : "Got it. Your appointment is all set.";
+        
+        addMessage({
+          id: uuidv4(),
+          role: "assistant",
+          content: responseText,
+        });
+        speakNative(responseText);
+        lastAppointmentIdRef.current = null;
+        return;
+      }
+      
+      // If no details extracted, ask them to clarify
+      const clarifyText = "I didn't catch that. Can you tell me who the meeting is with or what it's about?";
+      addMessage({
+        id: uuidv4(),
+        role: "assistant",
+        content: clarifyText,
+      });
+      speakNative(clarifyText);
+      waitingForOptionalFieldsRef.current = true; // Keep waiting
+      return;
     }
 
     const pendingPriorityTodoId = pendingPriorityTodoIdRef.current;
@@ -1090,6 +1183,11 @@ export default function ChatInput({
               pendingAppointmentTopicRef.current = title;
             }
             pendingAppointmentQuestionRef.current = withWhom ? "what" : "who_what";
+            
+            // Set flag to intercept next user response on client side
+            waitingForOptionalFieldsRef.current = true;
+            lastAppointmentIdRef.current = id; // Store appointment ID for update
+            
             addMessage({
               id: uuidv4(),
               role: "assistant",
@@ -1841,7 +1939,14 @@ export default function ChatInput({
         });
 
         const appointmentPrompt = /(appointment|meeting|calendar|schedule)/i.test(lastUserMessageRef.current || "");
+        const askingForOptionalFields = /would you like.*add.*(who|what)/i.test(responseText);
         const askingForDetails = /(what date|what time|when is|when should|how long|duration|who is .* with|with whom|what's it about|what is it about)/i.test(responseText);
+        
+        // Set flag when agent asks about optional fields
+        if (askingForOptionalFields) {
+          waitingForOptionalFieldsRef.current = true;
+        }
+        
         if (appointmentPrompt && askingForDetails && lastUserMessageRef.current) {
           pendingAppointmentContextRef.current = lastUserMessageRef.current;
           const parsed = extractFollowupDetails(lastUserMessageRef.current);
