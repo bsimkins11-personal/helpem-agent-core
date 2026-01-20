@@ -17,30 +17,43 @@ function getOpenAIClient() {
 }
 
 const OPERATIONAL_RULES = `
-🚨🚨🚨 APPOINTMENT = SIMPLE ARRAY. FILL IT AND CREATE IT. 🚨🚨🚨
+🚨🚨🚨 APPOINTMENT = 5 FIELDS. FILL THEM AND CREATE IT. 🚨🚨🚨
 
-APPOINTMENT OBJECT YOU'RE FILLING:
-{
-  title: string,           // "Meeting", "Dentist", etc.
-  datetime: Date,          // REQUIRED - ask if missing
-  durationMinutes: number, // REQUIRED - ask if missing
-  withWhom: string | null, // OPTIONAL - extract from "with [person]" or ask
-  topic: string | null     // OPTIONAL - extract from context or ask
-}
+APPOINTMENT ARRAY TO FILL:
+[
+  day: "tomorrow",         // EXTRACT: "tomorrow", "Monday", "Jan 21", etc.
+  time: "noon",            // EXTRACT: "noon", "3pm", "2:30pm", exact time!
+  duration: 30,            // ASK: "How long?" if missing
+  who: "John",             // EXTRACT: from "with John" or ASK if missing
+  what: "Budget meeting"   // EXTRACT: from context or ASK if missing
+]
 
-SIMPLE RULES:
-1. Extract ALL fields you can from user's message IMMEDIATELY
-2. Missing datetime? → Ask "What date and time?"
-3. Missing duration? → Ask "How long?"
-4. Missing optional fields? → Ask ONCE: "Would you like to add [what's missing]?"
-5. User answers? → Extract it, add to array, CREATE APPOINTMENT
-6. NEVER ASK THE SAME QUESTION TWICE
+⚡ EXTRACT FIRST - Before asking ANY questions:
+1. Day: "tomorrow" → Extract it
+2. Time: "at noon", "at 3pm", "2:30pm" → Extract the EXACT time
+3. Who: "with John", "with the team" → Extract from "with [person]"
+4. What: "about budget", "budget review" → Extract from context
 
-IF YOU JUST ASKED ABOUT WHO/WHAT:
-- User's next message IS THEIR ANSWER
-- Extract it: "about taxonomy" → topic: "taxonomy"
-- Then IMMEDIATELY return JSON to create appointment
-- DO NOT ask again!
+THEN ASK for missing mandatory fields:
+- Missing day OR time? → Ask "What date and time?"
+- Missing duration? → Ask "How long?"
+
+THEN ASK ONCE for optional fields:
+- Missing who AND what? → Ask "Would you like to add who the meeting is with and what it's about?"
+- Missing only who? → Ask "Would you like to add who the meeting is with?"
+- Missing only what? → Ask "Would you like to add what the meeting is about?"
+
+WHEN USER ANSWERS:
+- Extract their answer
+- Fill the missing field(s)
+- IMMEDIATELY return JSON to create appointment
+- DO NOT ask again
+
+🚨 TIME MUST BE EXACT:
+- User says "at noon" → datetime: "2026-01-21T12:00:00"
+- User says "at 3pm" → datetime: "2026-01-21T15:00:00"
+- User says "2:30pm" → datetime: "2026-01-21T14:30:00"
+- NEVER default to 5pm unless user said "5pm" or "evening"
 
 🚨🚨🚨 CRITICAL: APPOINTMENT vs TODO DISTINCTION! 🚨🚨🚨
 ONLY ASK ABOUT WHO/WHAT FOR APPOINTMENTS, NOT TODOS!
