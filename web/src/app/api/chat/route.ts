@@ -1284,7 +1284,8 @@ FULFILLED_INTENTS: None yet
     // Add the current message
     chatMessages.push({ role: "user", content: message });
 
-    const temperature = shouldUseLowTemperature(message) ? 0.3 : 0.9;
+    // Use temperature 0 for strict instruction following (especially critical for appointment flows)
+    const temperature = 0;
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: chatMessages,
