@@ -24,29 +24,33 @@ struct AppLogger {
     // MARK: - Convenience Methods
     
     /// Log debug information (only visible in debug builds)
-    static func debug(_ message: String, logger: Logger = .general, file: String = #file, function: String = #function, line: Int = #line) {
+    static func debug(_ message: String, logger: Logger = AppLogger.general, file: String = #file, function: String = #function, line: Int = #line) {
         #if DEBUG
         logger.debug("[\(fileNameFromPath(file)):\(line)] \(function) - \(message)")
         #endif
     }
     
-    /// Log informational message
-    static func info(_ message: String, logger: Logger = .general) {
+    /// Log informational message (production: only errors and critical)
+    static func info(_ message: String, logger: Logger = AppLogger.general) {
+        #if DEBUG
         logger.info("\(message)")
+        #endif
     }
     
     /// Log warning message
-    static func warning(_ message: String, logger: Logger = .general) {
+    static func warning(_ message: String, logger: Logger = AppLogger.general) {
+        #if DEBUG
         logger.warning("\(message)")
+        #endif
     }
     
-    /// Log error message
-    static func error(_ message: String, logger: Logger = .general) {
+    /// Log error message (always logged, even in production)
+    static func error(_ message: String, logger: Logger = AppLogger.general) {
         logger.error("\(message)")
     }
     
-    /// Log critical error that needs immediate attention
-    static func critical(_ message: String, logger: Logger = .general) {
+    /// Log critical error that needs immediate attention (always logged)
+    static func critical(_ message: String, logger: Logger = AppLogger.general) {
         logger.critical("\(message)")
     }
     
@@ -66,16 +70,15 @@ struct AppLogger {
 func log(_ message: String, logger: Logger = AppLogger.general) {
     #if DEBUG
     AppLogger.debug(message, logger: logger)
-    #else
-    AppLogger.info(message, logger: logger)
     #endif
+    // Production: silent unless it's an error
 }
 
 // MARK: - Performance Logging
 
 extension AppLogger {
     /// Measure and log execution time of a code block
-    static func measureTime<T>(_ operation: String, logger: Logger = .general, _ block: () throws -> T) rethrows -> T {
+    static func measureTime<T>(_ operation: String, logger: Logger = AppLogger.general, _ block: () throws -> T) rethrows -> T {
         let start = CFAbsoluteTimeGetCurrent()
         let result = try block()
         let duration = CFAbsoluteTimeGetCurrent() - start
@@ -88,7 +91,7 @@ extension AppLogger {
     }
     
     /// Measure and log execution time of an async code block
-    static func measureTime<T>(_ operation: String, logger: Logger = .general, _ block: () async throws -> T) async rethrows -> T {
+    static func measureTime<T>(_ operation: String, logger: Logger = AppLogger.general, _ block: () async throws -> T) async rethrows -> T {
         let start = CFAbsoluteTimeGetCurrent()
         let result = try await block()
         let duration = CFAbsoluteTimeGetCurrent() - start

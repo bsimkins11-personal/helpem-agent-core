@@ -11,8 +11,9 @@ struct HelpEmAppApp: App {
         AppEnvironment.printConfig()
         
         // Validate environment URLs
-        guard AppEnvironment.validateURLs() else {
+        if !AppEnvironment.validateURLs() {
             AppLogger.critical("Invalid environment URLs - app may not function correctly", logger: AppLogger.general)
+            return
         }
         
         // Set up notification delegate

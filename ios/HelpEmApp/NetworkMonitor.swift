@@ -60,7 +60,7 @@ final class NetworkMonitor: ObservableObject {
     }
     
     deinit {
-        stopMonitoring()
+        monitor.cancel()
     }
     
     // MARK: - Monitoring

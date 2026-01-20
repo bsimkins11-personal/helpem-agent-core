@@ -21,14 +21,16 @@ struct WebViewContainer: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        print("🌐 WebViewContainer: makeUIView called - creating WebView")
+        #if DEBUG
+        AppLogger.debug("WebView creation started", logger: AppLogger.webview)
+        #endif
+        
         // Configure WebView with memory optimization
         let config = WKWebViewConfiguration()
         let controller = WKUserContentController()
         
         // 🛡️ Memory Management Configuration
         config.suppressesIncrementalRendering = true
-        // Use default persistent store but clear it first for fresh start
         config.websiteDataStore = .default()
         
         // Limit media playback to reduce memory usage
@@ -41,16 +43,13 @@ struct WebViewContainer: UIViewRepresentable {
         
         // Inject authentication script
         let token = KeychainHelper.shared.sessionToken ?? ""
-        print("🔑 WebView Creation:")
-        print("   Session Token exists:", !token.isEmpty)
-        print("   Token length:", token.count)
-        print("   Token preview:", token.isEmpty ? "NONE" : String(token.prefix(30)) + "...")
-        print("   Apple User ID:", KeychainHelper.shared.appleUserId ?? "NONE")
-        print("   User ID:", KeychainHelper.shared.userId ?? "NONE")
         
+        #if DEBUG
+        AppLogger.debug("Token exists: \(!token.isEmpty), length: \(token.count)", logger: AppLogger.webview)
         if token.isEmpty {
-            print("❌ CRITICAL: No session token in keychain - user will see auth errors!")
+            AppLogger.warning("No session token in keychain", logger: AppLogger.webview)
         }
+        #endif
         
         controller.addUserScript(Self.makeAuthScript(token: token))
         
@@ -77,7 +76,6 @@ struct WebViewContainer: UIViewRepresentable {
         
         // Set up WebView handler for RootView
         DispatchQueue.main.async {
-            print("🔗 WebViewContainer: Setting up WebViewHandler")
             let handler = RootView.WebViewHandler()
             handler.webView = webView
             let coordinator = context.coordinator
@@ -85,7 +83,9 @@ struct WebViewContainer: UIViewRepresentable {
                 coordinator?.forceCleanupAllAudio()
             }
             self.webViewHandler = handler
-            print("✅ WebViewContainer: WebViewHandler set up complete")
+            #if DEBUG
+            AppLogger.debug("WebViewHandler configured", logger: AppLogger.webview)
+            #endif
         }
         
         // 🚨 Setup memory warning observer
@@ -97,32 +97,29 @@ struct WebViewContainer: UIViewRepresentable {
         
         // Only clear cache if this is a fresh install (no session token)
         if KeychainHelper.shared.sessionToken == nil {
-            print("🧹 First launch - clearing WebView cache...")
             let dataStore = WKWebsiteDataStore.default()
             dataStore.removeData(
                 ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
                 modifiedSince: Date.distantPast
             ) {
-                print("✅ Cache cleared for first launch")
+                #if DEBUG
+                AppLogger.debug("Cache cleared for first launch", logger: AppLogger.webview)
+                #endif
             }
-        } else {
-            print("✅ Preserving WebView cache for authenticated session")
         }
         
         // Load web app
         guard let url = URL(string: AppEnvironment.webAppURL) else {
-            print("❌ Invalid web app URL")
+            AppLogger.error("Invalid web app URL", logger: AppLogger.webview)
             return webView
         }
         
         var request = URLRequest(url: url)
-        // Use normal cache for faster loading
         request.cachePolicy = .useProtocolCachePolicy
         if !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
-        print("🌐 Loading web app: \(AppEnvironment.webAppURL)")
         webView.load(request)
         
         return webView
@@ -142,24 +139,11 @@ struct WebViewContainer: UIViewRepresentable {
         
         let source = """
         (function() {
-            console.log('🔐 iOS Auth Script Starting...');
             const token = "\(safeToken)";
             const webHost = "\(webHost)";
             const apiHost = "\(apiHost)";
             
-            console.log('📱 iOS: Token exists:', token.length > 0);
-            console.log('📱 iOS: Token length:', token.length);
-            
-            if (!token || token.length === 0) {
-                console.error('❌ iOS: NO SESSION TOKEN - User needs to sign in');
-                console.error('❌ iOS: Fetch requests will FAIL without token');
-                // Still set up fetch interception to show better errors
-            } else {
-                console.log('✅ iOS: Valid session token found');
-                console.log('📱 iOS: Token preview:', token.substring(0, 30) + '...');
-            }
-            
-            // ALWAYS store token globally (even if empty, for debugging)
+            // Store token globally
             window.__nativeSessionToken = token;
             window.__authDebug = {
                 hasToken: token.length > 0,
@@ -168,102 +152,52 @@ struct WebViewContainer: UIViewRepresentable {
                 apiHost: apiHost
             };
             
-            console.log('✅ iOS: window.__nativeSessionToken set');
-            console.log('✅ iOS: window.__authDebug set');
-            
             // Check if URL should receive auth token
             const shouldAttach = (url) => {
                 try {
                     const u = new URL(url, window.location.origin);
-                    const shouldAttachResult = u.host === webHost || 
+                    return u.host === webHost || 
                            u.host === apiHost || 
                            u.pathname.startsWith('/api/');
-                    return shouldAttachResult;
                 } catch (e) {
-                    console.error('❌ iOS: shouldAttach error:', e);
                     return false;
                 }
             };
             
-            // ALWAYS intercept fetch (even without token, for debugging)
+            // Intercept fetch to attach auth token
             const originalFetch = window.fetch;
-            let fetchCount = 0;
             
             window.fetch = function(input, init = {}) {
-                fetchCount++;
                 const url = (typeof input === 'string') ? input : (input && input.url) ? input.url : '';
-                const fetchId = fetchCount;
                 
-                console.log(`🌐 [${fetchId}] Fetch to:`, url);
-                
-                const willAttachToken = shouldAttach(url);
-                console.log(`🔐 [${fetchId}] Will attach token:`, willAttachToken);
-                
-                if (willAttachToken) {
-                    if (!token || token.length === 0) {
-                        console.error(`❌ [${fetchId}] NO TOKEN to attach - request will likely FAIL with 401`);
-                    } else {
-                        const headers = new Headers(init.headers || {});
-                        if (!headers.get('Authorization')) {
-                            headers.set('Authorization', 'Bearer ' + token);
-                            init.headers = headers;
-                            console.log(`✅ [${fetchId}] Authorization header attached`);
-                        } else {
-                            console.log(`ℹ️ [${fetchId}] Authorization header already present`);
-                        }
+                if (shouldAttach(url) && token && token.length > 0) {
+                    const headers = new Headers(init.headers || {});
+                    if (!headers.get('Authorization')) {
+                        headers.set('Authorization', 'Bearer ' + token);
+                        init.headers = headers;
                     }
                 }
                 
                 // Make the request
                 return originalFetch(input, init).then((response) => {
-                    console.log(`📥 [${fetchId}] Response status:`, response.status);
-                    
-                    if (response && response.status === 401) {
-                        console.error(`❌ [${fetchId}] 401 UNAUTHORIZED for:`, url);
-                        console.error(`❌ [${fetchId}] Token was:`, token ? 'present' : 'MISSING');
-                        
-                        // Only trigger auth expiry on critical auth endpoints
-                        if (url.includes('/auth/')) {
-                            console.error('❌ Critical auth endpoint failed - showing login');
-                            if (window.webkit?.messageHandlers?.native) {
-                                window.webkit.messageHandlers.native.postMessage({ 
-                                    action: 'authExpired' 
-                                });
-                            }
-                        } else {
-                            console.warn('⚠️ Non-critical 401 - continuing with local data');
+                    // Handle 401 on auth endpoints
+                    if (response && response.status === 401 && url.includes('/auth/')) {
+                        if (window.webkit?.messageHandlers?.native) {
+                            window.webkit.messageHandlers.native.postMessage({ 
+                                action: 'authExpired' 
+                            });
                         }
                     }
-                    
                     return response;
                 }).catch((error) => {
-                    console.error(`❌ [${fetchId}] Fetch error:`, error);
                     throw error;
                 });
             };
             
-            console.log('✅ iOS: Fetch interception installed');
-            console.log('🔐 iOS Auth Script Complete');
-            
-            // Expose diagnostic function
+            // Expose diagnostic function (debug only)
             window.__debugAuth = function() {
-                console.log('=== AUTH DEBUG ===');
-                console.log('Has Token:', token.length > 0);
-                console.log('Token Length:', token.length);
-                console.log('Token Preview:', token ? token.substring(0, 40) + '...' : 'NONE');
-                console.log('Web Host:', webHost);
-                console.log('API Host:', apiHost);
-                console.log('window.__nativeSessionToken exists:', !!window.__nativeSessionToken);
-                console.log('window.__authDebug:', window.__authDebug);
-                console.log('=================');
                 return window.__authDebug;
             };
-            
-            // Auto-run diagnostic
-            setTimeout(() => {
-                console.log('🔍 Running auto-diagnostic after 1 second...');
-                window.__debugAuth();
-            }, 1000);
         })();
         """
         
@@ -331,23 +265,22 @@ struct WebViewContainer: UIViewRepresentable {
                 guard let self = self else { return }
                 self.lastInputWasVoice = true
                 
-                // Persist voice input to backend for auditing/analytics
-                Task.detached { [text] in
-                    do {
-                        _ = try await APIClient.shared.saveUserInput(content: text, type: "voice")
-                        print("📥 Logged voice input to backend")
-                    } catch {
-                        print("⚠️ Failed to log voice input:", error.localizedDescription)
-                    }
-                }
-                
-                if self.pageReady {
-                    self.sendToWeb(text)
-                } else {
-                    // Queue if page not ready yet
-                    self.pendingFinalTexts.append(text)
+            // Persist voice input to backend for auditing/analytics
+            Task.detached { [text] in
+                do {
+                    _ = try await APIClient.shared.saveUserInput(content: text, type: "voice")
+                } catch {
+                    // Error logged by APIClient
                 }
             }
+            
+            if self.pageReady {
+                self.sendToWeb(text)
+            } else {
+                // Queue if page not ready yet
+                self.pendingFinalTexts.append(text)
+            }
+        }
         }
         
         deinit {
@@ -374,7 +307,7 @@ struct WebViewContainer: UIViewRepresentable {
         
         /// Clear WebView cache and data when memory warning is received
         private func handleMemoryWarning() {
-            print("⚠️ Memory warning received - clearing WebView cache")
+            AppLogger.warning("Memory warning - clearing WebView cache", logger: AppLogger.webview)
             
             // Clear website data
             let dataStore = WKWebsiteDataStore.default()
@@ -384,7 +317,9 @@ struct WebViewContainer: UIViewRepresentable {
             ])
             
             dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date.distantPast) {
-                print("✅ WebView cache cleared")
+                #if DEBUG
+                AppLogger.debug("WebView cache cleared", logger: AppLogger.webview)
+                #endif
             }
             
             // Force JavaScript garbage collection
@@ -432,31 +367,32 @@ struct WebViewContainer: UIViewRepresentable {
             ])
             
             dataStore.removeData(ofTypes: dataTypes, modifiedSince: oneDay) {
-                print("🧹 Cleared old WebView cache data")
+                #if DEBUG
+                AppLogger.debug("Old WebView cache cleared", logger: AppLogger.webview)
+                #endif
             }
         }
         
         /// Force cleanup ALL audio resources (mic, speech, TTS)
         func forceCleanupAllAudio() {
-            print("🧹 WebView: Force cleanup all audio")
+            #if DEBUG
+            AppLogger.debug("Force audio cleanup", logger: AppLogger.webview)
+            #endif
             
             // Stop text-to-speech immediately
             if synthesizer.isSpeaking {
                 synthesizer.stopSpeaking(at: .immediate)
-                print("✅ TTS stopped")
             }
             
-            // Force immediate microphone cleanup (no delays)
-            // Don't use stopListening() - it has async delays that won't execute when backgrounding
+            // Force immediate microphone cleanup
             speechManager.forceCleanup()
             
             // Deactivate audio session to remove blue/yellow indicator dots
             let session = AVAudioSession.sharedInstance()
             do {
                 try session.setActive(false, options: .notifyOthersOnDeactivation)
-                print("✅ Audio session deactivated")
             } catch {
-                print("⚠️ Failed to deactivate audio session:", error)
+                AppLogger.error("Failed to deactivate audio session: \(error.localizedDescription)", logger: AppLogger.webview)
             }
         }
         
@@ -724,7 +660,6 @@ struct WebViewContainer: UIViewRepresentable {
             
             // Start speech recognition
             speechManager.startListening()
-            print("🎤 Started recording")
         }
         
         private func handleStopRecording() {
@@ -734,7 +669,6 @@ struct WebViewContainer: UIViewRepresentable {
             
             // Stop speech recognition
             speechManager.stopListening()
-            print("🛑 Stopped recording")
         }
         
         private func handleSpeak(text: String?) {
@@ -756,7 +690,7 @@ struct WebViewContainer: UIViewRepresentable {
                   let title = body["title"] as? String,
                   let bodyText = body["body"] as? String,
                   let dateString = body["date"] as? String else {
-                print("⚠️ Missing required notification parameters")
+                AppLogger.warning("Missing notification parameters", logger: AppLogger.notification)
                 return
             }
             
@@ -764,11 +698,9 @@ struct WebViewContainer: UIViewRepresentable {
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             guard let date = formatter.date(from: dateString) else {
-                print("❌ Invalid date format:", dateString)
+                AppLogger.error("Invalid date format: \(dateString)", logger: AppLogger.notification)
                 return
             }
-            
-            print("🔔 Scheduling notification '\(id)' for", date)
             
             Task {
                 do {
@@ -779,20 +711,21 @@ struct WebViewContainer: UIViewRepresentable {
                         date: date,
                         userInfo: ["type": "reminder", "id": id]
                     )
-                    print("✅ Notification scheduled successfully")
+                    #if DEBUG
+                    AppLogger.debug("Notification scheduled: \(id)", logger: AppLogger.notification)
+                    #endif
                 } catch {
-                    print("❌ Failed to schedule notification:", error)
+                    AppLogger.error("Failed to schedule notification: \(error.localizedDescription)", logger: AppLogger.notification)
                 }
             }
         }
         
         private func handleCancelNotification(body: [String: Any]) {
             guard let id = body["id"] as? String else {
-                print("⚠️ Missing notification ID")
+                AppLogger.warning("Missing notification ID", logger: AppLogger.notification)
                 return
             }
             
-            print("🗑️ Canceling notification '\(id)'")
             NotificationManager.shared.cancelNotification(id: id)
         }
 

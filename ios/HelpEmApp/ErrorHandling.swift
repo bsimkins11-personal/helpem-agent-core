@@ -9,7 +9,7 @@ import SwiftUI
 /// Base protocol for all app errors
 protocol AppErrorProtocol: LocalizedError {
     var userMessage: String { get }
-    var recoverySuggestion: String? { get }
+    nonisolated var recoverySuggestion: String? { get }
     var canRetry: Bool { get }
     var severity: ErrorSeverity { get }
 }
