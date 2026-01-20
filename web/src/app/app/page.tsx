@@ -20,8 +20,7 @@ const PRIORITY_TABS = [
   { key: "medium" as const, label: "Med", color: "bg-amber-500", activeText: "text-white", inactiveText: "text-amber-600", inactiveBg: "bg-amber-50" },
   { key: "low" as const, label: "Low", color: "bg-green-500", activeText: "text-white", inactiveText: "text-green-600", inactiveBg: "bg-green-50" },
 ];
-const HEADER_OFFSET_PX = 60;
-const STACK_GAP_PX = 8;
+const STACK_GAP_PX = 0;
 
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
@@ -207,9 +206,16 @@ export default function AppPage() {
 
   const chatRef = useRef<HTMLDivElement>(null);
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
+  const isNativeApp = typeof window !== "undefined" && (
+    navigator.userAgent.includes("helpem") ||
+    (window as any).webkit?.messageHandlers?.native ||
+    (window as any).__IS_HELPEM_APP__ ||
+    (window as any).nativeBridge?.isNative
+  );
+  const headerOffsetPx = isNativeApp ? 0 : 60;
   const fixedStackRef = useRef<HTMLDivElement>(null);
-  const [fixedStackHeight, setFixedStackHeight] = useState(0);
-  const fixedOffset = HEADER_OFFSET_PX + fixedStackHeight;
+  const [fixedStackHeight, setFixedStackHeight] = useState(160);
+  const fixedOffset = headerOffsetPx + fixedStackHeight;
   const contentTopPadding = fixedStackHeight ? fixedOffset + STACK_GAP_PX : 200;
   
   const scrollToChat = () => {
@@ -253,7 +259,7 @@ export default function AppPage() {
         ref={fixedStackRef}
         style={{ 
           position: 'fixed',
-          top: `${HEADER_OFFSET_PX}px`,
+          top: `${headerOffsetPx}px`,
           left: 0,
           right: 0,
           zIndex: 99999,

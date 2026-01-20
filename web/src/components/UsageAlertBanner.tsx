@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getUsageStatus, type UsageData } from "@/lib/mockUsageService";
 
 type AlertLevel = "warning" | "critical" | null;
 
 export function UsageAlertBanner() {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [alertLevel, setAlertLevel] = useState<AlertLevel>(null);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [bannerHeight, setBannerHeight] = useState(0);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkUsage = async () => {
@@ -36,8 +39,9 @@ export function UsageAlertBanner() {
         }
 
         if (shouldShow && level) {
-          setIsVisible(true);
+          setIsMounted(true);
           setAlertLevel(level);
+          requestAnimationFrame(() => setIsOpen(true));
         }
       } catch (error) {
         console.error("Failed to check usage:", error);
@@ -55,11 +59,18 @@ export function UsageAlertBanner() {
       // Store the alert level that was dismissed
       localStorage.setItem(dismissedKey, alertLevel === "critical" ? "90" : "50");
       
-      setIsVisible(false);
+      setIsOpen(false);
     }
   };
 
-  if (!isVisible || !alertLevel || !usageData) return null;
+  useEffect(() => {
+    if (!isMounted) return;
+    if (bannerRef.current) {
+      setBannerHeight(bannerRef.current.scrollHeight);
+    }
+  }, [isMounted]);
+
+  if (!isMounted || !alertLevel || !usageData) return null;
 
   const usagePercent = Math.round((usageData.used / usageData.limit) * 100);
   const remaining = usageData.limit - usageData.used;
@@ -82,23 +93,38 @@ export function UsageAlertBanner() {
   const alert = alertStyles[alertLevel];
 
   return (
-    <div className={`${alert.bg} text-white py-1 px-2 flex items-center justify-between shadow-lg`}>
-      <div className="flex items-center gap-1.5 flex-1">
-        <span className="text-sm">{alert.icon}</span>
-        <div>
-          <p className="text-[10px] font-bold leading-tight">{alert.title}</p>
-          <p className="text-[10px] leading-tight">{alert.message}</p>
-        </div>
-      </div>
-      <button
-        onClick={handleDismiss}
-        className="p-0 hover:bg-white/20 rounded transition-colors ml-2 flex-shrink-0"
-        aria-label="Dismiss alert"
+    <div
+      className="overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-in-out"
+      style={{
+        maxHeight: isOpen ? `${bannerHeight}px` : "0px",
+        opacity: isOpen ? 1 : 0,
+        transform: isOpen ? "translateY(0)" : "translateY(-4px)"
+      }}
+      onTransitionEnd={() => {
+        if (!isOpen) setIsMounted(false);
+      }}
+    >
+      <div
+        ref={bannerRef}
+        className={`${alert.bg} text-white py-1 px-2 flex items-center justify-between shadow-lg`}
       >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+        <div className="flex items-center gap-1.5 flex-1">
+          <span className="text-sm">{alert.icon}</span>
+          <div>
+            <p className="text-[10px] font-bold leading-tight">{alert.title}</p>
+            <p className="text-[10px] leading-tight">{alert.message}</p>
+          </div>
+        </div>
+        <button
+          onClick={handleDismiss}
+          className="p-0 hover:bg-white/20 rounded transition-colors ml-2 flex-shrink-0"
+          aria-label="Dismiss alert"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
