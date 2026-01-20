@@ -688,8 +688,8 @@ export default function ChatInput({
                 role: "assistant",
                 content: followupMessage,
               });
-              const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current || itemToUpdate.title;
-              const effectiveWithWhom = updatePayload.withWhom || itemToUpdate.withWhom || null;
+              const effectiveTitle = updatePayload.title || lastAppointmentTitleRef.current;
+              const effectiveWithWhom = updatePayload.withWhom ?? null;
               const askText = getWhoWhatPrompt(effectiveTitle, effectiveWithWhom);
               if (askText && askedWhoWhatForAppointmentRef.current != lastAppointmentIdRef.current) {
                 askedWhoWhatForAppointmentRef.current = lastAppointmentIdRef.current;
