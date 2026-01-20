@@ -797,7 +797,7 @@ export default function ChatInput({
 
           if (data.type === "appointment") {
             if (pendingAppointmentContextRef.current && lastAppointmentIdRef.current) {
-              const updatePayload: Partial<Appointment> = {};
+              let updatePayload: Partial<Appointment> = {};
               if (typeof data.title === "string" && data.title.trim().length > 0) {
                 const previousTitle = lastAppointmentTitleRef.current;
                 const nextTitle = data.title.trim();
