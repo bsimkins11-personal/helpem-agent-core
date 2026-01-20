@@ -181,6 +181,8 @@ export default function ChatInput({
   const stopTimerRef = useRef<number | null>(null);
   const flushTimerRef = useRef<number | null>(null);
   const pendingAppointmentContextRef = useRef<string | null>(null);
+  const pendingAppointmentWithWhomRef = useRef<string | null>(null);
+  const pendingAppointmentTopicRef = useRef<string | null>(null);
   const lastUserMessageRef = useRef<string | null>(null);
   const lastAppointmentIdRef = useRef<string | null>(null);
   const lastAppointmentTitleRef = useRef<string | null>(null);
@@ -703,6 +705,8 @@ export default function ChatInput({
               }
 
               pendingAppointmentContextRef.current = null;
+              pendingAppointmentWithWhomRef.current = null;
+              pendingAppointmentTopicRef.current = null;
               const followupMessage = data.message || "Got it. I’ve updated that appointment with the extra details.";
               addMessage({
                 id: uuidv4(),
@@ -730,6 +734,8 @@ export default function ChatInput({
               return;
             }
             pendingAppointmentContextRef.current = null;
+            pendingAppointmentWithWhomRef.current = null;
+            pendingAppointmentTopicRef.current = null;
           }
         if (internalType === "todo") {
           const hasDate = !!data.datetime;
@@ -914,13 +920,20 @@ export default function ChatInput({
             : Number.isFinite(data.duration)
               ? Number(data.duration)
               : 30;
-          const withWhom = typeof data.withWhom === "string" && data.withWhom.trim().length > 0
+          let withWhom = typeof data.withWhom === "string" && data.withWhom.trim().length > 0
             ? data.withWhom.trim()
             : null;
+          if (!withWhom && pendingAppointmentWithWhomRef.current) {
+            withWhom = pendingAppointmentWithWhomRef.current;
+          }
+          let title = data.title;
+          if (isGenericAppointmentTitle(title) && pendingAppointmentTopicRef.current) {
+            title = pendingAppointmentTopicRef.current;
+          }
 
           console.log("📅 Creating appointment:", {
             id,
-            title: data.title,
+            title,
             datetime: datetime.toISOString(),
             durationMinutes,
             originalDatetime: data.datetime,
@@ -928,26 +941,26 @@ export default function ChatInput({
           });
           
           // Save to database
-          const responseText = data.message || `Added appointment "${data.title}" for ${formatDateTimeForSpeech(datetime)}.`;
+          const responseText = data.message || `Added appointment "${title}" for ${formatDateTimeForSpeech(datetime)}.`;
           
           // Always add to local state first (works even offline)
           console.log("📅 ChatInput: Calling addAppointment with:", {
             id,
-            title: data.title,
+            title,
             datetime: datetime.toISOString(),
             createdAt: now.toISOString(),
           });
           
           addAppointment({
             id,
-            title: data.title,
+            title,
             withWhom,
             datetime,
             durationMinutes,
             createdAt: now,
           });
           lastAppointmentIdRef.current = id;
-          lastAppointmentTitleRef.current = data.title;
+          lastAppointmentTitleRef.current = title;
           
           console.log("✅ ChatInput: addAppointment call completed");
           
@@ -959,7 +972,7 @@ export default function ChatInput({
           try {
             console.log('🌐 Preparing fetch to /api/appointments');
             console.log('🌐 Request payload:', {
-              title: data.title,
+              title,
               withWhom,
               datetime: datetime.toISOString(),
               durationMinutes,
@@ -969,7 +982,7 @@ export default function ChatInput({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                title: data.title,
+                title,
                 withWhom,
                 datetime: datetime.toISOString(),
                 durationMinutes,
@@ -1066,7 +1079,7 @@ export default function ChatInput({
             }
           }
 
-          const followup = getWhoWhatPrompt(data.title, withWhom);
+          const followup = getWhoWhatPrompt(title, withWhom);
           if (followup && askedWhoWhatForAppointmentRef.current != id) {
             askedWhoWhatForAppointmentRef.current = id;
             addMessage({
@@ -1081,6 +1094,8 @@ export default function ChatInput({
               });
             }
           }
+          pendingAppointmentWithWhomRef.current = null;
+          pendingAppointmentTopicRef.current = null;
         } else if (internalType === "grocery") {
           // Support both single item and multiple items (array)
           const items = data.items || [data.title || data.content];
@@ -1687,6 +1702,13 @@ export default function ChatInput({
         const askingForDetails = /(what date|what time|when is|when should|how long|duration|who is .* with|with whom|what's it about|what is it about)/i.test(responseText);
         if (appointmentPrompt && askingForDetails && lastUserMessageRef.current) {
           pendingAppointmentContextRef.current = lastUserMessageRef.current;
+          const parsed = extractFollowupDetails(lastUserMessageRef.current);
+          if (parsed.withWhom) {
+            pendingAppointmentWithWhomRef.current = parsed.withWhom;
+          }
+          if (parsed.topic) {
+            pendingAppointmentTopicRef.current = parsed.topic;
+          }
         }
         // ALWAYS send to native for TTS when in native app
         if (isNativeApp) {
