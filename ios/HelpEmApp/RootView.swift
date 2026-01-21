@@ -11,6 +11,7 @@ struct RootView: View {
     @StateObject private var authManager = AuthManager.shared
     @State private var webViewHandler: WebViewHandler?
     @State private var isMenuPresented = false
+    @State private var isTribeManagerPresented = false
     @Environment(\.scenePhase) private var scenePhase
     
     private func openFeedbackURL() {
@@ -366,6 +367,16 @@ struct RootView: View {
                                         .padding(.vertical, 12)
                                 }
                                 .padding(.horizontal, 20)
+
+                                Button(action: {
+                                    isMenuPresented = false
+                                    isTribeManagerPresented = true
+                                }) {
+                                    Label("Manage My Tribe", systemImage: "person.3")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
                                 
                                 Button(action: {
                                     isMenuPresented = false
@@ -403,6 +414,20 @@ struct RootView: View {
                                 Spacer()
                             }
                             .presentationDetents([.medium])
+                        }
+                        .sheet(isPresented: $isTribeManagerPresented) {
+                            NavigationStack {
+                                TribeListView()
+                                    .navigationTitle("My Tribe")
+                                    .navigationBarTitleDisplayMode(.inline)
+                                    .toolbar {
+                                        ToolbarItem(placement: .cancellationAction) {
+                                            Button("Done") {
+                                                isTribeManagerPresented = false
+                                            }
+                                        }
+                                    }
+                            }
                         }
                     }
             } else {
