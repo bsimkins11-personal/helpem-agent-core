@@ -29,8 +29,6 @@ struct ContactsPickerView: View {
                     } else {
                         contactsList
                     }
-                default:
-                    emptyState
                 }
             }
             .navigationTitle("Invite to Tribe")

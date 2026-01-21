@@ -43,7 +43,7 @@ struct TribeSettingsView: View {
             }
             
             // Notification preferences
-            Section("Notifications") {
+            Section {
                 Toggle("Proposal Notifications", isOn: $viewModel.proposalNotifications)
                     .onChange(of: viewModel.proposalNotifications) { _, newValue in
                         Task {
@@ -65,6 +65,8 @@ struct TribeSettingsView: View {
                             )
                         }
                     }
+            } header: {
+                Text("Notifications")
             } footer: {
                 Text("Proposal notifications alert you once when someone shares something. Digest notifications summarize multiple proposals.")
             }
@@ -430,7 +432,7 @@ class TribeSettingsViewModel: ObservableObject {
     func loadSettings(tribeId: String) async {
         // Load current member settings
         do {
-            let members = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
+            _ = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
             // Find current user's membership
             // Note: In real implementation, we'd need to know current user ID
             // For now, this is a placeholder
