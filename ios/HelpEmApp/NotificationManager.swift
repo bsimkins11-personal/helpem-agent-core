@@ -67,14 +67,16 @@ final class NotificationManager: NSObject {
         title: String,
         body: String,
         timeInterval: TimeInterval,
+        sound: UNNotificationSound? = .default,
+        badge: NSNumber? = 1,
         userInfo: [String: Any] = [:]
     ) async throws {
         // Create notification content
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        content.sound = .default
-        content.badge = 1
+        content.sound = sound
+        content.badge = badge
         content.userInfo = userInfo
         
         // Create trigger
@@ -101,14 +103,16 @@ final class NotificationManager: NSObject {
         title: String,
         body: String,
         date: Date,
+        sound: UNNotificationSound? = .default,
+        badge: NSNumber? = 1,
         userInfo: [String: Any] = [:]
     ) async throws {
         // Create notification content
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        content.sound = .default
-        content.badge = 1
+        content.sound = sound
+        content.badge = badge
         content.userInfo = userInfo
         
         // Create date components trigger

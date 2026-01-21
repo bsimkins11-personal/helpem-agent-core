@@ -223,7 +223,7 @@ struct WebViewContainer: UIViewRepresentable {
     // MARK: - Coordinator
     
     /// Coordinates WebView events, native messaging, and speech
-    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKDownloadDelegate {
         
         // MARK: - Properties
         
@@ -252,6 +252,9 @@ struct WebViewContainer: UIViewRepresentable {
         private let loadTimeout: TimeInterval = 30.0
         private var retryCount = 0
         private let maxRetries = 3
+
+        // Download tracking (avoid WebKit "DownloadFailed" spam)
+        private var downloadDestinations: [ObjectIdentifier: URL] = [:]
         
         // MARK: - Initialization
         
@@ -411,6 +414,67 @@ struct WebViewContainer: UIViewRepresentable {
             AppLogger.error("WebView provisional navigation failed: \(error.localizedDescription)", logger: AppLogger.webview)
             cancelLoadTimeout()
             handleLoadError(error)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse,
+            decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+        ) {
+            if let httpResponse = navigationResponse.response as? HTTPURLResponse,
+               let contentDisposition = httpResponse.value(forHTTPHeaderField: "Content-Disposition")?.lowercased(),
+               contentDisposition.contains("attachment") {
+                AppLogger.info("Blocking attachment download from WebView", logger: AppLogger.webview)
+                decisionHandler(.cancel)
+                return
+            }
+
+            if !navigationResponse.canShowMIMEType {
+                AppLogger.info("Blocking non-displayable MIME type from WebView", logger: AppLogger.webview)
+                decisionHandler(.cancel)
+                return
+            }
+
+            decisionHandler(.allow)
+        }
+
+        // MARK: - Downloads
+
+        func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+            download.delegate = self
+        }
+
+        func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+            download.delegate = self
+        }
+
+        func download(
+            _ download: WKDownload,
+            decideDestinationUsing response: URLResponse,
+            suggestedFilename: String,
+            completionHandler: @escaping (URL?) -> Void
+        ) {
+            let tempDir = FileManager.default.temporaryDirectory
+            let destination = tempDir.appendingPathComponent(suggestedFilename)
+            downloadDestinations[ObjectIdentifier(download)] = destination
+            completionHandler(destination)
+        }
+
+        func downloadDidFinish(_ download: WKDownload) {
+            let key = ObjectIdentifier(download)
+            if let destination = downloadDestinations[key] {
+                try? FileManager.default.removeItem(at: destination)
+                downloadDestinations.removeValue(forKey: key)
+            }
+        }
+
+        func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+            let key = ObjectIdentifier(download)
+            if let destination = downloadDestinations[key] {
+                try? FileManager.default.removeItem(at: destination)
+                downloadDestinations.removeValue(forKey: key)
+            }
+            AppLogger.info("Download failed: \(error.localizedDescription)", logger: AppLogger.webview)
         }
         
         // MARK: - Loading Timeout
@@ -681,9 +745,12 @@ struct WebViewContainer: UIViewRepresentable {
                   !text.isEmpty else {
                 return
             }
-            
-            speakConversationAware(text)
-            
+
+            // Give the audio session a brief moment to settle after recording stops.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.speakConversationAware(text)
+            }
+
             // Reset voice flag
             lastInputWasVoice = false
         }
@@ -696,6 +763,9 @@ struct WebViewContainer: UIViewRepresentable {
                 AppLogger.warning("Missing notification parameters", logger: AppLogger.notification)
                 return
             }
+            
+            let silent = (body["silent"] as? Bool) == true
+            let badgeValue = body["badge"] as? Int
             
             // Parse ISO date string
             let formatter = ISO8601DateFormatter()
@@ -712,6 +782,8 @@ struct WebViewContainer: UIViewRepresentable {
                         title: title,
                         body: bodyText,
                         date: date,
+                        sound: silent ? nil : .default,
+                        badge: badgeValue.map { NSNumber(value: $0) } ?? 1,
                         userInfo: ["type": "reminder", "id": id]
                     )
                     #if DEBUG

@@ -15,6 +15,7 @@ const navItems = [
   { href: '/appointments', label: 'Appts', icon: '◷' },
   { href: '/todos', label: 'Todos', icon: '✓' },
   { href: '/habits', label: 'Routines', icon: '↻' },
+  { href: '/analytics', label: 'Analytics', icon: '▤' },
 ];
 
 export function LayoutHeader() {
@@ -278,6 +279,13 @@ export function LayoutHeader() {
                 </Link>
               ) : (
                 <>
+                  <Link
+                    href="/analytics"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-4 py-3 text-brandText hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                  >
+                    Personal Analytics
+                  </Link>
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);

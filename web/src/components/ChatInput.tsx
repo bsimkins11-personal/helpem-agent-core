@@ -219,6 +219,47 @@ export default function ChatInput({
   const needsOptionalFields = (builder: AppointmentBuilder) => {
     return !builder.askedForOptionalFields;
   };
+
+  const deriveAppointmentTitle = (
+    title: string | undefined,
+    withWhom?: string | null,
+    topic?: string | null
+  ) => {
+    const trimmed = title?.trim() || "";
+    const safeWithWhom = withWhom?.trim();
+    const safeTopic = topic?.trim();
+    const isGenericTitle = !trimmed || /^(meeting|appointment)$/i.test(trimmed);
+
+    const normalize = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const overlaps = (a?: string | null, b?: string | null) => {
+      if (!a || !b) return false;
+      const na = normalize(a);
+      const nb = normalize(b);
+      if (!na || !nb) return false;
+      return na.includes(nb) || nb.includes(na);
+    };
+
+    // If title is specific, keep it unless it's essentially the same as topic.
+    if (!isGenericTitle) {
+      if (safeTopic && overlaps(trimmed, safeTopic)) return trimmed;
+      return trimmed;
+    }
+
+    if (safeTopic && safeWithWhom) {
+      return `${safeTopic} with ${safeWithWhom}`;
+    }
+    if (safeTopic) return safeTopic;
+
+    if (safeWithWhom) {
+      return `Meeting with ${safeWithWhom}`;
+    }
+    return "Meeting";
+  };
   
   const isDeclineReply = (text: string) => {
     const normalized = text.trim().toLowerCase();
@@ -679,6 +720,7 @@ export default function ChatInput({
       // Finalize appointment - we have everything we need now
       // withWhom is MANDATORY - if missing, use fallback
       const finalWithWhom = builder.withWhom?.trim() || "Just me";
+      const finalTitle = deriveAppointmentTitle(builder.title, finalWithWhom, builder.topic);
       
       if (!builder.withWhom) {
         console.warn("⚠️⚠️⚠️ withWhom is MISSING at finalization! Using fallback.");
@@ -688,7 +730,7 @@ export default function ChatInput({
       
       const finalAppointment: Appointment = {
         id: builder.id,
-        title: builder.title || "Meeting",
+        title: finalTitle,
         datetime: builder.datetime!,
         durationMinutes: builder.durationMinutes!,
         withWhom: finalWithWhom,  // MANDATORY - always has a value
@@ -1233,9 +1275,20 @@ export default function ChatInput({
           const durationMinutes = Number.isFinite(data.durationMinutes) ? Number(data.durationMinutes) : 
                                   Number.isFinite(data.duration) ? Number(data.duration) : undefined;
           const withWhom = typeof data.withWhom === "string" && data.withWhom.trim() ? data.withWhom.trim() : undefined;
-          const topic = typeof data.topic === "string" && data.topic.trim() ? data.topic.trim() : undefined;
-          const location = typeof data.location === "string" && data.location.trim() ? data.location.trim() : undefined;
-          const title = data.title || "Meeting";
+          let topic = typeof data.topic === "string" && data.topic.trim() ? data.topic.trim() : undefined;
+          let location = typeof data.location === "string" && data.location.trim() ? data.location.trim() : undefined;
+
+          if ((!topic || !location) && lastUserMessageRef.current) {
+            const extracted = extractOptionalFields(lastUserMessageRef.current);
+            if (!topic && extracted.topic) {
+              topic = extracted.topic;
+            }
+            if (!location && extracted.location && /[a-zA-Z]/.test(extracted.location)) {
+              location = extracted.location;
+            }
+          }
+
+          const title = deriveAppointmentTitle(data.title, withWhom, topic);
           
           console.log("=".repeat(80));
           console.log("📋📋📋 CREATING NEW BUILDER FROM AI RESPONSE 📋📋📋");
@@ -1318,7 +1371,7 @@ export default function ChatInput({
           // We have everything - finalize immediately without asking
           const finalAppointment: Appointment = {
             id: builder.id,
-            title: builder.title || "Meeting",
+            title: deriveAppointmentTitle(builder.title, builder.withWhom, builder.topic),
             datetime: builder.datetime!,
             durationMinutes: builder.durationMinutes!,
             withWhom: builder.withWhom?.trim() || "Just me",
@@ -1526,6 +1579,12 @@ export default function ChatInput({
           if (updates.datetime) {
             fallbackUpdates.datetime = parseAiDatetime(updates.datetime);
           }
+          if (typeof updates.topic === "string" && updates.topic.trim().length > 0) {
+            fallbackUpdates.topic = updates.topic.trim();
+          }
+          if (typeof updates.location === "string" && updates.location.trim().length > 0) {
+            fallbackUpdates.location = updates.location.trim();
+          }
           if (Number.isFinite(updates.durationMinutes) || Number.isFinite(updates.duration)) {
             const nextDuration = Number(updates.durationMinutes ?? updates.duration);
             if (!Number.isNaN(nextDuration)) {
@@ -1599,102 +1658,8 @@ export default function ChatInput({
         }
 
         if (!itemToUpdate) {
-          if (actualType === "appointment" && pendingAppointmentContextRef.current) {
-            const fallbackTitle = updates.newTitle || searchTitle || "Meeting";
-            const fallbackDatetime = updates.datetime ? parseAiDatetime(updates.datetime) : null;
-            const fallbackDuration = Number.isFinite(updates.durationMinutes)
-              ? Number(updates.durationMinutes)
-              : Number.isFinite(updates.duration)
-                ? Number(updates.duration)
-                : null;
-            const fallbackWithWhom = typeof updates.withWhom === "string" ? updates.withWhom.trim() : null;
-
-            if (!fallbackDatetime) {
-              const responseText = "What date and time should I use?";
-              addMessage({
-                id: uuidv4(),
-                role: "assistant",
-                content: responseText,
-              });
-              if (isNativeApp) {
-                window.webkit?.messageHandlers?.native?.postMessage({
-                  action: "speak",
-                  text: responseText,
-                });
-              }
-              return;
-            }
-
-            if (!fallbackDuration || fallbackDuration <= 0) {
-              const responseText = "How long is the meeting?";
-              addMessage({
-                id: uuidv4(),
-                role: "assistant",
-                content: responseText,
-              });
-              if (isNativeApp) {
-                window.webkit?.messageHandlers?.native?.postMessage({
-                  action: "speak",
-                  text: responseText,
-                });
-              }
-              return;
-            }
-
-            const id = uuidv4();
-            const now = new Date();
-            addAppointment({
-              id,
-              title: fallbackTitle,
-              withWhom: fallbackWithWhom,
-              topic: null,
-              location: null,
-              datetime: fallbackDatetime,
-              durationMinutes: fallbackDuration,
-              createdAt: now,
-            });
-            lastAppointmentIdRef.current = id;
-            lastAppointmentTitleRef.current = fallbackTitle;
-
-            try {
-              const apiResponse = await fetch("/api/appointments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  title: fallbackTitle,
-                  withWhom: fallbackWithWhom,
-                  datetime: fallbackDatetime.toISOString(),
-                  durationMinutes: fallbackDuration,
-                }),
-              });
-
-              if (apiResponse.status === 409) {
-                const conflictData = await apiResponse.json().catch(() => null);
-                deleteAppointment(id);
-                lastAppointmentIdRef.current = null;
-                lastAppointmentTitleRef.current = null;
-                const conflictText = conflictData?.conflict
-                  ? `That overlaps with "${conflictData.conflict.title}" at ${formatDateTimeForSpeech(new Date(conflictData.conflict.datetime))}. Want to pick a different time or shorten the meeting?`
-                  : "That time overlaps with another appointment. Want to pick a different time or shorten the meeting?";
-                addMessage({
-                  id: uuidv4(),
-                  role: "assistant",
-                  content: conflictText,
-                });
-                if (isNativeApp) {
-                  window.webkit?.messageHandlers?.native?.postMessage({
-                    action: "speak",
-                    text: conflictText,
-                  });
-                }
-                return;
-              }
-            } catch (error) {
-              console.error("❌ Error creating appointment from follow-up:", error);
-            }
-
-            pendingAppointmentContextRef.current = null;
-            const responseText = data.message || `Got it. I've scheduled "${fallbackTitle}" for ${formatDateTimeForSpeech(fallbackDatetime)}.`;
+          if (actualType === "appointment") {
+            const responseText = "Which meeting should I update?";
             addMessage({
               id: uuidv4(),
               role: "assistant",
@@ -1705,16 +1670,6 @@ export default function ChatInput({
                 action: "speak",
                 text: responseText,
               });
-            }
-            const askText = getWhoWhatPrompt(fallbackTitle, fallbackWithWhom);
-            if (askText && askedWhoWhatForAppointmentRef.current != id) {
-              askedWhoWhatForAppointmentRef.current = id;
-              addMessage({
-                id: uuidv4(),
-                role: "assistant",
-                content: askText,
-              });
-              speakNative(askText, 900);
             }
             return;
           }
@@ -1762,14 +1717,42 @@ export default function ChatInput({
               if (typeof updates.withWhom === "string") {
                 appointmentUpdates.withWhom = updates.withWhom.trim();
               }
+              if (typeof updates.topic === "string") {
+                appointmentUpdates.topic = updates.topic.trim();
+              }
+              if (typeof updates.location === "string") {
+                appointmentUpdates.location = updates.location.trim();
+              }
               if (updates.durationMinutes || updates.duration) {
                 const nextDuration = Number(updates.durationMinutes ?? updates.duration);
                 if (!Number.isNaN(nextDuration)) {
                   appointmentUpdates.durationMinutes = nextDuration;
                 }
               }
+
+              if (!appointmentUpdates.title) {
+                const derivedTitle = deriveAppointmentTitle(
+                  itemToUpdate.title,
+                  appointmentUpdates.withWhom ?? itemToUpdate.withWhom,
+                  appointmentUpdates.topic ?? itemToUpdate.topic
+                );
+                if (derivedTitle && derivedTitle !== itemToUpdate.title) {
+                  appointmentUpdates.title = derivedTitle;
+                }
+              }
               
               updateAppointment(itemToUpdate.id, appointmentUpdates);
+              try {
+                if (Object.keys(appointmentUpdates).length > 0) {
+                  await fetch("/api/appointments", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: itemToUpdate.id, ...appointmentUpdates }),
+                  });
+                }
+              } catch (error) {
+                console.error("❌ Error updating appointment:", error);
+              }
 
               const askedId = askedWhoWhatForAppointmentRef.current;
               const durationUpdated = Boolean(updates.durationMinutes || updates.duration);

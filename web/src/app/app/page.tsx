@@ -8,6 +8,8 @@ import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
 import { useLife } from "@/state/LifeStore";
+import { useNotificationSettings } from "@/hooks/useNotificationSettings";
+import { usePersonalAnalyticsNotifications } from "@/hooks/usePersonalAnalyticsNotifications";
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
@@ -24,9 +26,12 @@ const STACK_GAP_PX = 0;
 
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
+  const { settings } = useNotificationSettings();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
+
+  usePersonalAnalyticsNotifications(settings);
   
   console.log('🟦 ========================================');
   console.log('🟦 AppPage: RENDERING');

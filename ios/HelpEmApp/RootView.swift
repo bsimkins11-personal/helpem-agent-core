@@ -10,6 +10,7 @@ struct RootView: View {
     
     @StateObject private var authManager = AuthManager.shared
     @State private var webViewHandler: WebViewHandler?
+    @State private var isMenuPresented = false
     @Environment(\.scenePhase) private var scenePhase
     
     private func openFeedbackURL() {
@@ -63,6 +64,14 @@ struct RootView: View {
             print("⚠️ iOS: webViewHandler is nil!")
         }
         webViewHandler?.triggerClearDataModal()
+    }
+
+    private func openPersonalAnalytics() {
+        print("📱 iOS: openPersonalAnalytics called")
+        if webViewHandler == nil {
+            print("⚠️ iOS: webViewHandler is nil!")
+        }
+        webViewHandler?.navigateAnalytics()
     }
     
     private func navigateHome() {
@@ -223,6 +232,21 @@ struct RootView: View {
             let request = URLRequest(url: url)
             webView?.load(request)
         }
+
+        func navigateAnalytics() {
+            guard var components = URLComponents(string: AppEnvironment.webAppURL) else {
+                print("❌ iOS: Invalid analytics URL")
+                return
+            }
+            components.path = "/analytics"
+            guard let url = components.url else {
+                print("❌ iOS: Invalid analytics URL components")
+                return
+            }
+            print("📊 iOS: Loading analytics URL \(url.absoluteString)")
+            let request = URLRequest(url: url)
+            webView?.load(request)
+        }
     }
     
     var body: some View {
@@ -262,46 +286,10 @@ struct RootView: View {
                                         
                                         Spacer()
                                         
-                                        // Menu button
-                                        Menu {
-                                            Button(action: {
-                                                openFeedbackURL()
-                                            }) {
-                                                Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
-                                            }
-                                            
-                                            Button(action: {
-                                                openUsageModal()
-                                            }) {
-                                                Label("View Usage", systemImage: "chart.bar.fill")
-                                            }
-                                            
-                                            Button(action: {
-                                                openConnectorsModal()
-                                            }) {
-                                                Label("Connectors", systemImage: "link.circle")
-                                            }
-                                            
-                                            Button(action: {
-                                                openSupportModal()
-                                            }) {
-                                                Label("Get Support", systemImage: "questionmark.circle")
-                                            }
-                                            
-                                            Divider()
-                                            
-                                            Button(action: {
-                                                openClearDataModal()
-                                            }) {
-                                                Label("Clear App Data", systemImage: "trash")
-                                            }
-                                            
-                                            Button(role: .destructive, action: {
-                                                authManager.logout()
-                                            }) {
-                                                Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
-                                            }
-                                        } label: {
+                                        // Menu button (custom sheet to avoid UIKit bar button constraints)
+                                        Button(action: {
+                                            isMenuPresented = true
+                                        }) {
                                             VStack(spacing: 2) {
                                                 Image(systemName: "ellipsis.circle.fill")
                                                     .font(.system(size: 26))
@@ -330,6 +318,92 @@ struct RootView: View {
                             }
                         }
                         .ignoresSafeArea()
+                        .sheet(isPresented: $isMenuPresented) {
+                            VStack(spacing: 0) {
+                                Text("Menu")
+                                    .font(.headline)
+                                    .padding(.top, 16)
+                                    .padding(.bottom, 12)
+                                
+                                Divider()
+                                
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openFeedbackURL()
+                                }) {
+                                    Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openUsageModal()
+                                }) {
+                                    Label("View Usage", systemImage: "chart.bar.fill")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openConnectorsModal()
+                                }) {
+                                    Label("Connectors", systemImage: "link.circle")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openPersonalAnalytics()
+                                }) {
+                                    Label("Personal Analytics", systemImage: "chart.line.uptrend.xyaxis")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openSupportModal()
+                                }) {
+                                    Label("Get Support", systemImage: "questionmark.circle")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                Divider()
+                                    .padding(.top, 8)
+                                
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openClearDataModal()
+                                }) {
+                                    Label("Clear App Data", systemImage: "trash")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                Button(role: .destructive, action: {
+                                    isMenuPresented = false
+                                    authManager.logout()
+                                }) {
+                                    Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                Spacer()
+                            }
+                            .presentationDetents([.medium])
+                        }
                     }
             } else {
                 SignInView(authManager: authManager)

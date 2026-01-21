@@ -35,7 +35,11 @@ export async function requestNotificationPermission(): Promise<boolean> {
  * @param title - Notification title
  * @param options - Standard NotificationOptions
  */
-export function sendNotification(title: string, options?: NotificationOptions): void {
+export function sendNotification(
+  title: string,
+  options?: NotificationOptions,
+  onClickUrl?: string
+): void {
   if (typeof window === "undefined" || Notification.permission !== "granted") {
     return;
   }
@@ -53,6 +57,9 @@ export function sendNotification(title: string, options?: NotificationOptions): 
     // Focus window on click
     notification.onclick = () => {
       window.focus();
+      if (onClickUrl) {
+        window.location.href = onClickUrl;
+      }
       notification.close();
       clearTimeout(timeoutId);
     };
