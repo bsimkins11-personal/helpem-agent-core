@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Tribe Detail screen with three sections:
 /// 1. Inbox (proposals)

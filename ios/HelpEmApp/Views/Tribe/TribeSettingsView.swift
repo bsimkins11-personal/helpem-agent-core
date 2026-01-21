@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Tribe Settings Screen
 /// - Rename Tribe (owner only)

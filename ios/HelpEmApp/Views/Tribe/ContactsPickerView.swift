@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import Contacts
 
 /// Contacts Picker for inviting Tribe members
@@ -28,6 +29,8 @@ struct ContactsPickerView: View {
                     } else {
                         contactsList
                     }
+                @unknown default:
+                    emptyState
                 }
             }
             .navigationTitle("Invite to Tribe")

@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Share with Tribe component
 /// 
@@ -36,7 +37,7 @@ struct ShareWithTribeView: View {
                 }
                 
                 // Recipient selection (mandatory)
-                if let tribeId = selectedTribeId {
+                if selectedTribeId != nil {
                     Section {
                         if viewModel.isLoadingMembers {
                             ProgressView()
@@ -125,7 +126,7 @@ struct ShareWithTribeView: View {
     }
     
     private var canShare: Bool {
-        guard let tribeId = selectedTribeId else { return false }
+        guard selectedTribeId != nil else { return false }
         guard !selectedRecipients.isEmpty else { return false }
         return true
     }

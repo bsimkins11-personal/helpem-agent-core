@@ -246,34 +246,3 @@ class TribeNotificationManager {
     }
 }
 
-// MARK: - Notification Delegate Extension
-
-extension NotificationManager: UNUserNotificationCenterDelegate {
-    /// Handle notification when app is in foreground
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        // Show notification even when app is in foreground
-        completionHandler([.banner, .sound, .badge])
-    }
-    
-    /// Handle notification action
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        Task {
-            // Check if this is a Tribe notification
-            let userInfo = response.notification.request.content.userInfo
-            if let type = userInfo["type"] as? String,
-               type.starts(with: "tribe_") {
-                await TribeNotificationManager.shared.handleNotificationAction(response: response)
-            }
-            
-            completionHandler()
-        }
-    }
-}
