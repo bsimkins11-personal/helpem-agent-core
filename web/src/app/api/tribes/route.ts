@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/lib/sessionAuth";
+import { verifySessionToken } from "@/lib/sessionAuth";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
 
@@ -9,7 +9,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await verifySession(req);
+    const session = await verifySessionToken(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await verifySession(req);
+    const session = await verifySessionToken(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
