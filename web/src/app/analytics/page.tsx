@@ -18,6 +18,8 @@ export default function AnalyticsPage() {
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const weekStart = new Date(todayStart);
   weekStart.setDate(todayStart.getDate() - todayStart.getDay());
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const summaries = useMemo(() => {
@@ -109,7 +111,7 @@ export default function AnalyticsPage() {
 
           <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <h2 className="text-lg font-semibold text-brandText mb-3">
-              Weekly summary ({formatDate(weekStart)} – {formatDate(todayStart)})
+              Weekly summary ({formatDate(weekStart)} – {formatDate(weekEnd)})
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
               <div className="rounded-xl border border-gray-100 p-3">
