@@ -131,11 +131,11 @@ struct TribeItemRow: View {
     private var itemTitle: String {
         // Extract title from data
         if let titleValue = item.data["title"],
-           case .string(let title) = titleValue {
+           case let title as String = titleValue.value {
             return title
         }
         if let nameValue = item.data["name"],
-           case .string(let name) = nameValue {
+           case let name as String = nameValue.value {
             return name
         }
         return "Untitled"
