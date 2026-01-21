@@ -17,7 +17,7 @@ export default function AnalyticsPage() {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const weekStart = new Date(todayStart);
-  weekStart.setDate(todayStart.getDate() - 6);
+  weekStart.setDate(todayStart.getDate() - todayStart.getDay());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const summaries = useMemo(() => {
@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-brandText">Personal Analytics</h1>
           <p className="text-sm text-brandTextLight mt-1">
-            A calm view of your routines, tasks, and appointments.
+            An overview of your appointments, todos, and routines.
           </p>
         </div>
 
