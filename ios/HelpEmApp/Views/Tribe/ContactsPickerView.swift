@@ -200,7 +200,7 @@ class ContactsPickerViewModel: ObservableObject {
             permissionStatus = .notDetermined
         case .denied, .restricted:
             permissionStatus = .denied
-        case .authorized:
+        case .authorized, .limited:
             permissionStatus = .authorized
             Task {
                 await loadContacts()

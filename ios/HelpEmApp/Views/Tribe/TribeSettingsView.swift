@@ -18,97 +18,11 @@ struct TribeSettingsView: View {
     
     var body: some View {
         List {
-            // Tribe name section (owner only)
-            if tribe.isOwner {
-                Section("Tribe Name") {
-                    HStack {
-                        Text(tribe.name)
-                        Spacer()
-                        Button("Rename") {
-                            newTribeName = tribe.name
-                            showingRename = true
-                        }
-                        .font(.subheadline)
-                    }
-                }
-            }
-            
-            // Members section
-            Section {
-                NavigationLink {
-                    TribeMembersView(tribe: tribe)
-                } label: {
-                    Label("Members", systemImage: "person.3")
-                }
-            }
-            
-            // Notification preferences
-            Section {
-                Toggle("Proposal Notifications", isOn: $viewModel.proposalNotifications)
-                    .onChange(of: viewModel.proposalNotifications) { _, newValue in
-                        Task {
-                            await viewModel.updateNotificationPreferences(
-                                tribeId: tribe.id,
-                                proposalNotifs: newValue,
-                                digestNotifs: viewModel.digestNotifications
-                            )
-                        }
-                    }
-                
-                Toggle("Digest Notifications", isOn: $viewModel.digestNotifications)
-                    .onChange(of: viewModel.digestNotifications) { _, newValue in
-                        Task {
-                            await viewModel.updateNotificationPreferences(
-                                tribeId: tribe.id,
-                                proposalNotifs: viewModel.proposalNotifications,
-                                digestNotifs: newValue
-                            )
-                        }
-                    }
-            } header: {
-                Text("Notifications")
-            } footer: {
-                Text("Proposal notifications alert you once when someone shares something. Digest notifications summarize multiple proposals.")
-            }
-            
-            // Management scope
-            Section("Management Scope") {
-                Picker("Show", selection: $viewModel.managementScope) {
-                    Text("Only Shared Items").tag("only_shared")
-                    Text("Shared + Personal Items").tag("shared_and_personal")
-                }
-                .pickerStyle(.menu)
-                .onChange(of: viewModel.managementScope) { _, newValue in
-                    if newValue == "shared_and_personal" {
-                        viewModel.showingAdvancedWarning = true
-                    } else {
-                        Task {
-                            await viewModel.updateManagementScope(tribeId: tribe.id, scope: newValue)
-                        }
-                    }
-                }
-            } footer: {
-                Text("'Shared + Personal Items' allows Tribe members to see your personal items in this context. This is an advanced option.")
-            }
-            
-            // Danger zone
-            Section {
-                if tribe.isOwner {
-                    Button(role: .destructive) {
-                        showingDeleteConfirm = true
-                    } label: {
-                        Label("Delete Tribe", systemImage: "trash")
-                    }
-                } else {
-                    Button(role: .destructive) {
-                        showingLeaveConfirm = true
-                    } label: {
-                        Label("Leave Tribe", systemImage: "arrow.right.square")
-                    }
-                }
-            } header: {
-                Text("Danger Zone")
-            }
+            tribeNameSection
+            membersSection
+            notificationsSection
+            managementScopeSection
+            dangerZoneSection
         }
         .task {
             await viewModel.loadSettings(tribeId: tribe.id)
@@ -160,6 +74,105 @@ struct TribeSettingsView: View {
             if let error = viewModel.error {
                 Text(error.localizedDescription)
             }
+        }
+    }
+
+    private var tribeNameSection: some View {
+        Group {
+            if tribe.isOwner {
+                Section("Tribe Name") {
+                    HStack {
+                        Text(tribe.name)
+                        Spacer()
+                        Button("Rename") {
+                            newTribeName = tribe.name
+                            showingRename = true
+                        }
+                        .font(.subheadline)
+                    }
+                }
+            }
+        }
+    }
+
+    private var membersSection: some View {
+        Section {
+            NavigationLink {
+                TribeMembersView(tribe: tribe)
+            } label: {
+                Label("Members", systemImage: "person.3")
+            }
+        }
+    }
+
+    private var notificationsSection: some View {
+        Section {
+            Toggle("Proposal Notifications", isOn: $viewModel.proposalNotifications)
+                .onChange(of: viewModel.proposalNotifications) { _, newValue in
+                    Task {
+                        await viewModel.updateNotificationPreferences(
+                            tribeId: tribe.id,
+                            proposalNotifs: newValue,
+                            digestNotifs: viewModel.digestNotifications
+                        )
+                    }
+                }
+
+            Toggle("Digest Notifications", isOn: $viewModel.digestNotifications)
+                .onChange(of: viewModel.digestNotifications) { _, newValue in
+                    Task {
+                        await viewModel.updateNotificationPreferences(
+                            tribeId: tribe.id,
+                            proposalNotifs: viewModel.proposalNotifications,
+                            digestNotifs: newValue
+                        )
+                    }
+                }
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("Proposal notifications alert you once when someone shares something. Digest notifications summarize multiple proposals.")
+        }
+    }
+
+    private var managementScopeSection: some View {
+        Section("Management Scope") {
+            Picker("Show", selection: $viewModel.managementScope) {
+                Text("Only Shared Items").tag("only_shared")
+                Text("Shared + Personal Items").tag("shared_and_personal")
+            }
+            .pickerStyle(.menu)
+            .onChange(of: viewModel.managementScope) { _, newValue in
+                if newValue == "shared_and_personal" {
+                    viewModel.showingAdvancedWarning = true
+                } else {
+                    Task {
+                        await viewModel.updateManagementScope(tribeId: tribe.id, scope: newValue)
+                    }
+                }
+            }
+        } footer: {
+            Text("'Shared + Personal Items' allows Tribe members to see your personal items in this context. This is an advanced option.")
+        }
+    }
+
+    private var dangerZoneSection: some View {
+        Section {
+            if tribe.isOwner {
+                Button(role: .destructive) {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete Tribe", systemImage: "trash")
+                }
+            } else {
+                Button(role: .destructive) {
+                    showingLeaveConfirm = true
+                } label: {
+                    Label("Leave Tribe", systemImage: "arrow.right.square")
+                }
+            }
+        } header: {
+            Text("Danger Zone")
         }
     }
 }
