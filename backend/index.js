@@ -6,6 +6,7 @@ import { verifyAppleIdentityToken } from "./src/lib/appleAuth.js";
 import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js";
 import { prisma } from "./src/lib/prisma.js";
 import { migrateFeedbackTable } from "./src/migrate-feedback.js";
+import tribeRoutes from "./src/routes/tribe.js";
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -409,6 +410,12 @@ app.get("/migrate-feedback", async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+// =============================================================================
+// TRIBE ROUTES
+// =============================================================================
+
+app.use("/tribes", apiLimiter, tribeRoutes);
 
 // Start server
 app.listen(port, () => {

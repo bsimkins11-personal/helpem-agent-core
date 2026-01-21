@@ -404,67 +404,83 @@ export default function AppPage() {
           </div>
         </div>
         
-        {/* Type/Hold to Talk Buttons */}
+        {/* Type/My Tribe/Hold to Talk Buttons */}
         <div style={{ backgroundColor: 'white', paddingTop: '8px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px', borderBottom: '4px solid #9ca3af' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center gap-2 p-2 rounded-lg border border-gray-200" style={{ backgroundColor: '#f9fafb' }}>
-            <button
-              onClick={() => {
-                setInputMode("type");
-                scrollToChatSoon();
-              }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all ${
-                inputMode === "type"
-                  ? "bg-brandBlue text-white border border-brandBlue"
-                  : "bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
-              }`}
-            >
-              <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Type
-            </button>
-            
-            <button
-              onPointerDown={(event) => {
-                event.preventDefault();
-                if (isHoldingToTalkRef.current) return;
-                isHoldingToTalkRef.current = true;
-                event.currentTarget.setPointerCapture(event.pointerId);
-                setInputMode("talk");
-                // Scroll without smooth animation to avoid canceling press
-                scrollToChatInstant();
-              }}
-              onPointerUp={(event) => {
-                event.preventDefault();
-                if (!isHoldingToTalkRef.current) return;
-                isHoldingToTalkRef.current = false;
-                event.currentTarget.releasePointerCapture(event.pointerId);
-                setInputMode("type");
-                // Apply any pending height changes now that user released button
-                applyPendingHeight();
-              }}
-              onPointerCancel={(event) => {
-                event.preventDefault();
-                if (!isHoldingToTalkRef.current) return;
-                isHoldingToTalkRef.current = false;
-                event.currentTarget.releasePointerCapture(event.pointerId);
-                setInputMode("type");
-                // Apply any pending height changes now that user released button
-                applyPendingHeight();
-              }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none touch-none ${
-                inputMode === "talk"
-                  ? "bg-red-500 text-white"
-                  : "bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
-              }`}
-            >
-              <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-              </svg>
-              Hold to talk
-            </button>
+            <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-gray-200" style={{ backgroundColor: '#f9fafb' }}>
+              {/* Left side: Type and My Tribe */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setInputMode("type");
+                    scrollToChatSoon();
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all ${
+                    inputMode === "type"
+                      ? "bg-brandBlue text-white border border-brandBlue"
+                      : "bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Type
+                </button>
+                
+                <button
+                  onClick={() => {
+                    window.location.href = '/tribe/inbox';
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
+                >
+                  <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  My Tribe
+                </button>
+              </div>
+              
+              {/* Right side: Hold to Talk (easy access for right-handed users) */}
+              <button
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  if (isHoldingToTalkRef.current) return;
+                  isHoldingToTalkRef.current = true;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setInputMode("talk");
+                  // Scroll without smooth animation to avoid canceling press
+                  scrollToChatInstant();
+                }}
+                onPointerUp={(event) => {
+                  event.preventDefault();
+                  if (!isHoldingToTalkRef.current) return;
+                  isHoldingToTalkRef.current = false;
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                  setInputMode("type");
+                  // Apply any pending height changes now that user released button
+                  applyPendingHeight();
+                }}
+                onPointerCancel={(event) => {
+                  event.preventDefault();
+                  if (!isHoldingToTalkRef.current) return;
+                  isHoldingToTalkRef.current = false;
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                  setInputMode("type");
+                  // Apply any pending height changes now that user released button
+                  applyPendingHeight();
+                }}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all select-none touch-none ${
+                  inputMode === "talk"
+                    ? "bg-red-500 text-white"
+                    : "bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
+                }`}
+              >
+                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+                Hold to talk
+              </button>
             </div>
           </div>
         </div>

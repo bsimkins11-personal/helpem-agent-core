@@ -87,3 +87,120 @@ model Habit {
 
   @@map("habits")
 }
+
+model GroceryItem {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @db.Uuid @map("user_id")
+  name         String
+  category     String?
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("grocery_items")
+}
+
+/// Tribe items are invitations. They never become active without explicit acceptance.
+model Tribe {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  ownerId     String         @db.Uuid @map("owner_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  deletedAt   DateTime?      @map("deleted_at")
+  
+  members     TribeMember[]
+  items       TribeItem[]
+  
+  @@map("tribes")
+}
+
+/// Tribe items are invitations. They never become active without explicit acceptance.
+model TribeMember {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tribeId           String                    @db.Uuid @map("tribe_id")
+  userId            String                    @db.Uuid @map("user_id")
+  invitedBy         String                    @db.Uuid @map("invited_by")
+  invitedAt         DateTime                  @default(now()) @map("invited_at")
+  acceptedAt        DateTime?                 @map("accepted_at")
+  leftAt            DateTime?                 @map("left_at")
+  
+  // Management scope: only_shared (default) or shared_and_personal
+  managementScope   String                    @default("only_shared") @map("management_scope")
+  
+  // Notification preferences
+  proposalNotifs    Boolean                   @default(true) @map("proposal_notifications")
+  digestNotifs      Boolean                   @default(false) @map("digest_notifications")
+  
+  tribe             Tribe                     @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  permissions       TribeMemberPermissions?
+  proposals         TribeProposal[]
+  
+  @@unique([tribeId, userId])
+  @@map("tribe_members")
+}
+
+/// Tribe items are invitations. They never become active without explicit acceptance.
+model TribeMemberPermissions {
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId              String       @unique @db.Uuid @map("member_id")
+  
+  // Per-category permissions: can_add, can_remove
+  canAddTasks           Boolean      @default(true) @map("can_add_tasks")
+  canRemoveTasks        Boolean      @default(false) @map("can_remove_tasks")
+  
+  canAddRoutines        Boolean      @default(true) @map("can_add_routines")
+  canRemoveRoutines     Boolean      @default(false) @map("can_remove_routines")
+  
+  canAddAppointments    Boolean      @default(true) @map("can_add_appointments")
+  canRemoveAppointments Boolean      @default(false) @map("can_remove_appointments")
+  
+  canAddGroceries       Boolean      @default(true) @map("can_add_groceries")
+  canRemoveGroceries    Boolean      @default(false) @map("can_remove_groceries")
+  
+  member                TribeMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  @@map("tribe_member_permissions")
+}
+
+/// Tribe items are invitations. They never become active without explicit acceptance.
+model TribeItem {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tribeId     String          @db.Uuid @map("tribe_id")
+  createdBy   String          @db.Uuid @map("created_by")
+  
+  // Item type: task, routine, appointment, grocery
+  itemType    String          @map("item_type")
+  
+  // Item data (JSON with type-specific fields)
+  data        Json
+  
+  createdAt   DateTime        @default(now()) @map("created_at")
+  deletedAt   DateTime?       @map("deleted_at")
+  
+  tribe       Tribe           @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  proposals   TribeProposal[]
+  
+  @@map("tribe_items")
+}
+
+/// Tribe items are invitations. They never become active without explicit acceptance.
+model TribeProposal {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId      String       @db.Uuid @map("item_id")
+  recipientId String       @db.Uuid @map("recipient_id")
+  
+  // State: proposed, not_now, accepted, dismissed
+  state       String       @default("proposed")
+  
+  createdAt   DateTime     @default(now()) @map("created_at")
+  stateChangedAt DateTime  @default(now()) @map("state_changed_at")
+  
+  // Only ONE notification per proposal
+  notifiedAt  DateTime?    @map("notified_at")
+  
+  item        TribeItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  recipient   TribeMember  @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  @@unique([itemId, recipientId])
+  @@index([recipientId, state])
+  @@map("tribe_proposals")
+}
