@@ -14,7 +14,7 @@ class TribeAPIClient {
     private let encoder: JSONEncoder
     
     private init() {
-        self.baseURL = AppEnvironment.apiBaseURL
+        self.baseURL = AppEnvironment.apiURL
         
         self.decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -220,7 +220,7 @@ class TribeAPIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         // Get session token from Keychain
-        guard let token = KeychainHelper.shared.getSessionToken() else {
+        guard let token = KeychainHelper.shared.sessionToken else {
             throw TribeAPIError.notAuthenticated
         }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

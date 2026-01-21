@@ -204,15 +204,13 @@ struct ProposalCard: View {
     private var itemTitle: String {
         guard let item = proposal.item else { return "Untitled" }
         
-        if let titleValue = item.data["title"] {
-            if case let value as String = titleValue {
-                return value
-            }
+        if let titleValue = item.data["title"],
+           case let value as String = titleValue.value {
+            return value
         }
-        if let nameValue = item.data["name"] {
-            if case let value as String = nameValue {
-                return value
-            }
+        if let nameValue = item.data["name"],
+           case let value as String = nameValue.value {
+            return value
         }
         return "Untitled"
     }
@@ -266,7 +264,7 @@ struct ItemDetailsView: View {
     @ViewBuilder
     private var appointmentDetails: some View {
         if let datetime = item.data["datetime"],
-           case let dateString as String = datetime,
+           case let dateString as String = datetime.value,
            let date = ISO8601DateFormatter().date(from: dateString) {
             HStack {
                 Image(systemName: "calendar")
@@ -275,7 +273,7 @@ struct ItemDetailsView: View {
         }
         
         if let withWhom = item.data["withWhom"],
-           case let name as String = withWhom {
+           case let name as String = withWhom.value {
             HStack {
                 Image(systemName: "person")
                 Text(name)
@@ -286,7 +284,7 @@ struct ItemDetailsView: View {
     @ViewBuilder
     private var taskDetails: some View {
         if let dueDate = item.data["dueDate"],
-           case let dateString as String = dueDate,
+           case let dateString as String = dueDate.value,
            let date = ISO8601DateFormatter().date(from: dateString) {
             HStack {
                 Image(systemName: "calendar")
@@ -295,7 +293,7 @@ struct ItemDetailsView: View {
         }
         
         if let priority = item.data["priority"],
-           case let priorityString as String = priority {
+           case let priorityString as String = priority.value {
             HStack {
                 Image(systemName: "flag")
                 Text(priorityString.capitalized)
@@ -306,7 +304,7 @@ struct ItemDetailsView: View {
     @ViewBuilder
     private var routineDetails: some View {
         if let frequency = item.data["frequency"],
-           case let freqString as String = frequency {
+           case let freqString as String = frequency.value {
             HStack {
                 Image(systemName: "repeat")
                 Text(freqString.capitalized)
@@ -317,7 +315,7 @@ struct ItemDetailsView: View {
     @ViewBuilder
     private var groceryDetails: some View {
         if let category = item.data["category"],
-           case let categoryString as String = category {
+           case let categoryString as String = category.value {
             HStack {
                 Image(systemName: "tag")
                 Text(categoryString)

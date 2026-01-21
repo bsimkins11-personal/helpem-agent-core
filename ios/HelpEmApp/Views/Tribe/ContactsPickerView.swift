@@ -29,7 +29,7 @@ struct ContactsPickerView: View {
                     } else {
                         contactsList
                     }
-                @unknown default:
+                default:
                     emptyState
                 }
             }
