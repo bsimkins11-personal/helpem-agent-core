@@ -136,7 +136,7 @@ struct TribeSettingsView: View {
     }
 
     private var managementScopeSection: some View {
-        Section("Management Scope") {
+        Section {
             Picker("Show", selection: $viewModel.managementScope) {
                 Text("Only Shared Items").tag("only_shared")
                 Text("Shared + Personal Items").tag("shared_and_personal")
@@ -151,6 +151,8 @@ struct TribeSettingsView: View {
                     }
                 }
             }
+        } header: {
+            Text("Management Scope")
         } footer: {
             Text("'Shared + Personal Items' allows Tribe members to see your personal items in this context. This is an advanced option.")
         }
