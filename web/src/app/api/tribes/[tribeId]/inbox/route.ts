@@ -9,16 +9,16 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { tribeId: string } }
+  { params }: { params: Promise<{ tribeId: string }> }
 ) {
   try {
+    const { tribeId } = await params;
     const session = await verifySessionToken(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const token = req.headers.get("authorization") || "";
-    const { tribeId } = params;
     
     const response = await fetch(`${BACKEND_URL}/tribes/${tribeId}/inbox`, {
       method: "GET",

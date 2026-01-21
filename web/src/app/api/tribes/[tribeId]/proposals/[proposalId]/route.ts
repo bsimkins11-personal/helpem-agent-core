@@ -9,16 +9,16 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { tribeId: string; proposalId: string } }
+  { params }: { params: Promise<{ tribeId: string; proposalId: string }> }
 ) {
   try {
+    const { tribeId, proposalId } = await params;
     const session = await verifySessionToken(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const token = req.headers.get("authorization") || "";
-    const { tribeId, proposalId } = params;
     
     const response = await fetch(
       `${BACKEND_URL}/tribes/${tribeId}/proposals/${proposalId}`,
