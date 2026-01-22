@@ -164,7 +164,19 @@ router.post("/", async (req, res) => {
       },
     });
 
-    return res.json({ tribe });
+    // Format response to match GET /tribes format (what iOS client expects)
+    const memberId = tribe.members[0]?.id;
+    const pendingCount = memberId ? await getPendingProposalsCount(memberId) : 0;
+    const formattedTribe = {
+      id: tribe.id,
+      name: tribe.name,
+      ownerId: tribe.ownerId,
+      isOwner: true, // Creator is always owner
+      pendingProposals: pendingCount,
+      joinedAt: tribe.members[0]?.acceptedAt || tribe.createdAt,
+    };
+
+    return res.json({ tribe: formattedTribe });
   } catch (err) {
     console.error("ERROR POST /tribes:", err);
     console.error("Error details:", {
@@ -1097,6 +1109,91 @@ router.post("/:tribeId/items", async (req, res) => {
     return res.json({ item, recipientCount: recipientMembers.length });
   } catch (err) {
     console.error("ERROR POST /tribes/:tribeId/items:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /tribes/users/search
+ * Search for users to add to tribe (by email or appleUserId)
+ * Returns list of users that can be added
+ */
+router.get("/users/search", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const { email, appleUserId } = req.query;
+
+    if (!email && !appleUserId) {
+      return res.status(400).json({ error: "email or appleUserId required" });
+    }
+
+    // Search for user by email (if we have email field) or appleUserId
+    const where = {};
+    if (email) {
+      // Note: User model currently only has appleUserId, not email
+      // This is a placeholder for when email is added
+      // For now, we'll search by appleUserId if provided
+    }
+    if (appleUserId) {
+      where.appleUserId = appleUserId;
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        appleUserId: true,
+        createdAt: true,
+        lastActiveAt: true,
+      },
+      take: 10,
+    });
+
+    return res.json({ users });
+  } catch (err) {
+    console.error("ERROR GET /tribes/users/search:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /tribes/users
+ * List all users (for adding to tribe - owner only feature)
+ * Returns all active users in the system
+ */
+router.get("/users", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    // Get all active users (recently active)
+    const users = await prisma.user.findMany({
+      where: {
+        lastActiveAt: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Active in last 30 days
+        },
+      },
+      select: {
+        id: true,
+        appleUserId: true,
+        createdAt: true,
+        lastActiveAt: true,
+      },
+      orderBy: {
+        lastActiveAt: "desc",
+      },
+      take: 100,
+    });
+
+    return res.json({ users });
+  } catch (err) {
+    console.error("ERROR GET /tribes/users:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
