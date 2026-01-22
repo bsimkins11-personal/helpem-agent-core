@@ -703,6 +703,7 @@ router.post("/:tribeId/member-requests/:requestId/approve", async (req, res) => 
 
     const userId = session.session.userId;
     const { tribeId, requestId } = req.params;
+    const { permissions } = req.body; // Optional: custom permissions when approving
 
     // Get tribe and verify user is owner
     const tribe = await prisma.tribe.findUnique({
