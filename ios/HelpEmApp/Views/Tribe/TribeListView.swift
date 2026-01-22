@@ -281,13 +281,17 @@ class TribeListViewModel: ObservableObject {
         defer { isLoading = false }
         
         do {
+            AppLogger.info("Creating tribe with name: \(name)", logger: AppLogger.general)
             let tribe = try await TribeAPIClient.shared.createTribe(name: name)
             tribes.insert(tribe, at: 0)
-            AppLogger.info("Created tribe: \(tribe.name)", logger: AppLogger.general)
+            AppLogger.info("Created tribe successfully: \(tribe.name) (id: \(tribe.id))", logger: AppLogger.general)
         } catch {
+            AppLogger.error("Failed to create tribe: \(error.localizedDescription)", logger: AppLogger.general)
+            if let tribeError = error as? TribeAPIError {
+                AppLogger.error("Tribe API Error: \(tribeError.errorDescription ?? "Unknown")", logger: AppLogger.general)
+            }
             self.error = error
             self.showError = true
-            AppLogger.error("Failed to create tribe: \(error)", logger: AppLogger.general)
         }
     }
 

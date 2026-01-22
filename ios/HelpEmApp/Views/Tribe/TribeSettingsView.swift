@@ -456,7 +456,7 @@ struct InviteMemberView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Select Contact") {
+                Section {
                     Button {
                         showingContacts = true
                     } label: {
@@ -468,11 +468,13 @@ struct InviteMemberView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                } header: {
+                    Text("Select Contact")
                 } footer: {
                     Text("Invites are sent as Tribe proposals. The recipient chooses whether to join.")
                 }
 
-                Section("Permissions") {
+                Section {
                     Toggle("Can Add Tasks", isOn: $canAddTasks)
                     Toggle("Can Remove Tasks", isOn: $canRemoveTasks)
                     Toggle("Can Add Routines", isOn: $canAddRoutines)
@@ -481,6 +483,8 @@ struct InviteMemberView: View {
                     Toggle("Can Remove Appointments", isOn: $canRemoveAppointments)
                     Toggle("Can Add Groceries", isOn: $canAddGroceries)
                     Toggle("Can Remove Groceries", isOn: $canRemoveGroceries)
+                } header: {
+                    Text("Permissions")
                 } footer: {
                     Text("Permissions can be updated any time after the invite is sent.")
                 }
@@ -518,12 +522,20 @@ struct InviteMemberView: View {
     }
 
     private func sendInvite() async {
-        guard let userId = selectedUserId else { return }
+        guard let userId = selectedUserId else { 
+            AppLogger.error("No user ID selected for invite", logger: AppLogger.general)
+            return 
+        }
+        
         isSending = true
         defer { isSending = false }
 
         do {
+            AppLogger.info("Sending invite to userId: \(userId) for tribe: \(tribe.id)", logger: AppLogger.general)
+            
             let member = try await TribeAPIClient.shared.inviteMember(tribeId: tribe.id, userId: userId)
+            AppLogger.info("Member invited successfully: \(member.id)", logger: AppLogger.general)
+            
             let permissions = PermissionsUpdate(
                 canAddTasks: canAddTasks,
                 canRemoveTasks: canRemoveTasks,
@@ -540,10 +552,13 @@ struct InviteMemberView: View {
                 memberId: member.id,
                 permissions: permissions
             )
+            
+            AppLogger.info("Member permissions updated successfully", logger: AppLogger.general)
 
             onComplete()
             dismiss()
         } catch {
+            AppLogger.error("Failed to send invite: \(error.localizedDescription)", logger: AppLogger.general)
             self.error = error
             self.showError = true
         }

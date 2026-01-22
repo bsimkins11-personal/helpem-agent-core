@@ -40,6 +40,11 @@ struct ContactsPickerView: View {
                     }
                 }
             }
+            .alert("Invalid Contact", isPresented: $viewModel.showContactError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("This contact doesn't have an email address or phone number. Please select a contact with at least one of these.")
+            }
             .task {
                 viewModel.checkPermissionStatus()
             }
@@ -127,7 +132,13 @@ struct ContactsPickerView: View {
                             Text("\(contact.givenName) \(contact.familyName)")
                                 .font(.body)
                             
-                            if let phone = contact.phoneNumbers.first?.value.stringValue {
+                            // Show email if available, otherwise phone
+                            if let email = contact.emailAddresses.first?.value as String?,
+                               !email.isEmpty {
+                                Text(email)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else if let phone = contact.phoneNumbers.first?.value.stringValue {
                                 Text(phone)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -163,15 +174,31 @@ struct ContactsPickerView: View {
     }
     
     private func handleContactSelection(_ contact: CNContact) {
-        // In a real implementation, we would:
-        // 1. Check if contact is a Helpem user (by phone/email)
-        // 2. If yes, send in-app invite
-        // 3. If no, send SMS/iMessage/Email with deep link
+        // Extract email or phone from contact
+        // Priority: email first, then phone
+        var userId: String?
         
-        // For now, simulate user ID
-        let userId = contact.identifier
-        onSelect(userId)
-        dismiss()
+        // Try to get email first
+        if let email = contact.emailAddresses.first?.value as String?,
+           !email.isEmpty {
+            userId = email
+        } else if let phone = contact.phoneNumbers.first?.value.stringValue,
+                  !phone.isEmpty {
+            // Use phone number (normalized)
+            let normalizedPhone = phone.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+            userId = normalizedPhone
+        }
+        
+        // If we have an identifier, use it; otherwise show error
+        if let userId = userId {
+            AppLogger.info("Selected contact: \(contact.givenName) \(contact.familyName), userId: \(userId)", logger: AppLogger.general)
+            onSelect(userId)
+            dismiss()
+        } else {
+            AppLogger.error("Contact has no email or phone: \(contact.givenName) \(contact.familyName)", logger: AppLogger.general)
+            // Show error to user - contact needs email or phone
+            viewModel.showContactError = true
+        }
     }
 }
 
@@ -183,6 +210,7 @@ class ContactsPickerViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var searchText = ""
     @Published var permissionStatus: PermissionStatus = .notDetermined
+    @Published var showContactError = false
     
     private let contactStore = CNContactStore()
     
