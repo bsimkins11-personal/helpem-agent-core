@@ -20,6 +20,7 @@ import {
   createProposals,
   transitionProposalState,
 } from "../lib/tribePermissions.js";
+import { createTribeActivity, getUserDisplayName } from "../lib/tribeActivity.js";
 
 const router = express.Router();
 
@@ -396,6 +397,20 @@ router.post("/:tribeId/members", async (req, res) => {
           state: "pending",
         },
       });
+
+      // Create activity entry (non-blocking - don't fail if activity creation fails)
+      try {
+        const requesterName = await getUserDisplayName(userId);
+        const targetName = await getUserDisplayName(inviteeUserId);
+        await createTribeActivity({
+          tribeId,
+          type: "SYSTEM",
+          message: `${requesterName} requested to add ${targetName}`,
+        });
+      } catch (activityError) {
+        console.error("Failed to create activity entry (non-critical):", activityError);
+        // Continue - activity creation is optional
+      }
 
       return res.json({ 
         request,
