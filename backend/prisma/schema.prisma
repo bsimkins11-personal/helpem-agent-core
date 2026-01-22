@@ -110,6 +110,7 @@ model Tribe {
   members     TribeMember[]
   items       TribeItem[]
   memberRequests TribeMemberRequest[]
+  activities  TribeActivity[]
   
   @@map("tribes")
 }
@@ -222,4 +223,24 @@ model TribeMemberRequest {
   @@unique([tribeId, requestedUserId, state])
   @@index([tribeId, state])
   @@map("tribe_member_requests")
+}
+
+/// Tribe activity feed - coordination events, not chat
+enum TribeActivityType {
+  SYSTEM
+  ADMIN
+}
+
+model TribeActivity {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tribeId     String            @db.Uuid @map("tribe_id")
+  type        TribeActivityType
+  message     String
+  createdBy   String?           @db.Uuid @map("created_by") // null for system events
+  createdAt   DateTime          @default(now()) @map("created_at")
+  
+  tribe       Tribe             @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  
+  @@index([tribeId, createdAt])
+  @@map("tribe_activities")
 }
