@@ -2,11 +2,27 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import rateLimit from "express-rate-limit";
+import { execSync } from "child_process";
 import { verifyAppleIdentityToken } from "./src/lib/appleAuth.js";
 import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js";
 import { prisma } from "./src/lib/prisma.js";
 import { migrateFeedbackTable } from "./src/migrate-feedback.js";
 import tribeRoutes from "./src/routes/tribe.js";
+
+// Run migrations on startup
+async function runMigrations() {
+  try {
+    console.log("🔄 Running database migrations...");
+    execSync("npx prisma migrate deploy", { 
+      stdio: "inherit",
+      env: { ...process.env }
+    });
+    console.log("✅ Migrations completed successfully");
+  } catch (error) {
+    console.error("⚠️ Migration warning:", error.message);
+    console.log("📝 Continuing startup - some migrations may need manual attention");
+  }
+}
 
 const app = express();
 const port = process.env.PORT || 8080;
@@ -444,7 +460,12 @@ app.get("/migrate-feedback", async (req, res) => {
 
 app.use("/tribes", apiLimiter, tribeRoutes);
 
-// Start server
-app.listen(port, () => {
-  console.log(`API listening on port ${port}`);
-});
+// Start server with migrations
+(async () => {
+  // Run migrations before starting server
+  await runMigrations();
+  
+  app.listen(port, () => {
+    console.log(`API listening on port ${port}`);
+  });
+})();
