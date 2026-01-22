@@ -68,18 +68,14 @@ export async function checkTribePermission(userId, tribeId, action, itemType) {
  * Get all Tribes for a user
  */
 export async function getUserTribes(userId) {
-  return await prisma.tribeMember.findMany({
+  const memberships = await prisma.tribeMember.findMany({
     where: {
       userId,
       acceptedAt: { not: null },
       leftAt: null,
     },
     include: {
-      tribe: {
-        where: {
-          deletedAt: null,
-        },
-      },
+      tribe: true, // Get tribe without filtering here (we'll filter in route)
       proposals: {
         where: {
           state: "proposed",
@@ -90,6 +86,9 @@ export async function getUserTribes(userId) {
       acceptedAt: "desc",
     },
   });
+
+  // Filter out memberships where tribe is deleted
+  return memberships.filter(m => m.tribe && !m.tribe.deletedAt);
 }
 
 /**

@@ -42,9 +42,12 @@ router.get("/", async (req, res) => {
     const userId = session.session.userId;
     const tribes = await getUserTribes(userId);
 
+    // Filter out any null tribes (in case of soft-deleted tribes)
+    const validTribes = tribes.filter(membership => membership.tribe !== null);
+
     // Add pending proposal counts
     const tribesWithCounts = await Promise.all(
-      tribes.map(async (membership) => {
+      validTribes.map(async (membership) => {
         const pendingCount = await getPendingProposalsCount(membership.id);
         return {
           id: membership.tribe.id,
