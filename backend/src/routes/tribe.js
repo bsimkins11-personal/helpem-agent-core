@@ -276,15 +276,37 @@ router.delete("/:tribeId", async (req, res) => {
       return res.status(403).json({ error: "Only the owner can delete a Tribe" });
     }
 
-    await prisma.tribe.update({
+    // Soft delete the tribe
+    const deleted = await prisma.tribe.update({
       where: { id: tribeId },
       data: { deletedAt: new Date() },
     });
 
-    return res.json({ success: true });
+    // Create activity entry for deletion
+    try {
+      const adminName = await getUserDisplayName(userId);
+      await createTribeActivity({
+        tribeId,
+        type: "SYSTEM",
+        message: `${adminName} deleted the tribe`,
+        createdBy: userId,
+      });
+    } catch (activityError) {
+      console.error("Failed to create activity entry (non-critical):", activityError);
+    }
+
+    return res.json({ success: true, tribe: deleted });
   } catch (err) {
     console.error("ERROR DELETE /tribes/:tribeId:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Error details:", {
+      message: err.message,
+      code: err.code,
+      meta: err.meta
+    });
+    return res.status(500).json({ 
+      error: "Internal server error",
+      details: process.env.NODE_ENV === "development" ? err.message : undefined
+    });
   }
 });
 
@@ -355,7 +377,10 @@ router.post("/:tribeId/members", async (req, res) => {
 
     const userId = session.session.userId;
     const { tribeId } = req.params;
-    const { inviteeUserId } = req.body;
+    const { 
+      inviteeUserId,
+      permissions // Optional: custom permissions for the new member
+    } = req.body;
 
     if (!inviteeUserId) {
       return res.status(400).json({ error: "inviteeUserId is required" });
@@ -461,30 +486,47 @@ router.post("/:tribeId/members", async (req, res) => {
       }
     }
 
-    // Create invitation
+    // Create invitation with custom or default permissions
+    const defaultPermissions = {
+      canAddTasks: true,
+      canRemoveTasks: false,
+      canAddRoutines: true,
+      canRemoveRoutines: false,
+      canAddAppointments: true,
+      canRemoveAppointments: false,
+      canAddGroceries: true,
+      canRemoveGroceries: false,
+    };
+
+    const memberPermissions = permissions || defaultPermissions;
+
     const member = await prisma.tribeMember.create({
       data: {
         tribeId,
         userId: inviteeUserId,
         invitedBy: userId,
         permissions: {
-          create: {
-            // Default permissions for new members
-            canAddTasks: true,
-            canRemoveTasks: false,
-            canAddRoutines: true,
-            canRemoveRoutines: false,
-            canAddAppointments: true,
-            canRemoveAppointments: false,
-            canAddGroceries: true,
-            canRemoveGroceries: false,
-          },
+          create: memberPermissions,
         },
       },
       include: {
         permissions: true,
       },
     });
+
+    // Create activity entry for direct owner add
+    try {
+      const adminName = await getUserDisplayName(userId);
+      const targetName = await getUserDisplayName(inviteeUserId);
+      await createTribeActivity({
+        tribeId,
+        type: "SYSTEM",
+        message: `${adminName} added ${targetName} to the tribe`,
+        createdBy: userId,
+      });
+    } catch (activityError) {
+      console.error("Failed to create activity entry (non-critical):", activityError);
+    }
 
     return res.json({ member });
   } catch (err) {
@@ -709,30 +751,47 @@ router.post("/:tribeId/member-requests/:requestId/approve", async (req, res) => 
       return res.json({ message: "User is already a member", request });
     }
 
-    // Create the member invitation
+    // Create the member invitation with custom or default permissions
+    const defaultPermissions = {
+      canAddTasks: true,
+      canRemoveTasks: false,
+      canAddRoutines: true,
+      canRemoveRoutines: false,
+      canAddAppointments: true,
+      canRemoveAppointments: false,
+      canAddGroceries: true,
+      canRemoveGroceries: false,
+    };
+
+    const memberPermissions = permissions || defaultPermissions;
+
     const member = await prisma.tribeMember.create({
       data: {
         tribeId,
         userId: request.requestedUserId,
         invitedBy: userId, // Owner is the inviter
         permissions: {
-          create: {
-            // Default permissions for new members
-            canAddTasks: true,
-            canRemoveTasks: false,
-            canAddRoutines: true,
-            canRemoveRoutines: false,
-            canAddAppointments: true,
-            canRemoveAppointments: false,
-            canAddGroceries: true,
-            canRemoveGroceries: false,
-          },
+          create: memberPermissions,
         },
       },
       include: {
         permissions: true,
       },
     });
+
+    // Create activity entry
+    try {
+      const adminName = await getUserDisplayName(userId);
+      const targetName = await getUserDisplayName(request.requestedUserId);
+      await createTribeActivity({
+        tribeId,
+        type: "SYSTEM",
+        message: `${adminName} approved adding ${targetName}`,
+        createdBy: userId,
+      });
+    } catch (activityError) {
+      console.error("Failed to create activity entry (non-critical):", activityError);
+    }
 
     // Update request as approved
     await prisma.tribeMemberRequest.update({
