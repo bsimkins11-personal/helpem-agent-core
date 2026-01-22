@@ -247,6 +247,47 @@ struct TribeInvitation: Codable, Identifiable {
     }
 }
 
+// MARK: - Request Models
+
+struct CreateTribeRequest: Codable {
+    let name: String
+}
+
+struct InviteMemberRequest: Codable {
+    let inviteeUserId: String
+    let permissions: PermissionsUpdate? // Optional: custom permissions
+}
+
+struct CreateTribeItemRequest: Codable {
+    let itemType: String
+    let data: [String: AnyCodable]
+    let recipientUserIds: [String]
+}
+
+struct UpdateMemberRequest: Codable {
+    let managementScope: String?
+    let proposalNotifications: Bool?
+    let digestNotifications: Bool?
+    let permissions: PermissionsUpdate?
+}
+
+struct PermissionsUpdate: Codable {
+    let canAddTasks: Bool?
+    let canRemoveTasks: Bool?
+    let canAddRoutines: Bool?
+    let canRemoveRoutines: Bool?
+    let canAddAppointments: Bool?
+    let canRemoveAppointments: Bool?
+    let canAddGroceries: Bool?
+    let canRemoveGroceries: Bool?
+}
+
+// MARK: - Approve Request Model
+
+struct ApproveMemberRequest: Codable {
+    let permissions: PermissionsUpdate?
+}
+
 // MARK: - Tribe Member Request
 
 struct TribeMemberRequest: Codable, Identifiable {
@@ -290,37 +331,4 @@ enum RequestState: String, Codable {
 
 struct TribeMemberRequestsResponse: Codable {
     let requests: [TribeMemberRequest]
-}
-
-struct CreateTribeRequest: Codable {
-    let name: String
-}
-
-struct InviteMemberRequest: Codable {
-    let inviteeUserId: String
-    let permissions: PermissionsUpdate? // Optional: custom permissions
-}
-
-struct CreateTribeItemRequest: Codable {
-    let itemType: String
-    let data: [String: AnyCodable]
-    let recipientUserIds: [String]
-}
-
-struct UpdateMemberRequest: Codable {
-    let managementScope: String?
-    let proposalNotifications: Bool?
-    let digestNotifications: Bool?
-    let permissions: PermissionsUpdate?
-}
-
-struct PermissionsUpdate: Codable {
-    let canAddTasks: Bool?
-    let canRemoveTasks: Bool?
-    let canAddRoutines: Bool?
-    let canRemoveRoutines: Bool?
-    let canAddAppointments: Bool?
-    let canRemoveAppointments: Bool?
-    let canAddGroceries: Bool?
-    let canRemoveGroceries: Bool?
 }

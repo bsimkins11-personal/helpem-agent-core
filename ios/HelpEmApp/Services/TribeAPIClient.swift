@@ -147,8 +147,8 @@ class TribeAPIClient {
     /// Approve a member add request (owner only)
     func approveMemberRequest(tribeId: String, requestId: String, permissions: PermissionsUpdate? = nil) async throws -> TribeMember {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/member-requests/\(requestId)/approve")!
-        let body = permissions != nil ? ["permissions": permissions] : [:]
-        let data = try await authenticatedRequest(url: url, method: "POST", body: body.isEmpty ? nil : body)
+        let request = ApproveMemberRequest(permissions: permissions)
+        let data = try await authenticatedRequest(url: url, method: "POST", body: request)
         let response = try decoder.decode([String: TribeMember].self, from: data)
         
         guard let member = response["member"] else {
