@@ -73,9 +73,12 @@ export async function getUserTribes(userId) {
       userId,
       acceptedAt: { not: null },
       leftAt: null,
+      tribe: {
+        deletedAt: null, // Filter deleted tribes in the where clause
+      },
     },
     include: {
-      tribe: true, // Get tribe without filtering here (we'll filter in route)
+      tribe: true,
       proposals: {
         where: {
           state: "proposed",
@@ -87,8 +90,7 @@ export async function getUserTribes(userId) {
     },
   });
 
-  // Filter out memberships where tribe is deleted
-  return memberships.filter(m => m.tribe && !m.tribe.deletedAt);
+  return memberships;
 }
 
 /**
