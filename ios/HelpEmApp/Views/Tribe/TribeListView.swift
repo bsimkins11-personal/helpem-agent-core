@@ -50,6 +50,22 @@ struct TribeListView: View {
     
     private var tribeList: some View {
         List {
+            if !viewModel.invitations.isEmpty {
+                Section("Invitations") {
+                    ForEach(viewModel.invitations) { invitation in
+                        InvitationRow(
+                            invitation: invitation,
+                            onAccept: {
+                                await viewModel.acceptInvitation(tribeId: invitation.tribeId)
+                            },
+                            onDecline: {
+                                await viewModel.declineInvitation(tribeId: invitation.tribeId)
+                            }
+                        )
+                    }
+                }
+            }
+
             ForEach(viewModel.tribes) { tribe in
                 NavigationLink {
                     TribeDetailView(tribe: tribe)
@@ -173,11 +189,72 @@ struct TribeRow: View {
     }
 }
 
+// MARK: - Invitation Row
+
+struct InvitationRow: View {
+    let invitation: TribeInvitation
+    let onAccept: () async -> Void
+    let onDecline: () async -> Void
+
+    @State private var isProcessing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(invitation.tribeName)
+                .font(.headline)
+
+            Text("You've been invited to join this Tribe.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 12) {
+                Button {
+                    Task {
+                        await handleAccept()
+                    }
+                } label: {
+                    Label("Accept", systemImage: "checkmark")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isProcessing)
+
+                Button {
+                    Task {
+                        await handleDecline()
+                    }
+                } label: {
+                    Text("Decline")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.bordered)
+                .disabled(isProcessing)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func handleAccept() async {
+        isProcessing = true
+        defer { isProcessing = false }
+        await onAccept()
+    }
+
+    private func handleDecline() async {
+        isProcessing = true
+        defer { isProcessing = false }
+        await onDecline()
+    }
+}
+
 // MARK: - View Model
 
 @MainActor
 class TribeListViewModel: ObservableObject {
     @Published var tribes: [Tribe] = []
+    @Published var invitations: [TribeInvitation] = []
     @Published var isLoading = false
     @Published var error: Error?
     @Published var showError = false
@@ -187,7 +264,10 @@ class TribeListViewModel: ObservableObject {
         defer { isLoading = false }
         
         do {
-            tribes = try await TribeAPIClient.shared.getTribes()
+            async let tribesTask = TribeAPIClient.shared.getTribes()
+            async let invitationsTask = TribeAPIClient.shared.getPendingInvitations()
+            tribes = try await tribesTask
+            invitations = try await invitationsTask
             AppLogger.info("Loaded \(tribes.count) tribes", logger: AppLogger.general)
         } catch {
             self.error = error
@@ -208,6 +288,28 @@ class TribeListViewModel: ObservableObject {
             self.error = error
             self.showError = true
             AppLogger.error("Failed to create tribe: \(error)", logger: AppLogger.general)
+        }
+    }
+
+    func acceptInvitation(tribeId: String) async {
+        do {
+            _ = try await TribeAPIClient.shared.acceptTribeInvitation(tribeId: tribeId)
+            await loadTribes()
+        } catch {
+            self.error = error
+            self.showError = true
+            AppLogger.error("Failed to accept invitation: \(error)", logger: AppLogger.general)
+        }
+    }
+
+    func declineInvitation(tribeId: String) async {
+        do {
+            try await TribeAPIClient.shared.leaveTribe(tribeId: tribeId)
+            await loadTribes()
+        } catch {
+            self.error = error
+            self.showError = true
+            AppLogger.error("Failed to decline invitation: \(error)", logger: AppLogger.general)
         }
     }
 }

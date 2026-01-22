@@ -209,9 +209,9 @@ struct TribeMembersView: View {
             }
         }
         .sheet(isPresented: $showingInvite) {
-            ContactsPickerView(tribe: tribe) { userId in
+            InviteMemberView(tribe: tribe) {
                 Task {
-                    await viewModel.inviteMember(tribeId: tribe.id, userId: userId)
+                    await viewModel.loadMembers(tribeId: tribe.id)
                 }
             }
         }
@@ -428,6 +428,125 @@ struct MemberDetailView: View {
         .buttonStyle(.borderedProminent)
         .disabled(viewModel.isSaving)
         .padding(.top, 8)
+    }
+}
+
+// MARK: - Invite Member View
+
+struct InviteMemberView: View {
+    let tribe: Tribe
+    let onComplete: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingContacts = false
+    @State private var selectedUserId: String?
+    @State private var isSending = false
+    @State private var error: Error?
+    @State private var showError = false
+
+    @State private var canAddTasks = true
+    @State private var canRemoveTasks = false
+    @State private var canAddRoutines = true
+    @State private var canRemoveRoutines = false
+    @State private var canAddAppointments = true
+    @State private var canRemoveAppointments = false
+    @State private var canAddGroceries = true
+    @State private var canRemoveGroceries = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Select Contact") {
+                    Button {
+                        showingContacts = true
+                    } label: {
+                        HStack {
+                            Text(selectedUserId == nil ? "Choose Contact" : "Contact Selected")
+                                .foregroundColor(selectedUserId == nil ? .blue : .primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } footer: {
+                    Text("Invites are sent as Tribe proposals. The recipient chooses whether to join.")
+                }
+
+                Section("Permissions") {
+                    Toggle("Can Add Tasks", isOn: $canAddTasks)
+                    Toggle("Can Remove Tasks", isOn: $canRemoveTasks)
+                    Toggle("Can Add Routines", isOn: $canAddRoutines)
+                    Toggle("Can Remove Routines", isOn: $canRemoveRoutines)
+                    Toggle("Can Add Appointments", isOn: $canAddAppointments)
+                    Toggle("Can Remove Appointments", isOn: $canRemoveAppointments)
+                    Toggle("Can Add Groceries", isOn: $canAddGroceries)
+                    Toggle("Can Remove Groceries", isOn: $canRemoveGroceries)
+                } footer: {
+                    Text("Permissions can be updated any time after the invite is sent.")
+                }
+            }
+            .navigationTitle("Invite Member")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isSending ? "Sending..." : "Send Invite") {
+                        Task {
+                            await sendInvite()
+                        }
+                    }
+                    .disabled(isSending || selectedUserId == nil)
+                }
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let error {
+                    Text(error.localizedDescription)
+                }
+            }
+            .sheet(isPresented: $showingContacts) {
+                ContactsPickerView(tribe: tribe) { userId in
+                    selectedUserId = userId
+                }
+            }
+        }
+    }
+
+    private func sendInvite() async {
+        guard let userId = selectedUserId else { return }
+        isSending = true
+        defer { isSending = false }
+
+        do {
+            let member = try await TribeAPIClient.shared.inviteMember(tribeId: tribe.id, userId: userId)
+            let permissions = PermissionsUpdate(
+                canAddTasks: canAddTasks,
+                canRemoveTasks: canRemoveTasks,
+                canAddRoutines: canAddRoutines,
+                canRemoveRoutines: canRemoveRoutines,
+                canAddAppointments: canAddAppointments,
+                canRemoveAppointments: canRemoveAppointments,
+                canAddGroceries: canAddGroceries,
+                canRemoveGroceries: canRemoveGroceries
+            )
+
+            _ = try await TribeAPIClient.shared.updateMemberSettings(
+                tribeId: tribe.id,
+                memberId: member.id,
+                permissions: permissions
+            )
+
+            onComplete()
+            dismiss()
+        } catch {
+            self.error = error
+            self.showError = true
+        }
     }
 }
 

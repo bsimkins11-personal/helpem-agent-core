@@ -64,6 +64,47 @@ router.get("/", async (req, res) => {
 });
 
 /**
+ * GET /tribes/invitations
+ * List pending Tribe invitations for the authenticated user
+ */
+router.get("/invitations", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const pending = await prisma.tribeMember.findMany({
+      where: {
+        userId,
+        acceptedAt: null,
+        leftAt: null,
+      },
+      include: {
+        tribe: true,
+      },
+      orderBy: {
+        invitedAt: "desc",
+      },
+    });
+
+    const invitations = pending.map((member) => ({
+      id: member.id,
+      tribeId: member.tribeId,
+      tribeName: member.tribe?.name || "Tribe",
+      invitedAt: member.invitedAt,
+      invitedBy: member.invitedBy,
+    }));
+
+    return res.json({ invitations });
+  } catch (err) {
+    console.error("ERROR GET /tribes/invitations:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * POST /tribes
  * Create a new Tribe
  */

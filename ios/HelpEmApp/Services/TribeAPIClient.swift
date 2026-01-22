@@ -32,6 +32,14 @@ class TribeAPIClient {
         let response = try decoder.decode(TribesResponse.self, from: data)
         return response.tribes
     }
+
+    /// Get pending Tribe invitations for the current user
+    func getPendingInvitations() async throws -> [TribeInvitation] {
+        let url = URL(string: "\(baseURL)/tribes/invitations")!
+        let data = try await authenticatedRequest(url: url, method: "GET")
+        let response = try decoder.decode(TribeInvitationsResponse.self, from: data)
+        return response.invitations
+    }
     
     /// Create a new Tribe
     func createTribe(name: String) async throws -> Tribe {

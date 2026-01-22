@@ -227,6 +227,26 @@ struct TribeItemsResponse: Codable {
     let items: [TribeItem]
 }
 
+struct TribeInvitationsResponse: Codable {
+    let invitations: [TribeInvitation]
+}
+
+struct TribeInvitation: Codable, Identifiable {
+    let id: String
+    let tribeId: String
+    let tribeName: String
+    let invitedAt: Date
+    let invitedBy: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tribeId = "tribeId"
+        case tribeName = "tribeName"
+        case invitedAt = "invitedAt"
+        case invitedBy = "invitedBy"
+    }
+}
+
 struct CreateTribeRequest: Codable {
     let name: String
 }
