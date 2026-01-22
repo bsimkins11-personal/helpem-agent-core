@@ -327,7 +327,8 @@ router.get("/:tribeId/members", async (req, res) => {
 
 /**
  * POST /tribes/:tribeId/members
- * Invite member to Tribe (creates pending invitation)
+ * Add member to Tribe (OWNER ONLY - direct add)
+ * OR request to add member (NON-OWNER - creates request)
  */
 router.post("/:tribeId/members", async (req, res) => {
   try {
@@ -344,7 +345,15 @@ router.post("/:tribeId/members", async (req, res) => {
       return res.status(400).json({ error: "inviteeUserId is required" });
     }
 
-    // Verify inviter is a member
+    // Get tribe and verify user is a member
+    const tribe = await prisma.tribe.findUnique({
+      where: { id: tribeId },
+    });
+
+    if (!tribe) {
+      return res.status(404).json({ error: "Tribe not found" });
+    }
+
     const inviterMember = await prisma.tribeMember.findFirst({
       where: {
         tribeId,
@@ -357,6 +366,44 @@ router.post("/:tribeId/members", async (req, res) => {
     if (!inviterMember) {
       return res.status(403).json({ error: "Not a member of this Tribe" });
     }
+
+    // Check if user is the owner
+    const isOwner = tribe.ownerId === userId;
+
+    // If not owner, create a request instead of directly adding
+    if (!isOwner) {
+      // Check if request already exists
+      const existingRequest = await prisma.tribeMemberRequest.findFirst({
+        where: {
+          tribeId,
+          requestedUserId: inviteeUserId,
+          state: "pending",
+        },
+      });
+
+      if (existingRequest) {
+        return res.status(400).json({ 
+          error: "A pending request to add this user already exists" 
+        });
+      }
+
+      // Create member add request
+      const request = await prisma.tribeMemberRequest.create({
+        data: {
+          tribeId,
+          requestedBy: userId,
+          requestedUserId: inviteeUserId,
+          state: "pending",
+        },
+      });
+
+      return res.json({ 
+        request,
+        message: "Request to add member sent to tribe owner" 
+      });
+    }
+
+    // Owner can directly add members - continue with existing logic
 
     // Check if invitee already exists
     const existing = await prisma.tribeMember.findFirst({
@@ -510,6 +557,223 @@ router.patch("/:tribeId/members/:memberId", async (req, res) => {
     return res.json({ member: updated });
   } catch (err) {
     console.error("ERROR PATCH /tribes/:tribeId/members/:memberId:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /tribes/:tribeId/member-requests
+ * Get member add requests (owners see all pending, members see their own)
+ */
+router.get("/:tribeId/member-requests", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId } = req.params;
+
+    // Get tribe
+    const tribe = await prisma.tribe.findUnique({
+      where: { id: tribeId },
+    });
+
+    if (!tribe) {
+      return res.status(404).json({ error: "Tribe not found" });
+    }
+
+    // Verify user is a member
+    const userMember = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!userMember) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    const isOwner = tribe.ownerId === userId;
+
+    // Owners see all pending requests, members see only their own
+    const requests = await prisma.tribeMemberRequest.findMany({
+      where: {
+        tribeId,
+        ...(isOwner ? { state: "pending" } : { requestedBy: userId }),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return res.json({ requests });
+  } catch (err) {
+    console.error("ERROR GET /tribes/:tribeId/member-requests:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /tribes/:tribeId/member-requests/:requestId/approve
+ * Approve a member add request (OWNER ONLY)
+ */
+router.post("/:tribeId/member-requests/:requestId/approve", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId, requestId } = req.params;
+
+    // Get tribe and verify user is owner
+    const tribe = await prisma.tribe.findUnique({
+      where: { id: tribeId },
+    });
+
+    if (!tribe) {
+      return res.status(404).json({ error: "Tribe not found" });
+    }
+
+    if (tribe.ownerId !== userId) {
+      return res.status(403).json({ error: "Only the tribe owner can approve member requests" });
+    }
+
+    // Get the request
+    const request = await prisma.tribeMemberRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request || request.tribeId !== tribeId) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    if (request.state !== "pending") {
+      return res.status(400).json({ error: "Request is not pending" });
+    }
+
+    // Check if user is already a member
+    const existing = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId: request.requestedUserId,
+      },
+    });
+
+    if (existing && !existing.leftAt) {
+      // User is already a member, just mark request as approved
+      await prisma.tribeMemberRequest.update({
+        where: { id: requestId },
+        data: {
+          state: "approved",
+          reviewedAt: new Date(),
+          reviewedBy: userId,
+        },
+      });
+      return res.json({ message: "User is already a member", request });
+    }
+
+    // Create the member invitation
+    const member = await prisma.tribeMember.create({
+      data: {
+        tribeId,
+        userId: request.requestedUserId,
+        invitedBy: userId, // Owner is the inviter
+        permissions: {
+          create: {
+            // Default permissions for new members
+            canAddTasks: true,
+            canRemoveTasks: false,
+            canAddRoutines: true,
+            canRemoveRoutines: false,
+            canAddAppointments: true,
+            canRemoveAppointments: false,
+            canAddGroceries: true,
+            canRemoveGroceries: false,
+          },
+        },
+      },
+      include: {
+        permissions: true,
+      },
+    });
+
+    // Update request as approved
+    await prisma.tribeMemberRequest.update({
+      where: { id: requestId },
+      data: {
+        state: "approved",
+        reviewedAt: new Date(),
+        reviewedBy: userId,
+      },
+    });
+
+    return res.json({ member, request });
+  } catch (err) {
+    console.error("ERROR POST /tribes/:tribeId/member-requests/:requestId/approve:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /tribes/:tribeId/member-requests/:requestId/deny
+ * Deny a member add request (OWNER ONLY)
+ */
+router.post("/:tribeId/member-requests/:requestId/deny", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId, requestId } = req.params;
+
+    // Get tribe and verify user is owner
+    const tribe = await prisma.tribe.findUnique({
+      where: { id: tribeId },
+    });
+
+    if (!tribe) {
+      return res.status(404).json({ error: "Tribe not found" });
+    }
+
+    if (tribe.ownerId !== userId) {
+      return res.status(403).json({ error: "Only the tribe owner can deny member requests" });
+    }
+
+    // Get the request
+    const request = await prisma.tribeMemberRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request || request.tribeId !== tribeId) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    if (request.state !== "pending") {
+      return res.status(400).json({ error: "Request is not pending" });
+    }
+
+    // Update request as denied
+    const updatedRequest = await prisma.tribeMemberRequest.update({
+      where: { id: requestId },
+      data: {
+        state: "denied",
+        reviewedAt: new Date(),
+        reviewedBy: userId,
+      },
+    });
+
+    return res.json({ request: updatedRequest });
+  } catch (err) {
+    console.error("ERROR POST /tribes/:tribeId/member-requests/:requestId/deny:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

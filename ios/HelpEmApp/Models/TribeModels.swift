@@ -247,6 +247,51 @@ struct TribeInvitation: Codable, Identifiable {
     }
 }
 
+// MARK: - Tribe Member Request
+
+struct TribeMemberRequest: Codable, Identifiable {
+    let id: String
+    let tribeId: String
+    let requestedBy: String
+    let requestedUserId: String
+    let state: RequestState
+    let createdAt: Date
+    let reviewedAt: Date?
+    let reviewedBy: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tribeId = "tribeId"
+        case requestedBy = "requestedBy"
+        case requestedUserId = "requestedUserId"
+        case state
+        case createdAt = "createdAt"
+        case reviewedAt = "reviewedAt"
+        case reviewedBy = "reviewedBy"
+    }
+}
+
+enum RequestState: String, Codable {
+    case pending = "pending"
+    case approved = "approved"
+    case denied = "denied"
+    
+    var displayName: String {
+        switch self {
+        case .pending:
+            return "Pending"
+        case .approved:
+            return "Approved"
+        case .denied:
+            return "Denied"
+        }
+    }
+}
+
+struct TribeMemberRequestsResponse: Codable {
+    let requests: [TribeMemberRequest]
+}
+
 struct CreateTribeRequest: Codable {
     let name: String
 }

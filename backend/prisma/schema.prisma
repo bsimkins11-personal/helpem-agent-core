@@ -109,6 +109,7 @@ model Tribe {
   
   members     TribeMember[]
   items       TribeItem[]
+  memberRequests TribeMemberRequest[]
   
   @@map("tribes")
 }
@@ -203,4 +204,22 @@ model TribeProposal {
   @@unique([itemId, recipientId])
   @@index([recipientId, state])
   @@map("tribe_proposals")
+}
+
+/// Member add requests - when non-owners want to add someone to the tribe
+model TribeMemberRequest {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tribeId           String       @db.Uuid @map("tribe_id")
+  requestedBy       String       @db.Uuid @map("requested_by") // Member who requested
+  requestedUserId   String       @db.Uuid @map("requested_user_id") // User they want to add
+  state             String       @default("pending") // pending, approved, denied
+  createdAt         DateTime     @default(now()) @map("created_at")
+  reviewedAt        DateTime?    @map("reviewed_at")
+  reviewedBy        String?      @db.Uuid @map("reviewed_by") // Owner who reviewed
+  
+  tribe             Tribe        @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  
+  @@unique([tribeId, requestedUserId, state])
+  @@index([tribeId, state])
+  @@map("tribe_member_requests")
 }

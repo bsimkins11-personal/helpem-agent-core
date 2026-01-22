@@ -101,17 +101,71 @@ class TribeAPIClient {
         return response.members
     }
     
-    /// Invite a user to a Tribe
+    /// Invite a user to a Tribe (owner can directly add, members create requests)
     func inviteMember(tribeId: String, userId: String) async throws -> TribeMember {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/members")!
         let request = InviteMemberRequest(inviteeUserId: userId)
         let data = try await authenticatedRequest(url: url, method: "POST", body: request)
+        
+        // Try to decode as member first (owner direct add)
+        if let memberResponse = try? decoder.decode([String: TribeMember].self, from: data),
+           let member = memberResponse["member"] {
+            return member
+        }
+        
+        // If not a member, check if it's a request (non-owner)
+        if let requestResponse = try? decoder.decode([String: TribeMemberRequest].self, from: data),
+           let memberRequest = requestResponse["request"] {
+            // Non-owner created a request - throw special error
+            throw TribeAPIError.memberRequestCreated(memberRequest)
+        }
+        
+        throw TribeAPIError.invalidResponse
+    }
+    
+    /// Request to add a member (for non-owners)
+    func requestToAddMember(tribeId: String, userId: String) async throws -> TribeMemberRequest {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/members")!
+        let request = InviteMemberRequest(inviteeUserId: userId)
+        let data = try await authenticatedRequest(url: url, method: "POST", body: request)
+        let response = try decoder.decode([String: TribeMemberRequest].self, from: data)
+        
+        guard let memberRequest = response["request"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return memberRequest
+    }
+    
+    /// Get member add requests
+    func getMemberRequests(tribeId: String) async throws -> [TribeMemberRequest] {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/member-requests")!
+        let data = try await authenticatedRequest(url: url, method: "GET")
+        let response = try decoder.decode(TribeMemberRequestsResponse.self, from: data)
+        return response.requests
+    }
+    
+    /// Approve a member add request (owner only)
+    func approveMemberRequest(tribeId: String, requestId: String) async throws -> TribeMember {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/member-requests/\(requestId)/approve")!
+        let data = try await authenticatedRequest(url: url, method: "POST")
         let response = try decoder.decode([String: TribeMember].self, from: data)
         
         guard let member = response["member"] else {
             throw TribeAPIError.invalidResponse
         }
         return member
+    }
+    
+    /// Deny a member add request (owner only)
+    func denyMemberRequest(tribeId: String, requestId: String) async throws -> TribeMemberRequest {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/member-requests/\(requestId)/deny")!
+        let data = try await authenticatedRequest(url: url, method: "POST")
+        let response = try decoder.decode([String: TribeMemberRequest].self, from: data)
+        
+        guard let request = response["request"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return request
     }
     
     /// Update member settings
@@ -270,6 +324,7 @@ enum TribeAPIError: LocalizedError {
     case invalidResponse
     case httpError(Int)
     case serverError(String)
+    case memberRequestCreated(TribeMemberRequest)
     
     var errorDescription: String? {
         switch self {
@@ -281,6 +336,8 @@ enum TribeAPIError: LocalizedError {
             return "HTTP error: \(code)"
         case .serverError(let message):
             return message
+        case .memberRequestCreated:
+            return "Request to add member sent to tribe owner"
         }
     }
 }
