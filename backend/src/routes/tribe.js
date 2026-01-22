@@ -122,6 +122,16 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Tribe name is required" });
     }
 
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      console.error(`User not found: ${userId}`);
+      return res.status(404).json({ error: "User not found" });
+    }
+
     // Create Tribe and add creator as first member
     const tribe = await prisma.tribe.create({
       data: {
@@ -156,7 +166,26 @@ router.post("/", async (req, res) => {
     return res.json({ tribe });
   } catch (err) {
     console.error("ERROR POST /tribes:", err);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Error details:", {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+      code: err.code,
+      meta: err.meta
+    });
+    
+    // Return more detailed error for debugging
+    const errorMessage = err.message || "Internal server error";
+    const errorCode = err.code || "UNKNOWN_ERROR";
+    
+    return res.status(500).json({ 
+      error: "Internal server error",
+      details: process.env.NODE_ENV === "development" ? {
+        message: errorMessage,
+        code: errorCode,
+        meta: err.meta
+      } : undefined
+    });
   }
 });
 

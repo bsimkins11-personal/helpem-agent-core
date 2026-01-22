@@ -372,7 +372,7 @@ struct RootView: View {
                                     isMenuPresented = false
                                     isTribeManagerPresented = true
                                 }) {
-                                    Label("Manage My Tribe", systemImage: "person.3")
+                                    Label("Manage Tribes", systemImage: "person.3")
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 12)
                                 }
