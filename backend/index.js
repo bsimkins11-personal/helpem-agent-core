@@ -200,25 +200,52 @@ app.post("/test-db", apiLimiter, async (req, res) => {
     }
 
     try {
-      await prisma.userInput.create({
-        data: {
-          userId,
-          content: message,
-          type: type || "text",
-        },
-      });
+      // Try to create with type field
+      try {
+        await prisma.userInput.create({
+          data: {
+            userId,
+            content: message,
+            type: type || "text",
+          },
+        });
+      } catch (typeError) {
+        // If type column doesn't exist, try without it (temporary fallback)
+        if (typeError.code === 'P2022' || typeError.message?.includes('type')) {
+          console.warn("type column not found, creating without it (migration may be needed)");
+          await prisma.$executeRaw`
+            INSERT INTO user_inputs (user_id, content, created_at)
+            VALUES (${userId}::uuid, ${message}, NOW())
+          `;
+        } else {
+          throw typeError;
+        }
+      }
     } catch (err) {
       if (isMissingUserInputsTable(err)) {
         console.warn("⚠️ user_inputs table missing, creating...");
         try {
           await ensureUserInputsTable();
-          await prisma.userInput.create({
-            data: {
-              userId,
-              content: message,
-              type: type || "text",
-            },
-          });
+          try {
+            await prisma.userInput.create({
+              data: {
+                userId,
+                content: message,
+                type: type || "text",
+              },
+            });
+          } catch (typeError2) {
+            // If type column doesn't exist, try without it (temporary fallback)
+            if (typeError2.code === 'P2022' || typeError2.message?.includes('type')) {
+              console.warn("type column not found, creating without it (migration may be needed)");
+              await prisma.$executeRaw`
+                INSERT INTO user_inputs (user_id, content, created_at)
+                VALUES (${userId}::uuid, ${message}, NOW())
+              `;
+            } else {
+              throw typeError2;
+            }
+          }
         } catch (retryErr) {
           console.error("ERROR /test-db (log skipped):", retryErr);
           return res.json({
