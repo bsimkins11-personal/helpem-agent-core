@@ -102,9 +102,9 @@ class TribeAPIClient {
     }
     
     /// Invite a user to a Tribe (owner can directly add, members create requests)
-    func inviteMember(tribeId: String, userId: String) async throws -> TribeMember {
+    func inviteMember(tribeId: String, userId: String, permissions: PermissionsUpdate? = nil) async throws -> TribeMember {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/members")!
-        let request = InviteMemberRequest(inviteeUserId: userId)
+        let request = InviteMemberRequest(inviteeUserId: userId, permissions: permissions)
         let data = try await authenticatedRequest(url: url, method: "POST", body: request)
         
         // Try to decode as member first (owner direct add)
@@ -145,9 +145,10 @@ class TribeAPIClient {
     }
     
     /// Approve a member add request (owner only)
-    func approveMemberRequest(tribeId: String, requestId: String) async throws -> TribeMember {
+    func approveMemberRequest(tribeId: String, requestId: String, permissions: PermissionsUpdate? = nil) async throws -> TribeMember {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/member-requests/\(requestId)/approve")!
-        let data = try await authenticatedRequest(url: url, method: "POST")
+        let body = permissions != nil ? ["permissions": permissions] : [:]
+        let data = try await authenticatedRequest(url: url, method: "POST", body: body.isEmpty ? nil : body)
         let response = try decoder.decode([String: TribeMember].self, from: data)
         
         guard let member = response["member"] else {

@@ -298,6 +298,7 @@ struct CreateTribeRequest: Codable {
 
 struct InviteMemberRequest: Codable {
     let inviteeUserId: String
+    let permissions: PermissionsUpdate? // Optional: custom permissions
 }
 
 struct CreateTribeItemRequest: Codable {
