@@ -404,11 +404,11 @@ export default function AppPage() {
           </div>
         </div>
         
-        {/* Type/My Tribe/Hold to Talk Buttons */}
+        {/* Type/My Tribes/Hold to Talk Buttons */}
         <div style={{ backgroundColor: 'white', paddingTop: '8px', paddingBottom: '8px', paddingLeft: '16px', paddingRight: '16px', borderBottom: '4px solid #9ca3af' }}>
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between gap-2 p-2 rounded-lg border border-gray-200" style={{ backgroundColor: '#f9fafb' }}>
-              {/* Left side: Type and My Tribe */}
+              {/* Left side: Type and My Tribes */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {

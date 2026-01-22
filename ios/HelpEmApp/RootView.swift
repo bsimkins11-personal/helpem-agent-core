@@ -418,7 +418,7 @@ struct RootView: View {
                         .sheet(isPresented: $isTribeManagerPresented) {
                             NavigationStack {
                                 TribeListView()
-                                    .navigationTitle("My Tribe")
+                                    .navigationTitle("My Tribes")
                                     .navigationBarTitleDisplayMode(.inline)
                                     .toolbar {
                                         ToolbarItem(placement: .cancellationAction) {

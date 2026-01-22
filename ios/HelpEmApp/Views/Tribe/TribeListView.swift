@@ -19,7 +19,7 @@ struct TribeListView: View {
                     tribeList
                 }
             }
-            .navigationTitle("My Tribe")
+            .navigationTitle("My Tribes")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
