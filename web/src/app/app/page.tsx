@@ -52,18 +52,34 @@ export default function AppPage() {
     const loadTribes = async () => {
       try {
         const token = localStorage.getItem("helpem_session");
-        if (!token) return;
+        console.log("🔐 Tribes: Token exists?", !!token);
         
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tribes`, {
+        if (!token) {
+          console.log("❌ No session token - skipping tribe load");
+          return;
+        }
+        
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const url = `${apiUrl}/tribes`;
+        console.log("🌐 Fetching tribes from:", url);
+        
+        const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
+        console.log("📡 Tribes API response status:", res.status);
+        
         if (res.ok) {
           const data = await res.json();
+          console.log("✅ Tribes data received:", data);
+          console.log("📊 Number of tribes:", data.tribes?.length || 0);
           setTribes(data.tribes || []);
+        } else {
+          const errorText = await res.text();
+          console.error("❌ Tribes API error:", res.status, errorText);
         }
       } catch (error) {
-        console.error("Failed to load tribes:", error);
+        console.error("💥 Failed to load tribes:", error);
       }
     };
     
