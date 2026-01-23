@@ -40,7 +40,7 @@ struct TribeListView: View {
                     Text(ErrorSanitizer.userFacingMessage(for: error))
                 }
             }
-            .onChange(of: viewModel.error) { _, newError in
+            .onReceive(viewModel.$error) { newError in
                 showError = newError != nil
             }
             .task {

@@ -45,7 +45,7 @@ struct TribeInboxView: View {
         .refreshable {
             await viewModel.loadProposals(tribeId: tribe.id)
         }
-        .onChange(of: viewModel.error) { _, newError in
+        .onReceive(viewModel.$error) { newError in
             showError = newError != nil
         }
     }
