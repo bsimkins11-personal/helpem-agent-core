@@ -262,6 +262,7 @@ struct CreateTribeItemRequest: Codable {
     let itemType: String
     let data: [String: AnyCodable]
     let recipientUserIds: [String]
+    let idempotencyKey: String // REQUIRED for preventing duplicate proposals
 }
 
 struct UpdateMemberRequest: Codable {
@@ -361,4 +362,10 @@ struct SendMessageRequest: Codable {
 
 struct TribeMessagesResponse: Codable {
     let messages: [TribeMessage]
+}
+
+// MARK: - Proposal Action Requests (with idempotency)
+
+struct ProposalActionRequest: Codable {
+    let idempotencyKey: String // REQUIRED for preventing duplicate actions
 }

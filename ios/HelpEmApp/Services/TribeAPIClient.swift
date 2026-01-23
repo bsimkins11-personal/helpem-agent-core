@@ -206,9 +206,12 @@ class TribeAPIClient {
     
     /// Accept a proposal
     /// Tribe items are invitations. They never become active without explicit acceptance.
-    func acceptProposal(tribeId: String, proposalId: String) async throws -> TribeProposal {
+    /// Generates idempotency key to prevent duplicates on retry.
+    func acceptProposal(tribeId: String, proposalId: String, idempotencyKey: String? = nil) async throws -> TribeProposal {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/proposals/\(proposalId)/accept")!
-        let data = try await authenticatedRequest(url: url, method: "POST")
+        let key = idempotencyKey ?? PendingOperationManager.generateIdempotencyKey()
+        let request = ProposalActionRequest(idempotencyKey: key)
+        let data = try await authenticatedRequest(url: url, method: "POST", body: request)
         let response = try decoder.decode([String: TribeProposal].self, from: data)
         
         guard let proposal = response["proposal"] else {
@@ -218,9 +221,12 @@ class TribeAPIClient {
     }
     
     /// Mark proposal as "not now"
-    func notNowProposal(tribeId: String, proposalId: String) async throws -> TribeProposal {
+    /// Generates idempotency key to prevent duplicates on retry.
+    func notNowProposal(tribeId: String, proposalId: String, idempotencyKey: String? = nil) async throws -> TribeProposal {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/proposals/\(proposalId)/not-now")!
-        let data = try await authenticatedRequest(url: url, method: "POST")
+        let key = idempotencyKey ?? PendingOperationManager.generateIdempotencyKey()
+        let request = ProposalActionRequest(idempotencyKey: key)
+        let data = try await authenticatedRequest(url: url, method: "POST", body: request)
         let response = try decoder.decode([String: TribeProposal].self, from: data)
         
         guard let proposal = response["proposal"] else {
@@ -230,28 +236,35 @@ class TribeAPIClient {
     }
     
     /// Dismiss/remove a proposal
-    func dismissProposal(tribeId: String, proposalId: String) async throws {
+    /// Generates idempotency key to prevent duplicates on retry.
+    func dismissProposal(tribeId: String, proposalId: String, idempotencyKey: String? = nil) async throws {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/proposals/\(proposalId)")!
-        _ = try await authenticatedRequest(url: url, method: "DELETE")
+        let key = idempotencyKey ?? PendingOperationManager.generateIdempotencyKey()
+        let request = ProposalActionRequest(idempotencyKey: key)
+        _ = try await authenticatedRequest(url: url, method: "DELETE", body: request)
     }
     
     // MARK: - Tribe Items
     
     /// Create a Tribe item and send as proposal to recipients
     /// Tribe items are invitations. They never become active without explicit acceptance.
+    /// Generates idempotency key to prevent duplicates on retry.
     func createTribeItem(
         tribeId: String,
         itemType: String,
         data: [String: Any],
-        recipientUserIds: [String]
+        recipientUserIds: [String],
+        idempotencyKey: String? = nil
     ) async throws -> TribeItem {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/items")!
         
+        let key = idempotencyKey ?? PendingOperationManager.generateIdempotencyKey()
         let dataDict = data.mapValues { AnyCodable($0) }
         let request = CreateTribeItemRequest(
             itemType: itemType,
             data: dataDict,
-            recipientUserIds: recipientUserIds
+            recipientUserIds: recipientUserIds,
+            idempotencyKey: key
         )
         
         let responseData = try await authenticatedRequest(url: url, method: "POST", body: request)
