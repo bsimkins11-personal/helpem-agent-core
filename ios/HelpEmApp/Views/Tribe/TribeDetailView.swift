@@ -200,9 +200,7 @@ struct TribeDetailView: View {
     private var mainSections: some View {
         Section {
             NavigationLink {
-                // TODO: Create TribeMessagesView
-                Text("Messages")
-                    .navigationTitle("Messages")
+                TribeMessagesView(tribe: tribe)
             } label: {
                 SectionRow(
                     icon: "message.fill",
@@ -226,9 +224,7 @@ struct TribeDetailView: View {
             }
             
             NavigationLink {
-                // TODO: Create TribeSharedView
-                Text("Shared Items")
-                    .navigationTitle("Shared Items")
+                TribeSharedView(tribe: tribe)
             } label: {
                 SectionRow(
                     icon: "checkmark.circle.fill",
@@ -240,9 +236,7 @@ struct TribeDetailView: View {
             }
             
             NavigationLink {
-                // TODO: Create TribeMembersView or use existing view
-                Text("Members")
-                    .navigationTitle("Members")
+                TribeMembersView(tribe: tribe)
             } label: {
                 SectionRow(
                     icon: "person.3.fill",

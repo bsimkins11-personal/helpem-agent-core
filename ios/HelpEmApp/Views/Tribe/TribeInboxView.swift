@@ -40,24 +40,60 @@ struct TribeInboxView: View {
     
     private var proposalsList: some View {
         List {
-            ForEach(viewModel.proposals) { proposal in
-                ProposalCard(
-                    proposal: proposal,
-                    onAccept: {
-                        await viewModel.acceptProposal(tribeId: tribe.id, proposalId: proposal.id)
-                    },
-                    onNotNow: {
-                        await viewModel.notNowProposal(tribeId: tribe.id, proposalId: proposal.id)
-                    },
-                    onDismiss: {
-                        await viewModel.dismissProposal(tribeId: tribe.id, proposalId: proposal.id)
+            // New Proposals Section
+            if !viewModel.newProposals.isEmpty {
+                Section {
+                    ForEach(viewModel.newProposals) { proposal in
+                        ProposalCard(
+                            proposal: proposal,
+                            onAccept: {
+                                await viewModel.acceptProposal(tribeId: tribe.id, proposalId: proposal.id)
+                            },
+                            onNotNow: {
+                                await viewModel.notNowProposal(tribeId: tribe.id, proposalId: proposal.id)
+                            },
+                            onDismiss: {
+                                await viewModel.dismissProposal(tribeId: tribe.id, proposalId: proposal.id)
+                            }
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
                     }
-                )
-                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                .listRowSeparator(.hidden)
+                } header: {
+                    Text("New")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+            }
+            
+            // Later Section (not_now proposals)
+            if !viewModel.laterProposals.isEmpty {
+                Section {
+                    ForEach(viewModel.laterProposals) { proposal in
+                        ProposalCard(
+                            proposal: proposal,
+                            onAccept: {
+                                await viewModel.acceptProposal(tribeId: tribe.id, proposalId: proposal.id)
+                            },
+                            onNotNow: {
+                                await viewModel.notNowProposal(tribeId: tribe.id, proposalId: proposal.id)
+                            },
+                            onDismiss: {
+                                await viewModel.dismissProposal(tribeId: tribe.id, proposalId: proposal.id)
+                            }
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .opacity(0.7) // Muted appearance for "Later" items
+                    }
+                } header: {
+                    Text("Later")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
             }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
     }
     
     private var emptyState: some View {
@@ -332,6 +368,15 @@ class TribeInboxViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
     @Published var showError = false
+    
+    // Separated proposals for "New" vs "Later" sections
+    var newProposals: [TribeProposal] {
+        proposals.filter { $0.state == .proposed }
+    }
+    
+    var laterProposals: [TribeProposal] {
+        proposals.filter { $0.state == .notNow }
+    }
     
     func loadInbox(tribeId: String) async {
         isLoading = true
