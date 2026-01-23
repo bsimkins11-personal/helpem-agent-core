@@ -12,7 +12,6 @@ struct RootView: View {
     @State private var webViewHandler: WebViewHandler?
     @State private var isMenuPresented = false
     @State private var isTribeManagerPresented = false
-    @State private var isTribeSettingsPresented = false
     @Environment(\.scenePhase) private var scenePhase
     
     private func openFeedbackURL() {
@@ -384,17 +383,7 @@ struct RootView: View {
                                     isMenuPresented = false
                                     isTribeManagerPresented = true
                                 }) {
-                                    Label("Manage Tribes", systemImage: "person.3")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.vertical, 12)
-                                }
-                                .padding(.horizontal, 20)
-                                
-                                Button(action: {
-                                    isMenuPresented = false
-                                    isTribeSettingsPresented = true
-                                }) {
-                                    Label("Tribe Settings", systemImage: "gearshape.2")
+                                    Label("Tribes", systemImage: "person.3")
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 12)
                                 }
@@ -440,26 +429,12 @@ struct RootView: View {
                         .sheet(isPresented: $isTribeManagerPresented) {
                             NavigationStack {
                                 TribeListView()
-                                    .navigationTitle("My Tribes")
+                                    .navigationTitle("Tribes")
                                     .navigationBarTitleDisplayMode(.inline)
                                     .toolbar {
                                         ToolbarItem(placement: .cancellationAction) {
                                             Button("Done") {
                                                 isTribeManagerPresented = false
-                                            }
-                                        }
-                                    }
-                            }
-                        }
-                        .sheet(isPresented: $isTribeSettingsPresented) {
-                            NavigationStack {
-                                TribeListView()
-                                    .navigationTitle("Tribe Settings")
-                                    .navigationBarTitleDisplayMode(.inline)
-                                    .toolbar {
-                                        ToolbarItem(placement: .cancellationAction) {
-                                            Button("Done") {
-                                                isTribeSettingsPresented = false
                                             }
                                         }
                                     }
