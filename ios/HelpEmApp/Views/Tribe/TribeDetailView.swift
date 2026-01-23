@@ -5,7 +5,12 @@ import Combine
 /// Unified hub for all tribe interactions: Messages, Inbox, Shared Items, Settings
 struct TribeDetailView: View {
     let tribe: Tribe
-    @StateObject private var viewModel = TribeDetailViewModel()
+    @StateObject private var viewModel: TribeDetailViewModel
+    
+    init(tribe: Tribe) {
+        self.tribe = tribe
+        _viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeDetailViewModel())
+    }
     
     @State private var selectedSection: TribeSection? = nil
     @State private var showingSettings = false

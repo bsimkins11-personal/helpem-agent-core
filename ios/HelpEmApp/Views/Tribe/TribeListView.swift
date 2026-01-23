@@ -4,7 +4,7 @@ import Combine
 /// Main Tribe list screen
 /// Shows all Tribes the user belongs to with muted pending counts
 struct TribeListView: View {
-    @StateObject private var viewModel = TribeListViewModel()
+    @StateObject private var viewModel = AppContainer.shared.makeTribeListViewModel()
     @State private var showingCreateTribe = false
     @State private var newTribeName = ""
     

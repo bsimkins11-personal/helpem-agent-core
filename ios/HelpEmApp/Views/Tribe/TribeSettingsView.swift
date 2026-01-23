@@ -183,8 +183,13 @@ struct TribeSettingsView: View {
 
 struct TribeMembersView: View {
     let tribe: Tribe
-    @StateObject private var viewModel = TribeMembersViewModel()
+    @StateObject private var viewModel: TribeMembersViewModel
     @State private var showingInvite = false
+    
+    init(tribe: Tribe) {
+        self.tribe = tribe
+        _viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeMembersViewModel())
+    }
     
     var body: some View {
         List {

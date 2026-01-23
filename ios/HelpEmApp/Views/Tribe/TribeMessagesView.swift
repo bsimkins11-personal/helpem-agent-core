@@ -5,8 +5,13 @@ import Combine
 /// Human conversation only - not a command queue
 struct TribeMessagesView: View {
     let tribe: Tribe
-    @StateObject private var viewModel = TribeMessagesViewModel()
+    @StateObject private var viewModel: TribeMessagesViewModel
     @State private var messageText = ""
+    
+    init(tribe: Tribe) {
+        self.tribe = tribe
+        _viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeMessagesViewModel())
+    }
     
     var body: some View {
         VStack(spacing: 0) {

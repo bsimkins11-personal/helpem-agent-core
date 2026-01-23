@@ -11,7 +11,12 @@ import Combine
 /// - No social pressure signals
 struct TribeInboxView: View {
     let tribe: Tribe
-    @StateObject private var viewModel = TribeInboxViewModel()
+    @StateObject private var viewModel: TribeInboxViewModel
+    
+    init(tribe: Tribe) {
+        self.tribe = tribe
+        _viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeInboxViewModel())
+    }
     
     var body: some View {
         Group {

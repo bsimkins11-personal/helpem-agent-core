@@ -4,7 +4,12 @@ import Combine
 /// Shared items view - shows all accepted proposals in a tribe
 struct TribeSharedView: View {
     let tribe: Tribe
-    @StateObject private var viewModel = TribeSharedViewModel()
+    @StateObject private var viewModel: TribeSharedViewModel
+    
+    init(tribe: Tribe) {
+        self.tribe = tribe
+        _viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeSharedViewModel())
+    }
     
     var body: some View {
         List {
