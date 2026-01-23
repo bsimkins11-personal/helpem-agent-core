@@ -32,28 +32,34 @@ class NetworkMonitor: ObservableObject {
     
     private func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
+            guard let self = self else { return }
+            let isConnected = path.status == .satisfied
+            let connectionType = self.determineConnectionType(path)
+            
             Task { @MainActor in
-                self?.isConnected = path.status == .satisfied
-                self?.updateConnectionType(path)
+                self.isConnected = isConnected
+                self.connectionType = connectionType
+                self.logConnectionChange(isConnected, type: connectionType)
             }
         }
         monitor.start(queue: queue)
     }
     
-    private func updateConnectionType(_ path: NWPath) {
+    private func determineConnectionType(_ path: NWPath) -> ConnectionType {
         if path.usesInterfaceType(.wifi) {
-            connectionType = .wifi
+            return .wifi
         } else if path.usesInterfaceType(.cellular) {
-            connectionType = .cellular
+            return .cellular
         } else if path.usesInterfaceType(.wiredEthernet) {
-            connectionType = .wired
+            return .wired
         } else {
-            connectionType = .unknown
+            return .unknown
         }
-        
-        // Log connectivity changes
+    }
+    
+    private func logConnectionChange(_ isConnected: Bool, type: ConnectionType) {
         if isConnected {
-            AppLogger.info("Network connected via \(connectionType)", logger: AppLogger.general)
+            AppLogger.info("Network connected via \(type)", logger: AppLogger.general)
         } else {
             AppLogger.warning("Network disconnected", logger: AppLogger.general)
         }
