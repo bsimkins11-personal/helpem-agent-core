@@ -479,13 +479,6 @@ app.get("/migrate-feedback", async (req, res) => {
 });
 
 // =============================================================================
-// ADMIN ROUTES (ONE-TIME USE - Remove after seeding)
-// =============================================================================
-
-import seedTribesHandler from './routes/admin-seed-tribes.js';
-app.post("/admin/seed-tribes", seedTribesHandler);
-
-// =============================================================================
 // TRIBE ROUTES
 // =============================================================================
 
