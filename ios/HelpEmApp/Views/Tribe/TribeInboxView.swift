@@ -18,28 +18,35 @@ struct TribeInboxView: View {
         _viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeInboxViewModel())
     }
     
+    @State private var showError = false
+    
     var body: some View {
         Group {
-            if viewModel.isLoading && viewModel.proposals.isEmpty {
+            let isEmpty = viewModel.newProposals.isEmpty && viewModel.laterProposals.isEmpty
+            
+            if viewModel.isLoading && isEmpty {
                 ProgressView("Loading inbox...")
-            } else if viewModel.proposals.isEmpty {
+            } else if isEmpty {
                 emptyState
             } else {
                 proposalsList
             }
         }
-        .alert("Error", isPresented: $viewModel.showError) {
+        .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
             if let error = viewModel.error {
-                Text(error.localizedDescription)
+                Text(ErrorSanitizer.userFacingMessage(for: error))
             }
         }
         .task {
-            await viewModel.loadInbox(tribeId: tribe.id)
+            await viewModel.loadProposals(tribeId: tribe.id)
         }
         .refreshable {
-            await viewModel.loadInbox(tribeId: tribe.id)
+            await viewModel.loadProposals(tribeId: tribe.id)
+        }
+        .onChange(of: viewModel.error) { _, newError in
+            showError = newError != nil
         }
     }
     
@@ -52,13 +59,13 @@ struct TribeInboxView: View {
                         ProposalCard(
                             proposal: proposal,
                             onAccept: {
-                                await viewModel.acceptProposal(tribeId: tribe.id, proposalId: proposal.id)
+                                try? await viewModel.acceptProposal(proposal, tribeId: tribe.id)
                             },
                             onNotNow: {
-                                await viewModel.notNowProposal(tribeId: tribe.id, proposalId: proposal.id)
+                                try? await viewModel.notNowProposal(proposal, tribeId: tribe.id)
                             },
                             onDismiss: {
-                                await viewModel.dismissProposal(tribeId: tribe.id, proposalId: proposal.id)
+                                try? await viewModel.dismissProposal(proposal, tribeId: tribe.id)
                             }
                         )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -78,13 +85,13 @@ struct TribeInboxView: View {
                         ProposalCard(
                             proposal: proposal,
                             onAccept: {
-                                await viewModel.acceptProposal(tribeId: tribe.id, proposalId: proposal.id)
+                                try? await viewModel.acceptProposal(proposal, tribeId: tribe.id)
                             },
                             onNotNow: {
-                                await viewModel.notNowProposal(tribeId: tribe.id, proposalId: proposal.id)
+                                try? await viewModel.notNowProposal(proposal, tribeId: tribe.id)
                             },
                             onDismiss: {
-                                await viewModel.dismissProposal(tribeId: tribe.id, proposalId: proposal.id)
+                                try? await viewModel.dismissProposal(proposal, tribeId: tribe.id)
                             }
                         )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
