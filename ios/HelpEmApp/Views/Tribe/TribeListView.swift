@@ -7,7 +7,9 @@ struct TribeListView: View {
     @StateObject private var viewModel = AppContainer.shared.makeTribeListViewModel()
     @State private var showingCreateTribe = false
     @State private var showError = false
+    @State private var showingSignInRequired = false
     @State private var newTribeName = ""
+    @ObservedObject private var authManager = AuthManager.shared
     
     var body: some View {
         NavigationStack {
@@ -40,8 +42,37 @@ struct TribeListView: View {
                     Text(ErrorSanitizer.userFacingMessage(for: error))
                 }
             }
+            .alert("Sign In Required", isPresented: $showingSignInRequired) {
+                Button("Sign In") {
+                    AuthManager.shared.signInWithApple()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Your session has expired. Please sign in to access your Tribes.")
+            }
             .onReceive(viewModel.$error) { newError in
-                showError = newError != nil
+                if let error = newError {
+                    // Check if it's an auth error
+                    if let tribeError = error as? TribeAPIError, 
+                       case .notAuthenticated = tribeError {
+                        showingSignInRequired = true
+                        showError = false
+                    } else {
+                        showError = true
+                        showingSignInRequired = false
+                    }
+                } else {
+                    showError = false
+                    showingSignInRequired = false
+                }
+            }
+            .onChange(of: authManager.isAuthenticated) { _, isAuth in
+                if isAuth {
+                    // Reload tribes when auth completes
+                    Task {
+                        await viewModel.loadTribes()
+                    }
+                }
             }
             .task {
                 await viewModel.loadTribes()
@@ -159,7 +190,14 @@ struct TribeListView: View {
             showingCreateTribe = false
             newTribeName = ""
         } catch {
-            // Error is captured in viewModel.error and shown via alert
+            // Check if it's an auth error
+            if let tribeError = error as? TribeAPIError, 
+               case .notAuthenticated = tribeError {
+                showingCreateTribe = false
+                newTribeName = ""
+                showingSignInRequired = true
+            }
+            // Other errors are captured in viewModel.error and shown via alert
         }
     }
 }
