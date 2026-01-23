@@ -131,7 +131,7 @@ class TribeMessagesViewModel: ObservableObject {
     }
     
     /// Stop polling
-    func stopPolling() {
+    nonisolated func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
     }
