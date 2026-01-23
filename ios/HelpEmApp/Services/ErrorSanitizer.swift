@@ -136,19 +136,6 @@ struct ErrorSanitizer {
     }
 }
 
-// MARK: - UseCaseError Extension
-
-enum UseCaseError: LocalizedError {
-    case itemSuppressed
-    case invalidInput
-    case notAuthorized
-    case tribeNotFound
-    case proposalNotFound
-    case networkError(Error)
-    case unknown(Error)
-    
-    var errorDescription: String? {
-        // Use sanitizer for all user-facing descriptions
-        ErrorSanitizer.userFacingMessage(for: self)
-    }
-}
+// MARK: - Note
+// UseCaseError is defined in Architecture/UseCases/UseCaseError.swift
+// No need to redeclare it here
