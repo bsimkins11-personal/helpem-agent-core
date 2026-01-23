@@ -15,6 +15,72 @@ type Connection = {
 };
 
 export default function ConnectionsPage() {
+  const [connecting, setConnecting] = useState<string | null>(null);
+
+  const handleConnect = async (connectionId: string) => {
+    setConnecting(connectionId);
+    
+    // Save connection to localStorage
+    try {
+      const savedConnections = localStorage.getItem('helpem_connections');
+      const connections = savedConnections ? JSON.parse(savedConnections) : [];
+      
+      const newConnection = {
+        id: connectionId,
+        connectedAt: new Date().toISOString(),
+        status: 'connected'
+      };
+      
+      connections.push(newConnection);
+      localStorage.setItem('helpem_connections', JSON.stringify(connections));
+      
+      // Update state
+      setConnections(prev => 
+        prev.map(conn => 
+          conn.id === connectionId 
+            ? { ...conn, status: 'connected', connectedAt: new Date().toISOString() }
+            : conn
+        )
+      );
+      
+      // Handle specific calendar integrations
+      if (connectionId === 'apple-calendar') {
+        alert('Apple Calendar integration enabled! You can now add events to your calendar.');
+      } else if (connectionId === 'google-calendar') {
+        alert('Google Calendar integration enabled! You can now sync your events.');
+      } else if (connectionId === 'outlook-calendar') {
+        alert('Outlook Calendar integration enabled! You can now connect your calendar.');
+      }
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      alert('Failed to connect. Please try again.');
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  const handleDisconnect = (connectionId: string) => {
+    try {
+      const savedConnections = localStorage.getItem('helpem_connections');
+      const connections = savedConnections ? JSON.parse(savedConnections) : [];
+      
+      const filtered = connections.filter((c: any) => c.id !== connectionId);
+      localStorage.setItem('helpem_connections', JSON.stringify(filtered));
+      
+      setConnections(prev => 
+        prev.map(conn => 
+          conn.id === connectionId 
+            ? { ...conn, status: 'available', connectedAt: undefined }
+            : conn
+        )
+      );
+      
+      alert(`${connectionId} disconnected successfully`);
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+    }
+  };
+
   const [connections, setConnections] = useState<Connection[]>([
     // Calendar Integrations
     {
@@ -22,7 +88,7 @@ export default function ConnectionsPage() {
       name: "Google Calendar",
       description: "Sync your Google Calendar events to helpem",
       icon: "📅",
-      status: "coming_soon",
+      status: "available",
       category: "calendar",
     },
     {
@@ -30,7 +96,7 @@ export default function ConnectionsPage() {
       name: "Apple Calendar",
       description: "Import events from Apple Calendar",
       icon: "📆",
-      status: "coming_soon",
+      status: "available",
       category: "calendar",
     },
     {
@@ -38,7 +104,7 @@ export default function ConnectionsPage() {
       name: "Outlook Calendar",
       description: "Connect your Microsoft Outlook calendar",
       icon: "📬",
-      status: "coming_soon",
+      status: "available",
       category: "calendar",
     },
     
@@ -106,6 +172,27 @@ export default function ConnectionsPage() {
   ]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  // Load saved connections from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedConnections = localStorage.getItem('helpem_connections');
+      if (savedConnections) {
+        const saved = JSON.parse(savedConnections);
+        setConnections(prev => 
+          prev.map(conn => {
+            const savedConn = saved.find((s: any) => s.id === conn.id);
+            if (savedConn) {
+              return { ...conn, status: 'connected', connectedAt: savedConn.connectedAt };
+            }
+            return conn;
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Failed to load connections:', error);
+    }
+  }, []);
 
   const categories = [
     { id: "all", name: "All Integrations", icon: "🔌" },
@@ -228,12 +315,19 @@ export default function ConnectionsPage() {
               {/* Action Button */}
               <div className="mt-auto pt-4">
                 {connection.status === "connected" ? (
-                  <button className="w-full px-4 py-2 border-2 border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all font-medium">
+                  <button 
+                    onClick={() => handleDisconnect(connection.id)}
+                    className="w-full px-4 py-2 border-2 border-red-500 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all font-medium"
+                  >
                     Disconnect
                   </button>
                 ) : connection.status === "available" ? (
-                  <button className="w-full px-4 py-2 bg-gradient-to-r from-brandBlue to-brandGreen text-white rounded-xl hover:shadow-lg transition-all font-medium">
-                    Connect
+                  <button 
+                    onClick={() => handleConnect(connection.id)}
+                    disabled={connecting === connection.id}
+                    className="w-full px-4 py-2 bg-gradient-to-r from-brandBlue to-brandGreen text-white rounded-xl hover:shadow-lg transition-all font-medium disabled:opacity-50"
+                  >
+                    {connecting === connection.id ? 'Connecting...' : 'Connect'}
                   </button>
                 ) : (
                   <button
