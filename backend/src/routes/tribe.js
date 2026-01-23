@@ -194,8 +194,20 @@ router.post("/", async (req, res) => {
     const errorMessage = err.message || "Internal server error";
     const errorCode = err.code || "UNKNOWN_ERROR";
     
+    // Check for common database errors
+    let userFriendlyMessage = "Failed to create tribe";
+    if (err.code === "P2002") {
+      userFriendlyMessage = "A tribe with this name already exists";
+    } else if (err.code === "P2025") {
+      userFriendlyMessage = "User not found";
+    } else if (err.message?.includes("tribe_member_permissions") || err.message?.includes("TribeMemberPermissions")) {
+      userFriendlyMessage = "Database migration may not have run. Please contact support.";
+    } else if (err.message?.includes("Table") && err.message?.includes("does not exist")) {
+      userFriendlyMessage = "Database tables not found. Please run migrations.";
+    }
+    
     return res.status(500).json({ 
-      error: "Internal server error",
+      error: userFriendlyMessage,
       details: process.env.NODE_ENV === "development" ? {
         message: errorMessage,
         code: errorCode,
