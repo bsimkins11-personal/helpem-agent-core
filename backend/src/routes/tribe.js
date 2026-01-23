@@ -622,9 +622,14 @@ router.patch("/:tribeId/members/:memberId", async (req, res) => {
 
     // Owner can update permissions for other members (not themselves)
     if (isOwner && permissions && targetMember.userId !== userId) {
-      await prisma.tribeMemberPermissions.update({
+      // Use upsert to create permissions if they don't exist, or update if they do
+      await prisma.tribeMemberPermissions.upsert({
         where: { memberId },
-        data: permissions,
+        create: {
+          memberId,
+          ...permissions,
+        },
+        update: permissions,
       });
       
       // Fetch updated member with permissions
