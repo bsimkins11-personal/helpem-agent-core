@@ -124,18 +124,36 @@ export async function validateRecipients(tribeId, recipientUserIds) {
  * 
  * Tribe items are invitations. They never become active without explicit acceptance.
  */
-export async function createProposals(itemId, recipientMemberIds) {
+export async function createProposals(itemId, recipientMemberIds, idempotencyKey = null) {
+  // If idempotency key provided, check for existing proposals
+  if (idempotencyKey) {
+    const existingProposals = await prisma.tribeProposal.findMany({
+      where: {
+        itemId,
+        idempotencyKey,
+      },
+    });
+
+    // If proposals already exist with this key, return them (idempotent)
+    if (existingProposals.length > 0) {
+      return { count: existingProposals.length, isIdempotent: true };
+    }
+  }
+
   const proposals = recipientMemberIds.map(memberId => ({
     itemId,
     recipientId: memberId,
     state: "proposed",
     createdAt: new Date(),
     stateChangedAt: new Date(),
+    idempotencyKey, // Store idempotency key if provided
   }));
 
-  return await prisma.tribeProposal.createMany({
+  const result = await prisma.tribeProposal.createMany({
     data: proposals,
   });
+
+  return { count: result.count, isIdempotent: false };
 }
 
 /**
