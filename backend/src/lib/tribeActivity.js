@@ -64,12 +64,25 @@ export async function getUserDisplayName(userId) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { appleUserId: true }, // We'll need to add displayName later if available
+      select: { appleUserId: true },
     });
     
-    // For now, return a truncated version of the ID
-    // TODO: Add displayName to User model or fetch from auth system
-    return user ? `User ${userId.slice(0, 8)}` : "Unknown User";
+    if (!user) {
+      return "Unknown User";
+    }
+    
+    // For synthetic demo users, extract name from apple_user_id
+    if (user.appleUserId && user.appleUserId.startsWith('demo-')) {
+      // Format: demo-sarah-spouse-001 -> Sarah
+      const parts = user.appleUserId.split('-');
+      if (parts.length >= 2) {
+        const name = parts[1];
+        return name.charAt(0).toUpperCase() + name.slice(1);
+      }
+    }
+    
+    // For real users, return truncated ID for now
+    return user.appleUserId ? `User ${userId.slice(0, 8)}` : "Unknown User";
   } catch (error) {
     console.error("Error fetching user display name:", error);
     return "Unknown User";
