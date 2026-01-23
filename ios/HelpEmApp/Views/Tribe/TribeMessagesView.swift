@@ -116,8 +116,7 @@ class TribeMessagesViewModel: ObservableObject {
     @Published var isLoading = false
     
     var currentUserId: String {
-        // TODO: Get from AuthManager
-        return ""
+        KeychainHelper.shared.userId ?? ""
     }
     
     func loadMessages(tribeId: String) async {

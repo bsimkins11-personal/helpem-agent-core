@@ -76,7 +76,8 @@ struct MemberRow: View {
     }
     
     private var memberDisplayName: String {
-        // TODO: Get actual user display name
+        // For now, use truncated user ID
+        // TODO: Add user display name to backend API response
         return "User \(member.userId.prefix(8))"
     }
     
