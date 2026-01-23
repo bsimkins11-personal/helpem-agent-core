@@ -11,6 +11,7 @@ import { useLife } from "@/state/LifeStore";
 import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { usePersonalAnalyticsNotifications } from "@/hooks/usePersonalAnalyticsNotifications";
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
+import { getClientSessionToken } from "@/lib/clientSession";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 type PriorityFilter = "all" | "high" | "medium" | "low";
@@ -51,7 +52,7 @@ export default function AppPage() {
   useEffect(() => {
     const loadTribes = async () => {
       try {
-        const token = localStorage.getItem("helpem_session");
+        const token = getClientSessionToken();
         console.log("🔐 Tribes: Token exists?", !!token);
         
         if (!token) {

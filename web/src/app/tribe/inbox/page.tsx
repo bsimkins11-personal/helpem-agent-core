@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { getClientSessionToken } from "@/lib/clientSession";
 
 type TribeMessage = {
   id: string;
@@ -65,7 +66,10 @@ export default function TribeInboxPage() {
   const loadTribes = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/tribes");
+      const token = getClientSessionToken();
+      const res = await fetch("/api/tribes", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (!res.ok) throw new Error("Failed to load tribes");
       
       const data = await res.json();
@@ -84,7 +88,10 @@ export default function TribeInboxPage() {
 
   const loadMessages = async (tribeId: string, silent = false) => {
     try {
-      const res = await fetch(`/api/tribes/${tribeId}/messages`);
+      const token = getClientSessionToken();
+      const res = await fetch(`/api/tribes/${tribeId}/messages`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (!res.ok) throw new Error("Failed to load messages");
       
       const data = await res.json();
@@ -101,9 +108,13 @@ export default function TribeInboxPage() {
     
     setSending(true);
     try {
+      const token = getClientSessionToken();
       const res = await fetch(`/api/tribes/${selectedTribeId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ message: newMessage.trim() }),
       });
       

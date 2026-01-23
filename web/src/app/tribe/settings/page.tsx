@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getClientSessionToken } from "@/lib/clientSession";
 
 type Tribe = {
   id: string;
@@ -34,7 +35,10 @@ export default function TribeSettingsPage() {
   const loadTribes = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/tribes");
+      const token = getClientSessionToken();
+      const res = await fetch("/api/tribes", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (!res.ok) throw new Error("Failed to load tribes");
       
       const data = await res.json();
@@ -52,9 +56,13 @@ export default function TribeSettingsPage() {
 
     setCreating(true);
     try {
+      const token = getClientSessionToken();
       const res = await fetch("/api/tribes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ name }),
       });
 
