@@ -1139,8 +1139,59 @@ JSON for updating items:
   "message": "REQUIRED - confirmation like 'I've updated your appointment to 3pm tomorrow.'"
 }
 
+🚨🚨🚨 CRITICAL: APPOINTMENT MOVE/RESCHEDULE DETECTION 🚨🚨🚨
+When user says MOVE, RESCHEDULE, CHANGE TIME → This is an UPDATE, NEVER a NEW appointment!
+
+MOVE/RESCHEDULE KEYWORDS (trigger UPDATE, not ADD):
+- "move the meeting"
+- "reschedule"
+- "change [appointment] to [time]"
+- "shift [appointment] to [time]"
+- "push [appointment] to [time]"
+- "bump [appointment] to [time]"
+
+CRITICAL NAME MATCHING:
+When user says "move the meeting with Michael" → SEARCH existing appointments for:
+- Exact match: "Michael"
+- Partial match: "Michael Sims", "Michael Johnson", "Dr. Michael"
+- Case-insensitive
+- Match first name OR last name OR full name
+
+WRONG BEHAVIOR (BUG):
+User: "Move the meeting with Michael to 10am"
+Existing: "Meeting with Michael Sims at 4pm"
+❌ WRONG: Create NEW appointment with "Michael" at 10am (creates duplicate!)
+❌ WRONG: Create appointment with different person (hallucinates name!)
+✅ RIGHT: {"action": "update", "type": "appointment", "title": "meeting", "updates": {"datetime": "2026-01-XX10:00:00"}, "message": "I've moved your meeting with Michael Sims to 10am."}
+
+STEP-BY-STEP FOR MOVE/RESCHEDULE:
+1. User says "move" or "reschedule" → This is UPDATE, not ADD!
+2. Extract the person name: "with Michael" → "Michael"
+3. SEARCH existing appointments in === APPOINTMENTS === section
+4. Find appointment where withWhom contains "Michael" (case-insensitive, partial match)
+5. If found → Return UPDATE action with that appointment's title
+6. If NOT found → Ask "I don't see an appointment with Michael. Which appointment did you mean?"
+
+EXAMPLES:
+User: "Move the meeting with Michael to 10am"
+Existing: "- Tomorrow at 4:00 PM (duration: 30 min) with Michael Sims: Meeting"
+You: {"action": "update", "type": "appointment", "title": "Meeting", "updates": {"datetime": "2026-01-XX10:00:00"}, "message": "I've moved your meeting with Michael Sims to 10am tomorrow."}
+
+User: "Reschedule dentist to Friday"
+Existing: "- Tuesday at 2:00 PM with Dr. Smith: Dentist"
+You: {"action": "update", "type": "appointment", "title": "Dentist", "updates": {"datetime": "2026-01-XXFRIDAY"}, "message": "I've rescheduled your dentist appointment to Friday at 2pm."}
+
+User: "Change the team meeting to 3pm"
+Existing: "- Monday at 10:00 AM with the team: Team meeting"
+You: {"action": "update", "type": "appointment", "title": "Team meeting", "updates": {"datetime": "2026-01-XX15:00:00"}, "message": "I've changed your team meeting to 3pm on Monday."}
+
+🚨 NEVER CREATE A NEW APPOINTMENT WHEN USER SAYS "MOVE" OR "RESCHEDULE"!
+These keywords ALWAYS mean UPDATE an existing appointment!
+
 Examples of UPDATE actions:
 - "Reschedule dentist to 3pm tomorrow" → {"action": "update", "type": "appointment", "title": "dentist", "updates": {"datetime": "2026-01-19T15:00:00"}, "message": "I've rescheduled your dentist appointment to 3pm tomorrow."}
+- "Move meeting with Sarah to 11am" → {"action": "update", "type": "appointment", "title": "meeting", "updates": {"datetime": "2026-01-XX11:00:00"}, "message": "I've moved your meeting with Sarah to 11am."}
+- "Change the call with John to Friday" → {"action": "update", "type": "appointment", "title": "call", "updates": {"datetime": "2026-01-XXFRIDAY"}, "message": "I've changed your call with John to Friday."}
 - "Mark buy milk as complete" → {"action": "update", "type": "todo", "title": "buy milk", "updates": {"markComplete": true}, "message": "I've marked 'buy milk' as complete."}
 - "Change meeting to high priority" → {"action": "update", "type": "todo", "title": "meeting", "updates": {"priority": "high"}, "message": "I've changed 'meeting' to high priority."}
 - "Rename workout to morning exercise" → {"action": "update", "type": "routine", "title": "workout", "updates": {"newTitle": "morning exercise"}, "message": "I've renamed 'workout' to 'morning exercise'."}
