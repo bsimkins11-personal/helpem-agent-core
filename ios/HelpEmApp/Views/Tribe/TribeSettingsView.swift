@@ -497,7 +497,7 @@ struct InviteMemberView: View {
                 } header: {
                     Text("Select Contact")
                 } footer: {
-                    Text("They'll receive a friendly invitation to join the \(tribe.name) tribe! 🎉")
+                    Text("Your personal invitation will be waiting for them when they join HelpEm! They'll see it's from you and can choose to accept.")
                 }
 
                 Section {
@@ -539,16 +539,16 @@ struct InviteMemberView: View {
                     Text(error.localizedDescription)
                 }
             }
-            .alert("Invitation Sent! 🎉", isPresented: $showSuccess) {
+            .alert("Invitation Ready! 🎉", isPresented: $showSuccess) {
                 Button("Done") {
                     onComplete()
                     dismiss()
                 }
             } message: {
                 if let name = selectedContactName {
-                    Text("Your invitation to join the \(tribe.name) tribe has been sent to \(name)!")
+                    Text("\(name) will see your personal invitation to join '\(tribe.name)' when they sign up for HelpEm. They'll be excited to collaborate with you!")
                 } else {
-                    Text("Your invitation to join the \(tribe.name) tribe has been sent!")
+                    Text("Your personal invitation to join '\(tribe.name)' is ready and waiting!")
                 }
             }
             .sheet(isPresented: $showingContacts) {
@@ -590,13 +590,12 @@ struct InviteMemberView: View {
                 tribeId: tribe.id,
                 contactIdentifier: contactId,
                 contactType: contactType,
-                contactName: nil,
+                contactName: selectedContactName,
                 permissions: permissions
             )
             AppLogger.info("Contact invited successfully: \(invitation.id)", logger: AppLogger.general)
 
-            onComplete()
-            dismiss()
+            showSuccess = true
         } catch {
             AppLogger.error("Failed to send invite: \(error.localizedDescription)", logger: AppLogger.general)
             self.error = error

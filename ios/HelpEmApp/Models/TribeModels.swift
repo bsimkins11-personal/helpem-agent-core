@@ -379,6 +379,7 @@ struct PendingTribeInvitation: Codable, Identifiable {
     let contactIdentifier: String
     let contactType: String // "email" or "phone"
     let contactName: String?
+    let inviterName: String? // Name of person who sent the invite
     let permissions: [String: AnyCodable]
     let createdAt: Date
     let expiresAt: Date
@@ -393,6 +394,7 @@ struct PendingTribeInvitation: Codable, Identifiable {
         case contactIdentifier = "contactIdentifier"
         case contactType = "contactType"
         case contactName = "contactName"
+        case inviterName = "inviterName"
         case permissions
         case createdAt = "createdAt"
         case expiresAt = "expiresAt"
@@ -412,5 +414,6 @@ struct InviteContactRequest: Codable {
 struct InviteContactResponse: Codable {
     let success: Bool
     let invitation: PendingTribeInvitation
+    let inviterName: String
     let message: String
 }

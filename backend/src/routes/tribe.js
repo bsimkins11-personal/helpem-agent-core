@@ -1278,6 +1278,10 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
     // Since we don't have email/phone in User model yet, we'll always create a pending invitation
     // This will be auto-accepted when they sign up
     
+    // Get inviter name for personalized messaging
+    const inviterName = await getUserDisplayName(userId);
+    const invitedName = contactName || normalizedIdentifier;
+    
     // Calculate expiry (30 days from now)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
@@ -1289,26 +1293,24 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
         contactIdentifier: normalizedIdentifier,
         contactType,
         contactName: contactName || null,
+        inviterName: inviterName,
         permissions: permissions || {},
         expiresAt,
         state: "pending",
       },
     });
-
-    // Create tribe activity
-    const inviterName = await getUserDisplayName(userId);
-    const invitedName = contactName || normalizedIdentifier;
     
     await createTribeActivity({
       tribeId,
       userId,
-      message: `${inviterName} invited ${invitedName} to the tribe`,
+      message: `${inviterName} invited ${invitedName} to join the tribe! 🎉`,
     });
 
     return res.json({ 
       success: true,
       invitation,
-      message: "Invitation sent. They will be added to the tribe when they sign up." 
+      inviterName,
+      message: `${invitedName} will receive a personal invitation from you to join the ${tribe.name} tribe when they sign up for HelpEm!` 
     });
   } catch (err) {
     console.error("ERROR POST /tribes/:tribeId/invite-contact:", err);

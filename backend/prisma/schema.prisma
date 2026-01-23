@@ -351,6 +351,9 @@ model PendingTribeInvitation {
   // Display name from contact book
   contactName        String?   @map("contact_name")
   
+  // Inviter display name (for personalized messaging)
+  inviterName        String?   @map("inviter_name")
+  
   // Permissions for when they join
   permissions        Json      @default("{}")
   

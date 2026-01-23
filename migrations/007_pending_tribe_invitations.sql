@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS pending_tribe_invitations (
   -- Display name from contact book
   contact_name VARCHAR(255),
   
+  -- Inviter display name (for personalized messaging)
+  inviter_name VARCHAR(255),
+  
   -- Permissions for when they join
   permissions JSONB DEFAULT '{}',
   

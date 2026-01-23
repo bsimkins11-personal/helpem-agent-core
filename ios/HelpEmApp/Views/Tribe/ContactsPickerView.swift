@@ -8,7 +8,7 @@ import Contacts
 /// No background sync, no uploading contact lists
 struct ContactsPickerView: View {
     let tribe: Tribe
-    let onSelect: (String) -> Void
+    let onSelect: (String, String) -> Void // (contactId, contactName)
     
     @StateObject private var viewModel = ContactsPickerViewModel()
     @Environment(\.dismiss) private var dismiss
@@ -57,11 +57,11 @@ struct ContactsPickerView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.blue)
             
-            Text("Add Someone to Tribe")
+            Text("Invite Someone Special")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("To invite someone, we need access to your contacts. We only request this when you want to add someone.")
+            Text("Choose someone to join your HelpEm tribe. They'll get a personal invitation from you when they sign up!")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -189,13 +189,16 @@ struct ContactsPickerView: View {
             userId = normalizedPhone
         }
         
+        // Get contact name
+        let contactName = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
+        
         // If we have an identifier, use it; otherwise show error
         if let userId = userId {
-            AppLogger.info("Selected contact: \(contact.givenName) \(contact.familyName), userId: \(userId)", logger: AppLogger.general)
-            onSelect(userId)
+            AppLogger.info("Selected contact: \(contactName), userId: \(userId)", logger: AppLogger.general)
+            onSelect(userId, contactName)
             dismiss()
         } else {
-            AppLogger.error("Contact has no email or phone: \(contact.givenName) \(contact.familyName)", logger: AppLogger.general)
+            AppLogger.error("Contact has no email or phone: \(contactName)", logger: AppLogger.general)
             // Show error to user - contact needs email or phone
             viewModel.showContactError = true
         }
