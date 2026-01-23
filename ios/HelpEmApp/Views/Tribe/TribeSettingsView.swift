@@ -663,30 +663,8 @@ class TribeSettingsViewModel: ObservableObject {
     }
 }
 
-@MainActor
-class TribeMembersViewModel: ObservableObject {
-    @Published var members: [TribeMember] = []
-    @Published var currentUserId: String?
-    
-    func loadMembers(tribeId: String) async {
-        do {
-            members = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
-            AppLogger.info("Loaded \(members.count) members", logger: AppLogger.general)
-        } catch {
-            AppLogger.error("Failed to load members: \(error)", logger: AppLogger.general)
-        }
-    }
-    
-    func inviteMember(tribeId: String, userId: String) async {
-        do {
-            let member = try await TribeAPIClient.shared.inviteMember(tribeId: tribeId, userId: userId)
-            members.append(member)
-            AppLogger.info("Invited member", logger: AppLogger.general)
-        } catch {
-            AppLogger.error("Failed to invite member: \(error)", logger: AppLogger.general)
-        }
-    }
-}
+// Note: TribeMembersViewModel has been moved to Architecture/ViewModels/TribeMembersViewModel.swift
+// This provides better separation of concerns and follows Clean Architecture principles
 
 @MainActor
 class MemberDetailViewModel: ObservableObject {
