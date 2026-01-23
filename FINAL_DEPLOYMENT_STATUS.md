@@ -39,13 +39,17 @@
 5. ✅ Renamed duplicate declarations (MemberRow, TribeMembersViewModel)
 6. ✅ Added explicit init() methods to ViewModels
 7. ✅ Fixed .capitalized usage (manual capitalization)
+8. ✅ Fixed duplicate TribeMembersView declaration (renamed to TribeMembersListView)
+9. ✅ Fixed missing permissions parameter in InviteMemberRequest
 
 ### Files Fixed
 - `SuppressedOrigin.swift` - Added Combine import
 - `TribeSharedView.swift` - Fixed AnyCodable access, added Combine, added init()
 - `TribeMessagesView.swift` - Fixed onChange, removed unused var, added Combine, added init()
-- `TribeMembersView.swift` - Renamed duplicates, added Combine, added init()
+- `TribeMembersView.swift` - Renamed to TribeMembersListView, added Combine, added init()
 - `TribeInboxView.swift` - Fixed .capitalized usage
+- `TribeDetailView.swift` - Updated reference to TribeMembersListView
+- `TribeAPIClient.swift` - Added missing permissions parameter
 
 ---
 
