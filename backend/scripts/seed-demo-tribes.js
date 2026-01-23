@@ -12,7 +12,20 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+
+// Ensure DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  console.error('❌ Error: DATABASE_URL environment variable is not set');
+  console.error('');
+  console.error('Please set DATABASE_URL before running this script:');
+  console.error('  export DATABASE_URL="your-postgres-connection-string"');
+  console.error('');
+  process.exit(1);
+}
+
+const prisma = new PrismaClient({
+  log: ['error', 'warn'],
+});
 
 // Synthetic user data
 const SYNTHETIC_USERS = [
@@ -118,20 +131,25 @@ const TRIBES = [
 ];
 
 async function createOrGetUser(appleUserId, name) {
-  let user = await prisma.user.findUnique({
-    where: { appleUserId }
-  });
-  
-  if (!user) {
-    user = await prisma.user.create({
-      data: { appleUserId }
+  try {
+    let user = await prisma.user.findUnique({
+      where: { appleUserId }
     });
-    console.log(`   ✅ Created synthetic user: ${name} (${appleUserId})`);
-  } else {
-    console.log(`   ℹ️  Using existing user: ${name} (${user.id})`);
+    
+    if (!user) {
+      user = await prisma.user.create({
+        data: { appleUserId }
+      });
+      console.log(`   ✅ Created synthetic user: ${name} (${appleUserId})`);
+    } else {
+      console.log(`   ℹ️  Using existing user: ${name} (${user.id})`);
+    }
+    
+    return user;
+  } catch (error) {
+    console.error(`   ❌ Failed to create/get user ${name}:`, error.message);
+    throw error;
   }
-  
-  return user;
 }
 
 async function seedDemoTribes(realUserId) {
