@@ -136,11 +136,18 @@ struct TribeInboxViewRefactored: View {
     private func handleAccept(_ proposal: TribeProposal) async {
         do {
             try await viewModel.acceptProposal(proposal, tribeId: tribe.id)
-        } catch UseCaseError.itemSuppressed {
-            errorMessage = "This item was previously deleted and cannot be re-added."
-            showError = true
         } catch {
-            errorMessage = error.localizedDescription
+            // Check for specific UseCaseError cases
+            if let useCaseError = error as? UseCaseError {
+                switch useCaseError {
+                case .itemSuppressed:
+                    errorMessage = "This item was previously deleted and cannot be re-added."
+                default:
+                    errorMessage = ErrorSanitizer.userFacingMessage(for: error)
+                }
+            } else {
+                errorMessage = ErrorSanitizer.userFacingMessage(for: error)
+            }
             showError = true
         }
     }
