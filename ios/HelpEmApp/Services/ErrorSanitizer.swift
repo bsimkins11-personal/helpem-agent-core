@@ -78,10 +78,7 @@ struct ErrorSanitizer {
         case .itemSuppressed:
             return "This item was previously deleted and won't be added again."
             
-        case .invalidInput:
-            return "Please check your input and try again."
-            
-        case .notAuthorized, .permissionDenied:
+        case .permissionDenied:
             return "You don't have permission to do that."
             
         case .tribeNotFound:
@@ -101,12 +98,6 @@ struct ErrorSanitizer {
             
         case .invalidState:
             return "This action can't be performed right now."
-            
-        case .networkError:
-            return "Please check your internet connection and try again."
-            
-        case .unknown:
-            return "Something went wrong. Please try again."
         }
     }
     
