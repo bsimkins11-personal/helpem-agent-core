@@ -725,7 +725,7 @@ export default function AppPage() {
                                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3.293 3.293 3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
                                   </svg>
-                                  {tribe.unreadMessageCount} new message{tribe.unreadMessageCount > 1 ? 's' : ''}
+                                  {tribe.unreadMessageCount ?? 0} new message{(tribe.unreadMessageCount ?? 0) > 1 ? 's' : ''}
                                 </span>
                               </div>
                             )}
@@ -737,7 +737,7 @@ export default function AppPage() {
                                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                                   </svg>
-                                  {tribe.pendingProposalsCount} pending proposal{tribe.pendingProposalsCount > 1 ? 's' : ''}
+                                  {tribe.pendingProposalsCount ?? 0} pending proposal{(tribe.pendingProposalsCount ?? 0) > 1 ? 's' : ''}
                                 </span>
                               </div>
                             )}
