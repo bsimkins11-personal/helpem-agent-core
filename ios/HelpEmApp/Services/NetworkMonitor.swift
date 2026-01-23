@@ -45,7 +45,7 @@ class NetworkMonitor: ObservableObject {
         monitor.start(queue: queue)
     }
     
-    private func determineConnectionType(_ path: NWPath) -> ConnectionType {
+    nonisolated private func determineConnectionType(_ path: NWPath) -> ConnectionType {
         if path.usesInterfaceType(.wifi) {
             return .wifi
         } else if path.usesInterfaceType(.cellular) {
