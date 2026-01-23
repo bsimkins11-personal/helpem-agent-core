@@ -188,7 +188,7 @@ struct TribeMembersView: View {
     
     init(tribe: Tribe) {
         self.tribe = tribe
-        _viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeMembersViewModel())
+        self._viewModel = StateObject(wrappedValue: AppContainer.shared.makeTribeMembersViewModel())
     }
     
     var body: some View {
