@@ -80,8 +80,8 @@ router.post('/seed', async (req, res) => {
 
     const userId = session.session.userId;
 
-    // Check if user already has tribes (don't double-seed)
-    const existingTribes = await prisma.tribe.count({
+    // Check if user already has tribes
+    const existingTribes = await prisma.tribe.findMany({
       where: {
         members: {
           some: {
@@ -90,14 +90,38 @@ router.post('/seed', async (req, res) => {
           }
         },
         deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        ownerId: true,
       }
     });
 
-    if (existingTribes > 0) {
+    if (existingTribes.length > 0) {
+      console.log(`User ${userId} already has ${existingTribes.length} tribes`);
+      
+      // Check if they have demo tribes specifically
+      const demoTribeNames = DEMO_TRIBES.map(t => t.name);
+      const hasDemoTribes = existingTribes.some(t => demoTribeNames.includes(t.name));
+      
+      if (hasDemoTribes) {
+        // User already has demo tribes, don't duplicate
+        return res.json({ 
+          message: 'User already has demo tribes', 
+          count: existingTribes.length,
+          skipped: true,
+          tribes: existingTribes
+        });
+      }
+      
+      // User has non-demo tribes (real tribes they created)
+      // Don't add demo tribes on top of real ones
       return res.json({ 
-        message: 'User already has tribes', 
-        count: existingTribes,
-        skipped: true 
+        message: 'User has real tribes, skipping demo tribes', 
+        count: existingTribes.length,
+        skipped: true,
+        tribes: existingTribes
       });
     }
 

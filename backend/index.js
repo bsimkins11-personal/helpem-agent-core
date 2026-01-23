@@ -492,7 +492,9 @@ app.get("/debug/tribes", debugTribesHandler);
 // =============================================================================
 
 import demoTribesRoutes from './routes/demo-tribes.js';
+import demoTribesCleanupRoutes from './routes/demo-tribes-cleanup.js';
 app.use("/tribes/demo", apiLimiter, demoTribesRoutes);
+app.use("/tribes/demo/cleanup", apiLimiter, demoTribesCleanupRoutes);
 
 // =============================================================================
 // TRIBE ROUTES
