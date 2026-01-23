@@ -13,6 +13,12 @@ class TribeMembersViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
     
+    // Current user ID (for highlighting current user in member list)
+    var currentUserId: String {
+        // TODO: Get from auth service
+        return ""
+    }
+    
     // MARK: - Dependencies
     
     private let repository: TribeRepository
