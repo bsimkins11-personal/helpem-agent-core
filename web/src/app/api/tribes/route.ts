@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
     const data = raw ? safeParseJson(raw) : {};
     
     if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
+      return NextResponse.json(buildUpstreamError(response.status, data, raw), {
+        status: response.status,
+      });
     }
 
     return NextResponse.json(data);
@@ -81,7 +83,9 @@ export async function POST(req: NextRequest) {
     const data = raw ? safeParseJson(raw) : {};
     
     if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
+      return NextResponse.json(buildUpstreamError(response.status, data, raw), {
+        status: response.status,
+      });
     }
 
     return NextResponse.json(data);
@@ -100,4 +104,19 @@ function safeParseJson(raw: string) {
   } catch (error) {
     return { error: raw || "Upstream error" };
   }
+}
+
+function buildUpstreamError(status: number, data: any, raw: string) {
+  const payload: Record<string, any> =
+    data && typeof data === "object" ? { ...data } : { error: raw || "Upstream error" };
+
+  if (payload.upstreamStatus == null) {
+    payload.upstreamStatus = status;
+  }
+
+  if (!payload.upstreamBody && raw && !raw.startsWith("{")) {
+    payload.upstreamBody = raw.slice(0, 2000);
+  }
+
+  return payload;
 }
