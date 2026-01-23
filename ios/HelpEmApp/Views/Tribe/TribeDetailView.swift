@@ -236,7 +236,7 @@ struct TribeDetailView: View {
             }
             
             NavigationLink {
-                TribeMembersView(tribe: tribe)
+                TribeMembersListView(tribe: tribe)
             } label: {
                 SectionRow(
                     icon: "person.3.fill",

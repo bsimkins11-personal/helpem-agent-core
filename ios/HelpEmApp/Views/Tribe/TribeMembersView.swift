@@ -1,8 +1,9 @@
 import SwiftUI
 import Combine
 
-/// Members view - shows all tribe members
-struct TribeMembersView: View {
+/// Members list view - shows all tribe members
+/// Separate from TribeSettingsView's member management
+struct TribeMembersListView: View {
     let tribe: Tribe
     @StateObject private var viewModel = TribeMembersListViewModel()
     
