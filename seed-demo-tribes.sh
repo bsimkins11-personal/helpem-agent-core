@@ -23,17 +23,22 @@ USER_ID="$1"
 echo "🔍 User ID: $USER_ID"
 echo ""
 
+# Load DATABASE_URL from backend/.env if it exists and DATABASE_URL is not already set
+if [ -z "$DATABASE_URL" ] && [ -f "backend/.env" ]; then
+  echo "📁 Loading DATABASE_URL from backend/.env..."
+  set -a
+  source backend/.env
+  set +a
+fi
+
 # Check if DATABASE_URL is set
 if [ -z "$DATABASE_URL" ]; then
   echo "❌ Error: DATABASE_URL environment variable not set"
   echo ""
-  echo "Please set DATABASE_URL. If using Railway:"
-  echo "  1. Go to your Railway project"
-  echo "  2. Copy the DATABASE_URL from Postgres variables"
-  echo "  3. Run: export DATABASE_URL='your-connection-string'"
-  echo ""
-  echo "Or run with inline environment:"
-  echo "  DATABASE_URL='postgres://...' ./seed-demo-tribes.sh YOUR_USER_ID"
+  echo "Please either:"
+  echo "  1. Add DATABASE_URL to backend/.env file"
+  echo "  2. Export it: export DATABASE_URL='your-connection-string'"
+  echo "  3. Run inline: DATABASE_URL='postgres://...' ./seed-demo-tribes.sh YOUR_USER_ID"
   echo ""
   exit 1
 fi

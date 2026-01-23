@@ -12,6 +12,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 // Ensure DATABASE_URL is set
 if (!process.env.DATABASE_URL) {
@@ -23,7 +24,9 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({
+  adapter,
   log: ['error', 'warn'],
 });
 

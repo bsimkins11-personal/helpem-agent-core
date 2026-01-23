@@ -5,8 +5,22 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-const prisma = new PrismaClient();
+// Ensure DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  console.error('❌ Error: DATABASE_URL environment variable is not set');
+  console.error('');
+  console.error('Please set DATABASE_URL or add it to backend/.env');
+  console.error('');
+  process.exit(1);
+}
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({
+  adapter,
+  log: ['error', 'warn'],
+});
 
 async function testConnection() {
   console.log('🔍 Testing database connection...\n');
