@@ -16,7 +16,6 @@ class CreateTribeItemUseCase {
     
     /// Execute the use case
     /// Creates a tribe item and sends proposals to recipients
-    @MainActor
     func execute(
         tribeId: String,
         itemType: String,
