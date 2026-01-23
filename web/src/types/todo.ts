@@ -8,6 +8,8 @@ export type Todo = {
   reminderTime?: Date; // When to send notification (if user said "remind me...")
   createdAt: Date;
   completedAt?: Date;
+  addedByTribeId?: string | null;
+  addedByTribeName?: string | null;
 };
 
 export type CreateTodoInput = Omit<Todo, 'id' | 'createdAt' | 'completedAt'>;

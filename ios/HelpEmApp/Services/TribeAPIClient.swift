@@ -271,6 +271,56 @@ class TribeAPIClient {
         return response.items
     }
     
+    // MARK: - Tribe Messages
+    
+    /// Get messages for a tribe
+    func getMessages(tribeId: String, limit: Int = 50, before: Date? = nil) async throws -> [TribeMessage] {
+        var urlComponents = URLComponents(string: "\(baseURL)/tribes/\(tribeId)/messages")!
+        var queryItems: [URLQueryItem] = [URLQueryItem(name: "limit", value: "\(limit)")]
+        if let before = before {
+            let formatter = ISO8601DateFormatter()
+            queryItems.append(URLQueryItem(name: "before", value: formatter.string(from: before)))
+        }
+        urlComponents.queryItems = queryItems
+        
+        let url = urlComponents.url!
+        let data = try await authenticatedRequest(url: url, method: "GET")
+        let response = try decoder.decode(TribeMessagesResponse.self, from: data)
+        return response.messages
+    }
+    
+    /// Send a message to a tribe
+    func sendMessage(tribeId: String, message: String) async throws -> TribeMessage {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/messages")!
+        let request = SendMessageRequest(message: message)
+        let data = try await authenticatedRequest(url: url, method: "POST", body: request)
+        let response = try decoder.decode([String: TribeMessage].self, from: data)
+        
+        guard let message = response["message"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return message
+    }
+    
+    /// Edit a message
+    func editMessage(tribeId: String, messageId: String, newMessage: String) async throws -> TribeMessage {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/messages/\(messageId)")!
+        let request = SendMessageRequest(message: newMessage)
+        let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
+        let response = try decoder.decode([String: TribeMessage].self, from: data)
+        
+        guard let message = response["message"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return message
+    }
+    
+    /// Delete a message
+    func deleteMessage(tribeId: String, messageId: String) async throws {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/messages/\(messageId)")!
+        _ = try await authenticatedRequest(url: url, method: "DELETE")
+    }
+    
     // MARK: - Private Helpers
     
     private func authenticatedRequest<T: Encodable>(

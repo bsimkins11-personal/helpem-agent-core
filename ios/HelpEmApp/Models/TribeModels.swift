@@ -332,3 +332,33 @@ enum RequestState: String, Codable {
 struct TribeMemberRequestsResponse: Codable {
     let requests: [TribeMemberRequest]
 }
+
+// MARK: - Tribe Message
+
+struct TribeMessage: Codable, Identifiable {
+    let id: String
+    let tribeId: String
+    let userId: String
+    let message: String
+    let createdAt: Date
+    let editedAt: Date?
+    let deletedAt: Date?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tribeId = "tribeId"
+        case userId = "userId"
+        case message
+        case createdAt = "createdAt"
+        case editedAt = "editedAt"
+        case deletedAt = "deletedAt"
+    }
+}
+
+struct SendMessageRequest: Codable {
+    let message: String
+}
+
+struct TribeMessagesResponse: Codable {
+    let messages: [TribeMessage]
+}

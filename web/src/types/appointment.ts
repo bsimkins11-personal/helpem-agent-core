@@ -7,6 +7,8 @@ export type Appointment = {
   datetime: Date;
   durationMinutes: number;
   createdAt: Date;
+  addedByTribeId?: string | null;
+  addedByTribeName?: string | null;
 };
 
 export type CreateAppointmentInput = Omit<Appointment, 'id' | 'createdAt'>;

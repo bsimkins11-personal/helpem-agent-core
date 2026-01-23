@@ -12,6 +12,7 @@ struct RootView: View {
     @State private var webViewHandler: WebViewHandler?
     @State private var isMenuPresented = false
     @State private var isTribeManagerPresented = false
+    @State private var isTribeSettingsPresented = false
     @Environment(\.scenePhase) private var scenePhase
     
     private func openFeedbackURL() {
@@ -380,6 +381,16 @@ struct RootView: View {
                                 
                                 Button(action: {
                                     isMenuPresented = false
+                                    isTribeSettingsPresented = true
+                                }) {
+                                    Label("Tribe Settings", systemImage: "gearshape.2")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                Button(action: {
+                                    isMenuPresented = false
                                     openSupportModal()
                                 }) {
                                     Label("Get Support", systemImage: "questionmark.circle")
@@ -424,6 +435,20 @@ struct RootView: View {
                                         ToolbarItem(placement: .cancellationAction) {
                                             Button("Done") {
                                                 isTribeManagerPresented = false
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                        .sheet(isPresented: $isTribeSettingsPresented) {
+                            NavigationStack {
+                                TribeSettingsListView()
+                                    .navigationTitle("Tribe Settings")
+                                    .navigationBarTitleDisplayMode(.inline)
+                                    .toolbar {
+                                        ToolbarItem(placement: .cancellationAction) {
+                                            Button("Done") {
+                                                isTribeSettingsPresented = false
                                             }
                                         }
                                     }
