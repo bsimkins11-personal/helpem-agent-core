@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getClientSessionToken } from "@/lib/clientSession";
+import { DemoTribeBanner } from "@/components/DemoTribeBanner";
 
 type Tribe = {
   id: string;

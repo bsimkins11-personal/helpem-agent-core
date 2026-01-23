@@ -74,7 +74,36 @@ export default function AppPage() {
           const data = await res.json();
           console.log("✅ Tribes data received:", data);
           console.log("📊 Number of tribes:", data.tribes?.length || 0);
-          setTribes(data.tribes || []);
+          
+          // Auto-seed demo tribes if user has none
+          if (!data.tribes || data.tribes.length === 0) {
+            console.log("🎬 No tribes found, seeding demo tribes...");
+            try {
+              const seedRes = await fetch("/api/tribes/demo/seed", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              
+              if (seedRes.ok) {
+                const seedData = await seedRes.json();
+                console.log("✅ Demo tribes created:", seedData);
+                // Reload tribes after seeding
+                const reloadRes = await fetch(url, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                if (reloadRes.ok) {
+                  const reloadData = await reloadRes.json();
+                  setTribes(reloadData.tribes || []);
+                }
+              } else {
+                console.warn("Demo seed failed, showing empty state");
+              }
+            } catch (seedError) {
+              console.error("Failed to seed demo tribes:", seedError);
+            }
+          } else {
+            setTribes(data.tribes || []);
+          }
         } else {
           const errorText = await res.text();
           console.error("❌ Tribes API error:", res.status, errorText);

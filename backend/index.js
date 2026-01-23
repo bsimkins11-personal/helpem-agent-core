@@ -488,6 +488,13 @@ import debugTribesHandler from './routes/debug-tribes.js';
 app.get("/debug/tribes", debugTribesHandler);
 
 // =============================================================================
+// DEMO TRIBES (V1 Preview)
+// =============================================================================
+
+import demoTribesRoutes from './routes/demo-tribes.js';
+app.use("/tribes/demo", apiLimiter, demoTribesRoutes);
+
+// =============================================================================
 // TRIBE ROUTES
 // =============================================================================
 
