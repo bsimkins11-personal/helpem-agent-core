@@ -153,7 +153,11 @@ export async function transitionProposalState(proposalId, recipientUserId, newSt
       },
     },
     include: {
-      item: true,
+      item: {
+        include: {
+          tribe: true,
+        },
+      },
       recipient: true,
     },
   });
@@ -183,9 +187,98 @@ export async function transitionProposalState(proposalId, recipientUserId, newSt
       stateChangedAt: new Date(),
     },
     include: {
-      item: true,
+      item: {
+        include: {
+          tribe: true,
+        },
+      },
+      recipient: true,
     },
   });
 
+  // If accepting and managementScope is "shared_and_personal", create personal item
+  if (newState === "accepted" && updated.recipient.managementScope === "shared_and_personal") {
+    await createPersonalItemFromProposal(updated, recipientUserId);
+  }
+
   return { success: true, proposal: updated };
+}
+
+/**
+ * Create a personal item from an accepted proposal
+ * Includes origin tracking for silent deletion protection
+ */
+async function createPersonalItemFromProposal(proposal, userId) {
+  const { item, recipient } = proposal;
+  const tribe = item.tribe;
+  const itemData = item.data;
+
+  // Origin tracking - REQUIRED for silent deletion protection
+  const originTracking = {
+    originTribeItemId: item.id,
+    originTribeProposalId: proposal.id,
+    addedByTribeId: tribe.id,
+    addedByTribeName: tribe.name,
+  };
+
+  try {
+    switch (item.itemType) {
+      case "appointment": {
+        await prisma.appointment.create({
+          data: {
+            userId,
+            title: itemData.title || "Untitled Appointment",
+            withWhom: itemData.withWhom || null,
+            datetime: new Date(itemData.datetime),
+            durationMinutes: itemData.durationMinutes || 30,
+            ...originTracking,
+          },
+        });
+        break;
+      }
+      case "task": {
+        await prisma.todo.create({
+          data: {
+            userId,
+            title: itemData.title || "Untitled Task",
+            priority: itemData.priority || "medium",
+            dueDate: itemData.dueDate ? new Date(itemData.dueDate) : null,
+            reminderTime: itemData.reminderTime ? new Date(itemData.reminderTime) : null,
+            ...originTracking,
+          },
+        });
+        break;
+      }
+      case "routine": {
+        await prisma.habit.create({
+          data: {
+            userId,
+            title: itemData.title || "Untitled Routine",
+            frequency: itemData.frequency || "daily",
+            daysOfWeek: itemData.daysOfWeek || [],
+            completions: itemData.completions || [],
+            ...originTracking,
+          },
+        });
+        break;
+      }
+      case "grocery": {
+        await prisma.groceryItem.create({
+          data: {
+            userId,
+            name: itemData.name || "Untitled Item",
+            category: itemData.category || null,
+            ...originTracking,
+          },
+        });
+        break;
+      }
+      default:
+        console.warn(`Unknown item type: ${item.itemType}`);
+    }
+  } catch (error) {
+    console.error("Error creating personal item from proposal:", error);
+    // Don't fail the proposal acceptance if personal item creation fails
+    // The item will still be in the tribe's shared items
+  }
 }

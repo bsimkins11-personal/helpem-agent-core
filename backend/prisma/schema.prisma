@@ -64,7 +64,12 @@ model Appointment {
   addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
   addedByTribeName String?   @map("added_by_tribe_name")
   
+  // Origin tracking - REQUIRED for silent deletion protection
+  originTribeItemId     String?   @db.Uuid @map("origin_tribe_item_id")
+  originTribeProposalId String?   @db.Uuid @map("origin_tribe_proposal_id")
+  
   @@index([userId, addedByTribeId])
+  @@index([userId, originTribeItemId])
   @@map("appointments")
 }
 
@@ -82,7 +87,12 @@ model Todo {
   addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
   addedByTribeName String?   @map("added_by_tribe_name")
   
+  // Origin tracking - REQUIRED for silent deletion protection
+  originTribeItemId     String?   @db.Uuid @map("origin_tribe_item_id")
+  originTribeProposalId String?   @db.Uuid @map("origin_tribe_proposal_id")
+  
   @@index([userId, addedByTribeId])
+  @@index([userId, originTribeItemId])
   @@map("todos")
 }
 
@@ -99,7 +109,12 @@ model Habit {
   addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
   addedByTribeName String?   @map("added_by_tribe_name")
   
+  // Origin tracking - REQUIRED for silent deletion protection
+  originTribeItemId     String?   @db.Uuid @map("origin_tribe_item_id")
+  originTribeProposalId String?   @db.Uuid @map("origin_tribe_proposal_id")
+  
   @@index([userId, addedByTribeId])
+  @@index([userId, originTribeItemId])
   @@map("habits")
 }
 
@@ -115,7 +130,12 @@ model GroceryItem {
   addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
   addedByTribeName String?   @map("added_by_tribe_name")
   
+  // Origin tracking - REQUIRED for silent deletion protection
+  originTribeItemId     String?   @db.Uuid @map("origin_tribe_item_id")
+  originTribeProposalId String?   @db.Uuid @map("origin_tribe_proposal_id")
+  
   @@index([userId, addedByTribeId])
+  @@index([userId, originTribeItemId])
   @@map("grocery_items")
 }
 
