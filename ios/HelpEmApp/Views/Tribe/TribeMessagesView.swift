@@ -116,6 +116,8 @@ class TribeMessagesViewModel: ObservableObject {
     @Published var isSending = false
     @Published var isLoading = false
     
+    init() {}
+    
     var currentUserId: String {
         KeychainHelper.shared.userId ?? ""
     }

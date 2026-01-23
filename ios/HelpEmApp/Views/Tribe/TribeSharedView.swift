@@ -131,6 +131,8 @@ class TribeSharedViewModel: ObservableObject {
     @Published var items: [TribeItem] = []
     @Published var isLoading = false
     
+    init() {}
+    
     func loadSharedItems(tribeId: String) async {
         isLoading = true
         defer { isLoading = false }

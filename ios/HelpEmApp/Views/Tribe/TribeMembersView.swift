@@ -100,6 +100,8 @@ class TribeMembersListViewModel: ObservableObject {
     @Published var members: [TribeMember] = []
     @Published var isLoading = false
     
+    init() {}
+    
     func loadMembers(tribeId: String) async {
         isLoading = true
         defer { isLoading = false }
