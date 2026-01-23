@@ -83,9 +83,6 @@ router.get("/", async (req, res) => {
             deletedAt: null,
           },
           orderBy: { createdAt: 'desc' },
-          include: {
-            user: true,
-          }
         });
         
         return {
