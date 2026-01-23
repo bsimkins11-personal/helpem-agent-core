@@ -73,18 +73,18 @@ struct TrialActivationView: View {
                         )
                     }
                     
-                    // Usage Budget Info
+                    // Trial info
                     VStack(spacing: 12) {
                         HStack {
-                            Image(systemName: "chart.bar.fill")
+                            Image(systemName: "sparkles")
                                 .foregroundColor(.blue)
-                            Text("Transparent Usage Tracking")
+                            Text("Full Access for 30 Days")
                                 .font(.headline)
                             Spacer()
                         }
                         .padding(.horizontal)
                         
-                        Text("Your trial includes $5 of API usage (about 625 AI messages). Track your usage in real-time - no surprises!")
+                        Text("Experience everything the Basic package offers with no limits for a full month. See how HelpEm can transform your productivity!")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .padding(.horizontal)
@@ -96,11 +96,11 @@ struct TrialActivationView: View {
                     
                     // Terms
                     VStack(spacing: 8) {
-                        Text("Trial ends after 30 days OR $5 usage, whichever comes first")
+                        Text("Trial lasts for 30 days")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
-                        Text("No credit card required • One trial per account")
+                        Text("No credit card required • One trial per account • Cancel anytime")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -248,116 +248,146 @@ struct TrialExpiredView: View {
                 Spacer()
                 
                 // Icon
-                Image(systemName: reason == "budget_exceeded" ? "chart.bar.xaxis" : "calendar.badge.clock")
+                Image(systemName: "gift.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(.orange)
+                    .foregroundColor(.blue)
                 
                 // Message
                 VStack(spacing: 12) {
-                    Text(headerMessage)
+                    Text("Your Trial Has Ended")
                         .font(.title2)
                         .fontWeight(.bold)
                         .multilineTextAlignment(.center)
                     
-                    Text(subMessage)
+                    Text("We hope you enjoyed experiencing the full Basic package! Choose how you'd like to continue with HelpEm.")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
                 
-                // Stats (if budget exceeded)
-                if reason == "budget_exceeded" {
-                    VStack(spacing: 8) {
-                        Text("You used your full $5.00 budget!")
-                            .font(.headline)
-                        
-                        Text("That's about 625 AI messages - you got great value from your trial!")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(12)
-                    .padding(.horizontal, 32)
-                }
-                
                 Spacer()
                 
-                // Upgrade options
+                // Choice prompt
                 VStack(spacing: 16) {
-                    Text("Continue with a Paid Plan")
+                    Text("Which plan would you like to continue with?")
                         .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                     
-                    HStack(spacing: 12) {
-                        // Basic
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Basic")
-                                .font(.headline)
-                            Text("$7.99/mo")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            Text("300 messages")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Button("Choose Basic") {
-                                // Navigate to payment
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                        }
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(12)
-                        
-                        // Premium
-                        VStack(alignment: .leading, spacing: 8) {
+                    VStack(spacing: 12) {
+                        // Option 1: Free
+                        Button {
+                            // Continue with free
+                            dismiss()
+                        } label: {
                             HStack {
-                                Text("Premium")
-                                    .font(.headline)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text("1.")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.gray)
+                                        Text("Free Plan")
+                                            .font(.headline)
+                                    }
+                                    Text("10 todos • 50 AI messages/month")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                                 Spacer()
-                                Text("BEST")
-                                    .font(.caption2)
+                                Text("$0")
+                                    .font(.title3)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.purple)
-                                    .cornerRadius(4)
                             }
-                            Text("$14.99/mo")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            Text("Unlimited")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Button("Choose Premium") {
-                                // Navigate to payment
-                            }
+                            .padding()
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(Color.purple)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(12)
                         }
-                        .padding()
-                        .background(Color.purple.opacity(0.1))
-                        .cornerRadius(12)
+                        .buttonStyle(.plain)
+                        
+                        // Option 2: Basic
+                        Button {
+                            // Navigate to Basic payment
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text("2.")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.blue)
+                                        Text("Basic Plan")
+                                            .font(.headline)
+                                    }
+                                    Text("100 todos • 300 AI messages • Calendar sync")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Text("$7.99/mo")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.blue, lineWidth: 2)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        // Option 3: Premium
+                        Button {
+                            // Navigate to Premium payment
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text("3.")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.purple)
+                                        Text("Premium Plan")
+                                            .font(.headline)
+                                        Text("BEST VALUE")
+                                            .font(.caption2)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.purple)
+                                            .cornerRadius(4)
+                                    }
+                                    Text("Unlimited everything • Advanced AI • Priority support")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Text("$14.99/mo")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.purple.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.purple, lineWidth: 2)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal)
                 }
                 
-                Button("Continue with Free Plan") {
-                    dismiss()
-                }
-                .foregroundColor(.secondary)
-                .padding(.bottom, 32)
+                Text("Choose the plan that works best for you")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 32)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -373,27 +403,6 @@ struct TrialExpiredView: View {
         }
     }
     
-    private var headerMessage: String {
-        switch reason {
-        case "budget_exceeded":
-            return "You've Used Your Full Trial Budget!"
-        case "time_expired":
-            return "Your 30-Day Trial Has Ended"
-        default:
-            return "Your Trial Has Ended"
-        }
-    }
-    
-    private var subMessage: String {
-        switch reason {
-        case "budget_exceeded":
-            return "Great news! You loved the app so much you used all $5 in API credits. Ready to continue?"
-        case "time_expired":
-            return "Your 30 days are up! We hope you enjoyed experiencing the full Basic package."
-        default:
-            return "We hope you enjoyed your trial. Choose a plan to continue with all the features."
-        }
-    }
 }
 
 // MARK: - Preview

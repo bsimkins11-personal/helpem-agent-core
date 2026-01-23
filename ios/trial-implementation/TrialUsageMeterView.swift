@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Real-time trial usage meter showing $5 budget consumption
+/// Real-time trial usage meter (backend tracks $5 cap invisibly)
 struct TrialUsageMeterView: View {
     let usage: TrialUsage
     @State private var animateProgress = false
@@ -27,10 +27,10 @@ struct TrialUsageMeterView: View {
                 }
             }
             
-            // Progress Bar
+            // Progress Bar (no dollar amounts shown)
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("$\(usage.usage.total) of $\(usage.usage.cap) used")
+                    Text("Trial Progress")
                         .font(.subheadline)
                         .fontWeight(.medium)
                     
@@ -64,7 +64,7 @@ struct TrialUsageMeterView: View {
                 }
                 .frame(height: 8)
                 
-                Text("$\(usage.usage.remaining) remaining")
+                Text("Enjoying your trial? Upgrade anytime!")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -72,33 +72,30 @@ struct TrialUsageMeterView: View {
             // Usage Breakdown
             if usage.usage.percentUsedDouble > 20 {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Usage Breakdown")
+                    Text("What You've Used")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
                     
                     HStack(spacing: 16) {
-                        UsageItem(
+                        UsageItemSimple(
                             icon: "bubble.left.fill",
-                            label: "AI",
-                            value: "\(usage.breakdown.aiMessages.count ?? 0)",
-                            cost: usage.breakdown.aiMessages.cost
+                            label: "AI Messages",
+                            value: "\(usage.breakdown.aiMessages.count ?? 0)"
                         )
                         
-                        UsageItem(
+                        UsageItemSimple(
                             icon: "waveform",
                             label: "Voice",
-                            value: "\(usage.breakdown.voiceInput.minutes ?? 0)m",
-                            cost: usage.breakdown.voiceInput.cost
+                            value: "\(usage.breakdown.voiceInput.minutes ?? 0)m"
                         )
                         
                         if usage.breakdown.calendarSyncs.count ?? 0 > 0 {
-                            UsageItem(
+                            UsageItemSimple(
                                 icon: "calendar",
-                                label: "Sync",
-                                value: "\(usage.breakdown.calendarSyncs.count ?? 0)",
-                                cost: usage.breakdown.calendarSyncs.cost
+                                label: "Syncs",
+                                value: "\(usage.breakdown.calendarSyncs.count ?? 0)"
                             )
                         }
                     }
@@ -108,16 +105,16 @@ struct TrialUsageMeterView: View {
             // Warning/Status
             if usage.usage.percentUsedDouble >= 80 {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
+                    Image(systemName: "sparkles")
+                        .foregroundColor(.blue)
                         .font(.caption)
                     
-                    Text("You're running low on trial budget. Upgrade to remove limits!")
+                    Text("You're loving the trial! Upgrade to keep the momentum going.")
                         .font(.caption)
-                        .foregroundColor(.orange)
+                        .foregroundColor(.blue)
                 }
                 .padding(8)
-                .background(Color.orange.opacity(0.1))
+                .background(Color.blue.opacity(0.1))
                 .cornerRadius(8)
             }
         }
@@ -164,11 +161,10 @@ struct TrialUsageMeterView: View {
     }
 }
 
-struct UsageItem: View {
+struct UsageItemSimple: View {
     let icon: String
     let label: String
     let value: String
-    let cost: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -183,10 +179,6 @@ struct UsageItem: View {
             Text(value)
                 .font(.caption)
                 .fontWeight(.semibold)
-            
-            Text("$\(cost)")
-                .font(.caption2)
-                .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)
