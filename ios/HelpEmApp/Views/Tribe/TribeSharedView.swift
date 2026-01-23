@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Shared items view - shows all accepted proposals in a tribe
 struct TribeSharedView: View {
@@ -63,28 +64,36 @@ struct TribeItemRow: View {
     }
     
     private var itemTitle: String {
-        if let data = item.data.value as? [String: Any],
-           let title = data["title"] as? String {
+        // item.data is [String: AnyCodable], access values directly
+        if let titleCodable = item.data["title"],
+           case let title as String = titleCodable.value {
             return title
+        }
+        if let nameCodable = item.data["name"],
+           case let name as String = nameCodable.value {
+            return name
         }
         let capitalized = item.itemType.prefix(1).uppercased() + item.itemType.dropFirst()
         return "Untitled \(capitalized)"
     }
     
     private var itemDetails: String? {
-        guard let data = item.data.value as? [String: Any] else { return nil }
+        // item.data is [String: AnyCodable], access values directly
         
         switch item.itemType {
         case "appointment":
-            if let datetime = data["datetime"] as? String {
+            if let datetimeCodable = item.data["datetime"],
+               case let datetime as String = datetimeCodable.value {
                 return datetime
             }
         case "task":
-            if let priority = data["priority"] as? String {
+            if let priorityCodable = item.data["priority"],
+               case let priority as String = priorityCodable.value {
                 return "Priority: \(priority)"
             }
         case "grocery":
-            if let category = data["category"] as? String {
+            if let categoryCodable = item.data["category"],
+               case let category as String = categoryCodable.value {
                 return category
             }
         default:

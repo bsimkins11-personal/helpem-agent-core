@@ -1,9 +1,10 @@
 import SwiftUI
+import Combine
 
 /// Members view - shows all tribe members
 struct TribeMembersView: View {
     let tribe: Tribe
-    @StateObject private var viewModel = TribeMembersViewModel()
+    @StateObject private var viewModel = TribeMembersListViewModel()
     
     var body: some View {
         List {
@@ -15,7 +16,7 @@ struct TribeMembersView: View {
                 )
             } else {
                 ForEach(viewModel.members) { member in
-                    MemberRow(member: member, isOwner: tribe.isOwner)
+                    TribeMemberRow(member: member, isOwner: tribe.isOwner)
                 }
             }
         }
@@ -30,9 +31,9 @@ struct TribeMembersView: View {
     }
 }
 
-// MARK: - Member Row
+// MARK: - Member Row (Tribe Members View)
 
-struct MemberRow: View {
+struct TribeMemberRow: View {
     let member: TribeMember
     let isOwner: Bool
     
@@ -92,10 +93,10 @@ struct MemberRow: View {
     }
 }
 
-// MARK: - View Model
+// MARK: - View Model (Tribe Members View)
 
 @MainActor
-class TribeMembersViewModel: ObservableObject {
+class TribeMembersListViewModel: ObservableObject {
     @Published var members: [TribeMember] = []
     @Published var isLoading = false
     

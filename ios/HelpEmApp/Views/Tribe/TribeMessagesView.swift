@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Messages view for a tribe
 /// Human conversation only - not a command queue
@@ -20,9 +21,9 @@ struct TribeMessagesView: View {
                     }
                     .padding()
                 }
-                .onChange(of: viewModel.messages.count) { _ in
+                .onChange(of: viewModel.messages.count) { oldValue, newValue in
                     // Scroll to bottom when new messages arrive
-                    if let lastMessage = viewModel.messages.last {
+                    if newValue > oldValue, let lastMessage = viewModel.messages.last {
                         withAnimation {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
                         }
@@ -89,7 +90,7 @@ struct MessageBubble: View {
                     .foregroundColor(isCurrentUser ? .white : .primary)
                     .cornerRadius(18)
                 
-                if let editedAt = message.editedAt {
+                if message.editedAt != nil {
                     Text("Edited")
                         .font(.caption2)
                         .foregroundColor(.secondary)
