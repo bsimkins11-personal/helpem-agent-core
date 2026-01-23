@@ -95,7 +95,9 @@ actor CacheService {
         expiredKeys.forEach { cache.removeValue(forKey: $0) }
         
         if !expiredKeys.isEmpty {
-            AppLogger.info("Cache cleanup: removed \(expiredKeys.count) expired entries", logger: AppLogger.general)
+            Task { @MainActor in
+                AppLogger.info("Cache cleanup: removed \(expiredKeys.count) expired entries", logger: AppLogger.general)
+            }
         }
     }
 }
