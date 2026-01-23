@@ -236,6 +236,9 @@ model TribeProposal {
   state       String       @default("proposed")
   
   createdAt   DateTime     @default(now()) @map("created_at")
+  
+  // Idempotency tracking
+  idempotencyKey String?   @map("idempotency_key") // For proposal creation
   stateChangedAt DateTime  @default(now()) @map("state_changed_at")
   
   // Only ONE notification per proposal
@@ -247,6 +250,21 @@ model TribeProposal {
   @@unique([itemId, recipientId])
   @@index([recipientId, state])
   @@map("tribe_proposals")
+}
+
+/// Idempotency tracking for proposal actions
+/// Prevents duplicate actions when client retries
+model TribeProposalAction {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @db.Uuid @map("user_id")
+  proposalId      String   @db.Uuid @map("proposal_id")
+  idempotencyKey  String   @unique @map("idempotency_key")
+  action          String   // "accept", "not_now", "dismiss"
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  @@unique([userId, idempotencyKey])
+  @@index([proposalId, userId])
+  @@map("tribe_proposal_actions")
 }
 
 /// Member add requests - when non-owners want to add someone to the tribe

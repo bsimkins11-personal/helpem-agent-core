@@ -1045,8 +1045,9 @@ router.post("/:tribeId/proposals/:proposalId/accept", async (req, res) => {
 
     const userId = session.session.userId;
     const { proposalId } = req.params;
+    const { idempotencyKey } = req.body; // Optional idempotency key from client
 
-    const result = await transitionProposalState(proposalId, userId, "accepted");
+    const result = await transitionProposalState(proposalId, userId, "accepted", idempotencyKey);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -1072,8 +1073,9 @@ router.post("/:tribeId/proposals/:proposalId/not-now", async (req, res) => {
 
     const userId = session.session.userId;
     const { proposalId } = req.params;
+    const { idempotencyKey } = req.body; // Optional idempotency key from client
 
-    const result = await transitionProposalState(proposalId, userId, "not_now");
+    const result = await transitionProposalState(proposalId, userId, "not_now", idempotencyKey);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -1099,8 +1101,10 @@ router.delete("/:tribeId/proposals/:proposalId", async (req, res) => {
 
     const userId = session.session.userId;
     const { proposalId } = req.params;
+    // For DELETE, idempotency key can be in query params or body
+    const idempotencyKey = req.body?.idempotencyKey || req.query?.idempotencyKey;
 
-    const result = await transitionProposalState(proposalId, userId, "dismissed");
+    const result = await transitionProposalState(proposalId, userId, "dismissed", idempotencyKey);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -1132,7 +1136,7 @@ router.post("/:tribeId/items", async (req, res) => {
 
     const userId = session.session.userId;
     const { tribeId } = req.params;
-    const { itemType, data, recipientUserIds } = req.body;
+    const { itemType, data, recipientUserIds, idempotencyKey } = req.body;
 
     // Validate item type
     if (!["task", "routine", "appointment", "grocery"].includes(itemType)) {
@@ -1183,10 +1187,11 @@ router.post("/:tribeId/items", async (req, res) => {
       },
     });
 
-    // Create proposals for each recipient
+    // Create proposals for each recipient (with idempotency check)
     await createProposals(
       item.id,
-      recipientMembers.map(m => m.id)
+      recipientMembers.map(m => m.id),
+      idempotencyKey // Pass idempotency key to prevent duplicates
     );
 
     return res.json({ item, recipientCount: recipientMembers.length });

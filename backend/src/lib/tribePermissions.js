@@ -139,11 +139,41 @@ export async function createProposals(itemId, recipientMemberIds) {
 }
 
 /**
- * Transition proposal state
+ * Transition proposal state with idempotency check
  * 
  * Only recipient can transition their own proposals.
+ * Idempotency keys prevent duplicate actions on retry.
  */
-export async function transitionProposalState(proposalId, recipientUserId, newState) {
+export async function transitionProposalState(proposalId, recipientUserId, newState, idempotencyKey = null) {
+  // Check idempotency if key provided
+  if (idempotencyKey) {
+    const existingAction = await prisma.tribeProposalAction.findUnique({
+      where: { idempotencyKey },
+      include: {
+        // We'll get the proposal from the action
+      },
+    });
+
+    if (existingAction) {
+      // Return the existing result (idempotent)
+      const proposal = await prisma.tribeProposal.findUnique({
+        where: { id: existingAction.proposalId },
+        include: {
+          item: {
+            include: {
+              tribe: true,
+            },
+          },
+          recipient: true,
+        },
+      });
+
+      if (proposal) {
+        return { success: true, proposal, isIdempotent: true };
+      }
+    }
+  }
+
   // Verify the proposal belongs to this user
   const proposal = await prisma.tribeProposal.findFirst({
     where: {
@@ -195,6 +225,25 @@ export async function transitionProposalState(proposalId, recipientUserId, newSt
       recipient: true,
     },
   });
+
+  // Store idempotency key if provided
+  if (idempotencyKey) {
+    try {
+      await prisma.tribeProposalAction.create({
+        data: {
+          userId: recipientUserId,
+          proposalId,
+          idempotencyKey,
+          action: newState,
+        },
+      });
+    } catch (error) {
+      // If duplicate key (race condition), that's okay - we already processed it
+      if (error.code !== 'P2002') {
+        console.error("Error storing idempotency key:", error);
+      }
+    }
+  }
 
   // If accepting and managementScope is "shared_and_personal", create personal item
   if (newState === "accepted" && updated.recipient.managementScope === "shared_and_personal") {
