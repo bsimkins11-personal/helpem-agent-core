@@ -15,7 +15,6 @@ class NotNowProposalUseCase {
     }
     
     /// Execute the use case
-    @MainActor
     func execute(tribeId: String, proposalId: String) async throws -> TribeProposal {
         // Step 1: Generate idempotency key
         let idempotencyKey = PendingOperationManager.generateIdempotencyKey()

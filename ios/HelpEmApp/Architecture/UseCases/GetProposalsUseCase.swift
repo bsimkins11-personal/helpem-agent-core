@@ -16,7 +16,6 @@ class GetProposalsUseCase {
     
     /// Execute the use case
     /// Returns proposals organized by state
-    @MainActor
     func execute(tribeId: String) async throws -> ProposalsByState {
         // Step 1: Fetch proposals from repository
         let proposals = try await repository.getProposals(tribeId: tribeId)

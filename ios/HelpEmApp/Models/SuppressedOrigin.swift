@@ -24,9 +24,11 @@ struct SuppressedOrigin: Codable, Identifiable, Equatable {
 
 /// Manager for suppressed origins
 /// Persists to disk and checks on sync to prevent deleted items from reappearing
-@MainActor
+/// Thread-safe using serial queue for synchronization
 class SuppressionManager: ObservableObject {
     static let shared = SuppressionManager()
+    
+    private let queue = DispatchQueue(label: "com.helpem.suppression", qos: .userInitiated)
     
     @Published private(set) var suppressedOrigins: [SuppressedOrigin] = []
     private let storageKey = "suppressed_tribe_origins"
@@ -37,36 +39,44 @@ class SuppressionManager: ObservableObject {
     
     /// Suppress an origin (when user deletes a tribe-added item)
     func suppress(originTribeItemId: String, userId: String) {
-        // Check if already suppressed
-        if isSuppressed(originTribeItemId: originTribeItemId) {
-            return
+        queue.sync {
+            // Check if already suppressed
+            if suppressedOrigins.contains(where: { $0.originTribeItemId == originTribeItemId }) {
+                return
+            }
+            
+            let suppressed = SuppressedOrigin(
+                id: UUID().uuidString,
+                originTribeItemId: originTribeItemId,
+                userId: userId,
+                suppressedAt: Date()
+            )
+            suppressedOrigins.append(suppressed)
+            persist()
         }
-        
-        let suppressed = SuppressedOrigin(
-            id: UUID().uuidString,
-            originTribeItemId: originTribeItemId,
-            userId: userId,
-            suppressedAt: Date()
-        )
-        suppressedOrigins.append(suppressed)
-        persist()
     }
     
     /// Check if an origin is suppressed
     func isSuppressed(originTribeItemId: String) -> Bool {
-        suppressedOrigins.contains { $0.originTribeItemId == originTribeItemId }
+        queue.sync {
+            return suppressedOrigins.contains { $0.originTribeItemId == originTribeItemId }
+        }
     }
     
     /// Remove suppression (for undo scenarios, if needed)
     func removeSuppression(originTribeItemId: String) {
-        suppressedOrigins.removeAll { $0.originTribeItemId == originTribeItemId }
-        persist()
+        queue.sync {
+            suppressedOrigins.removeAll { $0.originTribeItemId == originTribeItemId }
+            persist()
+        }
     }
     
     /// Clear all suppressions (for testing or user reset)
     func clearAll() {
-        suppressedOrigins.removeAll()
-        persist()
+        queue.sync {
+            suppressedOrigins.removeAll()
+            persist()
+        }
     }
     
     /// Persist to UserDefaults

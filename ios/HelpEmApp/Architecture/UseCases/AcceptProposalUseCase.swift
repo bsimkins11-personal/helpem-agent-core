@@ -19,7 +19,6 @@ class AcceptProposalUseCase {
     
     /// Execute the use case
     /// Returns the updated proposal
-    @MainActor
     func execute(tribeId: String, proposalId: String) async throws -> TribeProposal {
         // Step 1: Generate idempotency key
         let idempotencyKey = PendingOperationManager.generateIdempotencyKey()
@@ -80,7 +79,6 @@ class AcceptProposalUseCase {
     
     /// Retry pending operations
     /// Called on app startup or network reconnect
-    @MainActor
     func retryPendingOperations() async {
         let operations = pendingOperationManager.getOperationsToRetry()
             .filter { $0.type == .acceptProposal }

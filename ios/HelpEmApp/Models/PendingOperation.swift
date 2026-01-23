@@ -32,9 +32,11 @@ struct PendingOperation: Codable, Identifiable {
 
 /// Manager for pending operations
 /// Persists operations to disk and retries on app launch
-@MainActor
+/// Thread-safe using serial queue for synchronization
 class PendingOperationManager: ObservableObject {
     static let shared = PendingOperationManager()
+    
+    private let queue = DispatchQueue(label: "com.helpem.pendingops", qos: .userInitiated)
     
     @Published private(set) var pendingOperations: [PendingOperation] = []
     private let storageKey = "pending_tribe_operations"
@@ -45,42 +47,52 @@ class PendingOperationManager: ObservableObject {
     
     /// Add a pending operation
     func add(_ operation: PendingOperation) {
-        pendingOperations.append(operation)
-        persist()
+        queue.sync {
+            pendingOperations.append(operation)
+            persist()
+        }
     }
     
     /// Remove a completed operation
     func remove(id: String) {
-        pendingOperations.removeAll { $0.id == id }
-        persist()
+        queue.sync {
+            pendingOperations.removeAll { $0.id == id }
+            persist()
+        }
     }
     
     /// Remove operations by idempotency key (for deduplication)
     func remove(idempotencyKey: String) {
-        pendingOperations.removeAll { $0.idempotencyKey == idempotencyKey }
-        persist()
+        queue.sync {
+            pendingOperations.removeAll { $0.idempotencyKey == idempotencyKey }
+            persist()
+        }
     }
     
     /// Get operations that need retry
     func getOperationsToRetry() -> [PendingOperation] {
-        return pendingOperations.filter { $0.retryCount < 5 } // Max 5 retries
+        queue.sync {
+            return pendingOperations.filter { $0.retryCount < 5 } // Max 5 retries
+        }
     }
     
     /// Increment retry count for an operation
     func incrementRetry(id: String) {
-        if let index = pendingOperations.firstIndex(where: { $0.id == id }) {
-            var operation = pendingOperations[index]
-            operation = PendingOperation(
-                id: operation.id,
-                type: operation.type,
-                tribeId: operation.tribeId,
-                proposalId: operation.proposalId,
-                idempotencyKey: operation.idempotencyKey,
-                createdAt: operation.createdAt,
-                retryCount: operation.retryCount + 1
-            )
-            pendingOperations[index] = operation
-            persist()
+        queue.sync {
+            if let index = pendingOperations.firstIndex(where: { $0.id == id }) {
+                var operation = pendingOperations[index]
+                operation = PendingOperation(
+                    id: operation.id,
+                    type: operation.type,
+                    tribeId: operation.tribeId,
+                    proposalId: operation.proposalId,
+                    idempotencyKey: operation.idempotencyKey,
+                    createdAt: operation.createdAt,
+                    retryCount: operation.retryCount + 1
+                )
+                pendingOperations[index] = operation
+                persist()
+            }
         }
     }
     
