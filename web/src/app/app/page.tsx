@@ -59,8 +59,8 @@ export default function AppPage() {
           return;
         }
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-        const url = `${apiUrl}/tribes`;
+        // Use Next.js API proxy route (same as tribes pages)
+        const url = "/api/tribes";
         console.log("🌐 Fetching tribes from:", url);
         
         const res = await fetch(url, {
