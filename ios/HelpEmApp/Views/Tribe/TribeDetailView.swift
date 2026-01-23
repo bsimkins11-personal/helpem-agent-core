@@ -200,7 +200,9 @@ struct TribeDetailView: View {
     private var mainSections: some View {
         Section {
             NavigationLink {
-                TribeMessagesView(tribe: tribe)
+                // TODO: Create TribeMessagesView
+                Text("Messages")
+                    .navigationTitle("Messages")
             } label: {
                 SectionRow(
                     icon: "message.fill",
@@ -224,7 +226,9 @@ struct TribeDetailView: View {
             }
             
             NavigationLink {
-                TribeSharedView(tribe: tribe)
+                // TODO: Create TribeSharedView
+                Text("Shared Items")
+                    .navigationTitle("Shared Items")
             } label: {
                 SectionRow(
                     icon: "checkmark.circle.fill",
@@ -236,7 +240,9 @@ struct TribeDetailView: View {
             }
             
             NavigationLink {
-                TribeMembersView(tribe: tribe)
+                // TODO: Create TribeMembersView or use existing view
+                Text("Members")
+                    .navigationTitle("Members")
             } label: {
                 SectionRow(
                     icon: "person.3.fill",
@@ -404,23 +410,28 @@ class TribeDetailViewModel: ObservableObject {
         defer { isLoading = false }
         
         // Load all data in parallel
-        async let proposalsTask = loadProposals(tribeId: tribeId)
-        async let membersTask = loadMembers(tribeId: tribeId)
-        async let sharedTask = loadShared(tribeId: tribeId)
-        async let messagesTask = loadUnreadMessages(tribeId: tribeId)
-        
-        _ = await proposalsTask
-        _ = await membersTask
-        _ = await sharedTask
-        _ = await messagesTask
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await self.loadProposals(tribeId: tribeId)
+            }
+            group.addTask {
+                await self.loadMembers(tribeId: tribeId)
+            }
+            group.addTask {
+                await self.loadShared(tribeId: tribeId)
+            }
+            group.addTask {
+                await self.loadUnreadMessages(tribeId: tribeId)
+            }
+        }
     }
     
     private func loadProposals(tribeId: String) async {
         do {
             let proposals = try await TribeAPIClient.shared.getInbox(tribeId: tribeId)
-            pendingCount = proposals.filter { $0.state == .pending }.count
+            pendingCount = proposals.filter { $0.state == .proposed }.count
         } catch {
-            AppLogger.error("Failed to load proposals: \(error)", logger: AppLogger.general)
+            AppLogger.error("Failed to load proposals: \(error.localizedDescription)", logger: AppLogger.general)
         }
     }
     
@@ -429,7 +440,7 @@ class TribeDetailViewModel: ObservableObject {
             let members = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
             memberCount = members.filter { $0.isAccepted }.count
         } catch {
-            AppLogger.error("Failed to load members: \(error)", logger: AppLogger.general)
+            AppLogger.error("Failed to load members: \(error.localizedDescription)", logger: AppLogger.general)
         }
     }
     
@@ -438,7 +449,7 @@ class TribeDetailViewModel: ObservableObject {
             let items = try await TribeAPIClient.shared.getSharedItems(tribeId: tribeId)
             sharedCount = items.count
         } catch {
-            AppLogger.error("Failed to load shared items: \(error)", logger: AppLogger.general)
+            AppLogger.error("Failed to load shared items: \(error.localizedDescription)", logger: AppLogger.general)
         }
     }
     

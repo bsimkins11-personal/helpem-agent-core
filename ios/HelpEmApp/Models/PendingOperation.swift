@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 /// Pending operations that need to be retried after network failure or app restart
 /// Ensures idempotency and prevents duplicate actions
