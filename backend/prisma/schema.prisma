@@ -337,6 +337,39 @@ model TribeMessage {
   @@map("tribe_messages")
 }
 
+/// Pending Tribe Invitations - track invites to non-members
+/// When user signs up with matching email/phone, they auto-join the tribe
+model PendingTribeInvitation {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tribeId            String    @db.Uuid @map("tribe_id")
+  invitedBy          String    @db.Uuid @map("invited_by")
+  
+  // Contact identifier (email or phone)
+  contactIdentifier  String    @map("contact_identifier")
+  contactType        String    @map("contact_type") // "email" or "phone"
+  
+  // Display name from contact book
+  contactName        String?   @map("contact_name")
+  
+  // Permissions for when they join
+  permissions        Json      @default("{}")
+  
+  // Tracking
+  createdAt          DateTime  @default(now()) @map("created_at")
+  expiresAt          DateTime  @map("expires_at")
+  
+  // Status
+  state              String    @default("pending") // "pending", "accepted", "expired"
+  acceptedAt         DateTime? @map("accepted_at")
+  acceptedBy         String?   @db.Uuid @map("accepted_by")
+  
+  @@unique([tribeId, contactIdentifier])
+  @@index([contactIdentifier, state])
+  @@index([tribeId, state])
+  @@index([expiresAt, state])
+  @@map("pending_tribe_invitations")
+}
+
 /// Controls what the tribe can do to a member's personal items
 /// This is set by the member themselves to control tribe access to their personal data
 /// 

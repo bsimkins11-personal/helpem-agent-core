@@ -168,6 +168,26 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
     const now = new Date();
     const isNewUser = now.getTime() - createdAt.getTime() < 5000;
 
+    // For new users, check for pending tribe invitations
+    // TODO: When we add email/phone to User model, match against those
+    // For now, this is a placeholder for the future implementation
+    if (isNewUser) {
+      try {
+        // This will be implemented when we have email/phone on the User model
+        // For now, we'll log that we checked
+        console.log(`New user ${userId} signed up - checking for pending tribe invitations...`);
+        
+        // Future implementation:
+        // 1. Get user's email/phone from Sign in with Apple (if available)
+        // 2. Check for pending invitations matching that email/phone
+        // 3. Auto-accept those invitations by creating TribeMember records
+        
+      } catch (err) {
+        console.error("Error processing pending tribe invitations:", err);
+        // Don't fail auth if tribe invitation processing fails
+      }
+    }
+
     // Issue app-owned session token
     const sessionToken = createSessionToken(userId, apple_user_id);
 

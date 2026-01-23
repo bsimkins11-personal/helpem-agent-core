@@ -1202,6 +1202,121 @@ router.post("/:tribeId/items", async (req, res) => {
 });
 
 /**
+ * POST /tribes/:tribeId/invite-contact
+ * Invite a contact (by email or phone) to tribe
+ * - If user exists, add them directly
+ * - If not, create pending invitation that auto-accepts when they sign up
+ */
+router.post("/:tribeId/invite-contact", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.userId;
+    const { tribeId } = req.params;
+    const { contactIdentifier, contactType, contactName, permissions } = req.body;
+
+    // Validate inputs
+    if (!contactIdentifier || !contactType) {
+      return res.status(400).json({ error: "contactIdentifier and contactType are required" });
+    }
+
+    if (!["email", "phone"].includes(contactType)) {
+      return res.status(400).json({ error: "contactType must be 'email' or 'phone'" });
+    }
+
+    // Normalize the contact identifier
+    const normalizedIdentifier = contactType === "email" 
+      ? contactIdentifier.toLowerCase().trim()
+      : contactIdentifier.replace(/[^0-9]/g, ""); // Remove non-digits for phone
+
+    // Check if tribe exists and user is a member with permission
+    const tribe = await prisma.tribe.findUnique({
+      where: { id: tribeId },
+    });
+
+    if (!tribe || tribe.deletedAt) {
+      return res.status(404).json({ error: "Tribe not found" });
+    }
+
+    const inviterMember = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!inviterMember) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    const isOwner = tribe.ownerId === userId;
+
+    // TODO: In the future, we might store email/phone in User model
+    // For now, we'll check if there's already a pending invitation or existing member
+    
+    // Check if there's already a pending invitation for this contact
+    const existingInvitation = await prisma.pendingTribeInvitation.findFirst({
+      where: {
+        tribeId,
+        contactIdentifier: normalizedIdentifier,
+        state: "pending",
+      },
+    });
+
+    if (existingInvitation) {
+      return res.status(400).json({ 
+        error: "An invitation has already been sent to this contact",
+        invitation: existingInvitation 
+      });
+    }
+
+    // Since we don't have email/phone in User model yet, we'll always create a pending invitation
+    // This will be auto-accepted when they sign up
+    
+    // Calculate expiry (30 days from now)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const invitation = await prisma.pendingTribeInvitation.create({
+      data: {
+        tribeId,
+        invitedBy: userId,
+        contactIdentifier: normalizedIdentifier,
+        contactType,
+        contactName: contactName || null,
+        permissions: permissions || {},
+        expiresAt,
+        state: "pending",
+      },
+    });
+
+    // Create tribe activity
+    const inviterName = await getUserDisplayName(userId);
+    const invitedName = contactName || normalizedIdentifier;
+    
+    await createTribeActivity({
+      tribeId,
+      userId,
+      message: `${inviterName} invited ${invitedName} to the tribe`,
+    });
+
+    return res.json({ 
+      success: true,
+      invitation,
+      message: "Invitation sent. They will be added to the tribe when they sign up." 
+    });
+  } catch (err) {
+    console.error("ERROR POST /tribes/:tribeId/invite-contact:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * GET /tribes/users/search
  * Search for users to add to tribe (by email or appleUserId)
  * Returns list of users that can be added

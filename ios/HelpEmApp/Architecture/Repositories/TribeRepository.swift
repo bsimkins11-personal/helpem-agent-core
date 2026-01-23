@@ -17,6 +17,7 @@ protocol TribeRepository {
     // MARK: - Member Operations
     func getMembers(tribeId: String) async throws -> [TribeMember]
     func inviteMember(tribeId: String, userId: String, permissions: PermissionsUpdate?) async throws -> TribeMember
+    func inviteContact(tribeId: String, contactIdentifier: String, contactType: String, contactName: String?, permissions: PermissionsUpdate?) async throws -> PendingTribeInvitation
     func getMemberRequests(tribeId: String) async throws -> [TribeMemberRequest]
     func approveMemberRequest(tribeId: String, requestId: String, permissions: PermissionsUpdate?) async throws -> TribeMember
     func denyMemberRequest(tribeId: String, requestId: String) async throws -> TribeMemberRequest
@@ -149,6 +150,18 @@ class TribeAPIRepository: TribeRepository {
         let member = try await apiClient.inviteMember(tribeId: tribeId, userId: userId, permissions: permissions)
         await cacheService.invalidate("members_\(tribeId)")
         return member
+    }
+    
+    func inviteContact(tribeId: String, contactIdentifier: String, contactType: String, contactName: String?, permissions: PermissionsUpdate?) async throws -> PendingTribeInvitation {
+        let invitation = try await apiClient.inviteContact(
+            tribeId: tribeId,
+            contactIdentifier: contactIdentifier,
+            contactType: contactType,
+            contactName: contactName,
+            permissions: permissions
+        )
+        await cacheService.invalidate("members_\(tribeId)")
+        return invitation
     }
     
     func getMemberRequests(tribeId: String) async throws -> [TribeMemberRequest] {

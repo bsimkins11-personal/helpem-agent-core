@@ -123,6 +123,27 @@ class TribeAPIClient {
         throw TribeAPIError.invalidResponse
     }
     
+    /// Invite a contact (by email or phone) to a Tribe
+    /// Creates a pending invitation that auto-accepts when they sign up
+    func inviteContact(
+        tribeId: String,
+        contactIdentifier: String,
+        contactType: String,
+        contactName: String?,
+        permissions: PermissionsUpdate?
+    ) async throws -> PendingTribeInvitation {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/invite-contact")!
+        let request = InviteContactRequest(
+            contactIdentifier: contactIdentifier,
+            contactType: contactType,
+            contactName: contactName,
+            permissions: permissions
+        )
+        let data = try await authenticatedRequest(url: url, method: "POST", body: request)
+        let response = try decoder.decode(InviteContactResponse.self, from: data)
+        return response.invitation
+    }
+    
     /// Request to add a member (for non-owners)
     func requestToAddMember(tribeId: String, userId: String) async throws -> TribeMemberRequest {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/members")!

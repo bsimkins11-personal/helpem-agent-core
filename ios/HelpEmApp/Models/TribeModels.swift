@@ -369,3 +369,48 @@ struct TribeMessagesResponse: Codable {
 struct ProposalActionRequest: Codable {
     let idempotencyKey: String // REQUIRED for preventing duplicate actions
 }
+
+// MARK: - Pending Tribe Invitation
+
+struct PendingTribeInvitation: Codable, Identifiable {
+    let id: String
+    let tribeId: String
+    let invitedBy: String
+    let contactIdentifier: String
+    let contactType: String // "email" or "phone"
+    let contactName: String?
+    let permissions: [String: AnyCodable]
+    let createdAt: Date
+    let expiresAt: Date
+    let state: String // "pending", "accepted", "expired"
+    let acceptedAt: Date?
+    let acceptedBy: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tribeId = "tribeId"
+        case invitedBy = "invitedBy"
+        case contactIdentifier = "contactIdentifier"
+        case contactType = "contactType"
+        case contactName = "contactName"
+        case permissions
+        case createdAt = "createdAt"
+        case expiresAt = "expiresAt"
+        case state
+        case acceptedAt = "acceptedAt"
+        case acceptedBy = "acceptedBy"
+    }
+}
+
+struct InviteContactRequest: Codable {
+    let contactIdentifier: String
+    let contactType: String // "email" or "phone"
+    let contactName: String?
+    let permissions: PermissionsUpdate?
+}
+
+struct InviteContactResponse: Codable {
+    let success: Bool
+    let invitation: PendingTribeInvitation
+    let message: String
+}

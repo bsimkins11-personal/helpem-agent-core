@@ -247,14 +247,26 @@ struct RootView: View {
                 print("❌ iOS: Invalid connections URL")
                 return
             }
-            components.path = "/connections"
+            
+            // Try test page first to debug
+            components.path = "/connections-test"
+            
             guard let url = components.url else {
                 print("❌ iOS: Invalid connections URL components")
                 return
             }
-            print("🔌 iOS: Loading connections URL \(url.absoluteString)")
+            
+            print("🔌 iOS: Attempting navigation to connections")
+            print("🔌 iOS: Full URL: \(url.absoluteString)")
+            print("🔌 iOS: WebView exists: \(webView != nil)")
+            
             let request = URLRequest(url: url)
             webView?.load(request)
+            
+            // Log completion
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                print("🔌 iOS: Navigation request sent, current URL: \(self.webView?.url?.absoluteString ?? "none")")
+            }
         }
     }
     

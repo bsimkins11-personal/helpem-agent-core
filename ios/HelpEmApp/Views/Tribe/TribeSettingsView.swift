@@ -456,9 +456,11 @@ struct InviteMemberView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingContacts = false
     @State private var selectedUserId: String?
+    @State private var selectedContactName: String?
     @State private var isSending = false
     @State private var error: Error?
     @State private var showError = false
+    @State private var showSuccess = false
 
     @State private var canAddTasks = true
     @State private var canRemoveTasks = false
@@ -477,8 +479,16 @@ struct InviteMemberView: View {
                         showingContacts = true
                     } label: {
                         HStack {
-                            Text(selectedUserId == nil ? "Choose Contact" : "Contact Selected")
-                                .foregroundColor(selectedUserId == nil ? .blue : .primary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(selectedUserId == nil ? "Choose Contact" : "Contact Selected")
+                                    .foregroundColor(selectedUserId == nil ? .blue : .primary)
+                                
+                                if let name = selectedContactName {
+                                    Text(name)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.secondary)
@@ -487,7 +497,7 @@ struct InviteMemberView: View {
                 } header: {
                     Text("Select Contact")
                 } footer: {
-                    Text("Invites are sent as Tribe proposals. The recipient chooses whether to join.")
+                    Text("They'll receive a friendly invitation to join the \(tribe.name) tribe! 🎉")
                 }
 
                 Section {
@@ -529,17 +539,30 @@ struct InviteMemberView: View {
                     Text(error.localizedDescription)
                 }
             }
+            .alert("Invitation Sent! 🎉", isPresented: $showSuccess) {
+                Button("Done") {
+                    onComplete()
+                    dismiss()
+                }
+            } message: {
+                if let name = selectedContactName {
+                    Text("Your invitation to join the \(tribe.name) tribe has been sent to \(name)!")
+                } else {
+                    Text("Your invitation to join the \(tribe.name) tribe has been sent!")
+                }
+            }
             .sheet(isPresented: $showingContacts) {
-                ContactsPickerView(tribe: tribe) { userId in
+                ContactsPickerView(tribe: tribe) { userId, contactName in
                     selectedUserId = userId
+                    selectedContactName = contactName
                 }
             }
         }
     }
 
     private func sendInvite() async {
-        guard let userId = selectedUserId else { 
-            AppLogger.error("No user ID selected for invite", logger: AppLogger.general)
+        guard let contactId = selectedUserId else { 
+            AppLogger.error("No contact ID selected for invite", logger: AppLogger.general)
             return 
         }
         
@@ -547,7 +570,7 @@ struct InviteMemberView: View {
         defer { isSending = false }
 
         do {
-            AppLogger.info("Sending invite to userId: \(userId) for tribe: \(tribe.id)", logger: AppLogger.general)
+            AppLogger.info("Sending invite to contact: \(contactId) for tribe: \(tribe.id)", logger: AppLogger.general)
             
             let permissions = PermissionsUpdate(
                 canAddTasks: canAddTasks,
@@ -560,14 +583,17 @@ struct InviteMemberView: View {
                 canRemoveGroceries: canRemoveGroceries
             )
             
-            let member = try await AppContainer.shared.tribeRepository.inviteMember(
+            // Determine contact type (email or phone)
+            let contactType = contactId.contains("@") ? "email" : "phone"
+            
+            let invitation = try await AppContainer.shared.tribeRepository.inviteContact(
                 tribeId: tribe.id,
-                userId: userId,
+                contactIdentifier: contactId,
+                contactType: contactType,
+                contactName: nil,
                 permissions: permissions
             )
-            AppLogger.info("Member invited successfully: \(member.id)", logger: AppLogger.general)
-            
-            AppLogger.info("Member permissions updated successfully", logger: AppLogger.general)
+            AppLogger.info("Contact invited successfully: \(invitation.id)", logger: AppLogger.general)
 
             onComplete()
             dismiss()
