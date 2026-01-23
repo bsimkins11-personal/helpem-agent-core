@@ -3,5 +3,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "public": false
+  "public": false,
+  "regions": ["iad1"]
 }
