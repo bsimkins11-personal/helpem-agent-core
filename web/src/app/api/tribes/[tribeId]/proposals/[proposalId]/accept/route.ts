@@ -14,8 +14,8 @@ export async function POST(
   try {
     const { tribeId, proposalId } = await params;
     const session = await verifySessionToken(req);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session.success) {
+      return NextResponse.json({ error: session.error }, { status: session.status });
     }
 
     const token = req.headers.get("authorization") || "";
