@@ -75,13 +75,17 @@ class TribeInboxViewModel: ObservableObject {
             
             AppLogger.info("Proposal accepted: \(proposal.id)", logger: AppLogger.general)
             
-        } catch UseCaseError.itemSuppressed {
-            // Item was previously deleted
-            removeProposal(proposal.id) // Remove from UI
-            throw UseCaseError.itemSuppressed
         } catch {
-            // Keep proposal visible on error
-            throw error
+            // Check for specific UseCaseError cases
+            if let useCaseError = error as? UseCaseError,
+               case .itemSuppressed = useCaseError {
+                // Item was previously deleted
+                removeProposal(proposal.id) // Remove from UI
+                throw useCaseError
+            } else {
+                // Keep proposal visible on error
+                throw error
+            }
         }
     }
     
