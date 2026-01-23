@@ -81,22 +81,22 @@ struct ErrorSanitizer {
         case .permissionDenied:
             return "You don't have permission to do that."
             
-        case .tribeNotFound:
+        case .tribeNotFound(_):
             return "The tribe couldn't be found."
             
-        case .proposalNotFound:
+        case .proposalNotFound(_):
             return "The proposal couldn't be found."
             
-        case .memberNotFound:
+        case .memberNotFound(_):
             return "The member couldn't be found."
             
         case .noRecipients:
             return "Please select at least one recipient."
             
-        case .invalidItemType:
+        case .invalidItemType(_):
             return "Invalid item type. Please try again."
             
-        case .invalidState:
+        case .invalidState(_):
             return "This action can't be performed right now."
         }
     }
