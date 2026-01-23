@@ -59,7 +59,12 @@ model Appointment {
   datetime  DateTime
   durationMinutes Int @default(30) @map("duration_minutes")
   createdAt DateTime @default(now()) @map("created_at")
-
+  
+  // Tribe tracking - if this item was added by a tribe
+  addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
+  addedByTribeName String?   @map("added_by_tribe_name")
+  
+  @@index([userId, addedByTribeId])
   @@map("appointments")
 }
 
@@ -72,7 +77,12 @@ model Todo {
   reminderTime DateTime? @map("reminder_time")
   completedAt  DateTime? @map("completed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
-
+  
+  // Tribe tracking - if this item was added by a tribe
+  addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
+  addedByTribeName String?   @map("added_by_tribe_name")
+  
+  @@index([userId, addedByTribeId])
   @@map("todos")
 }
 
@@ -84,7 +94,12 @@ model Habit {
   daysOfWeek String[] @default([]) @map("days_of_week")
   completions Json   @default("[]")
   createdAt DateTime @default(now()) @map("created_at")
-
+  
+  // Tribe tracking - if this item was added by a tribe
+  addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
+  addedByTribeName String?   @map("added_by_tribe_name")
+  
+  @@index([userId, addedByTribeId])
   @@map("habits")
 }
 
@@ -95,7 +110,12 @@ model GroceryItem {
   category     String?
   completedAt  DateTime? @map("completed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
-
+  
+  // Tribe tracking - if this item was added by a tribe
+  addedByTribeId   String?   @db.Uuid @map("added_by_tribe_id")
+  addedByTribeName String?   @map("added_by_tribe_name")
+  
+  @@index([userId, addedByTribeId])
   @@map("grocery_items")
 }
 
@@ -111,6 +131,7 @@ model Tribe {
   items       TribeItem[]
   memberRequests TribeMemberRequest[]
   activities  TribeActivity[]
+  messages    TribeMessage[]
   
   @@map("tribes")
 }
@@ -134,6 +155,7 @@ model TribeMember {
   
   tribe             Tribe                     @relation(fields: [tribeId], references: [id], onDelete: Cascade)
   permissions       TribeMemberPermissions?
+  personalItemPermissions TribeMemberPersonalItemPermissions?
   proposals         TribeProposal[]
   
   @@unique([tribeId, userId])
@@ -243,4 +265,55 @@ model TribeActivity {
   
   @@index([tribeId, createdAt])
   @@map("tribe_activities")
+}
+
+/// Tribe messages - chat messages between tribe members
+model TribeMessage {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tribeId     String            @db.Uuid @map("tribe_id")
+  userId      String            @db.Uuid @map("user_id") // Who sent the message
+  message     String            // Message content
+  createdAt   DateTime          @default(now()) @map("created_at")
+  editedAt    DateTime?         @map("edited_at")
+  deletedAt   DateTime?         @map("deleted_at")
+  
+  tribe       Tribe             @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  
+  @@index([tribeId, createdAt])
+  @@map("tribe_messages")
+}
+
+/// Controls what the tribe can do to a member's personal items
+/// This is set by the member themselves to control tribe access to their personal data
+/// 
+/// CRITICAL PRIVACY RULE:
+/// - Users ALWAYS have the right to delete items from their personal lists
+/// - Deletions are SILENT - no notifications sent to tribe or the user who added the item
+/// - This ensures users maintain full control over their personal space without social friction
+model TribeMemberPersonalItemPermissions {
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId              String       @unique @db.Uuid @map("member_id")
+  
+  // Can tribe add items to my personal lists?
+  tribeCanAddToMyAppointments    Boolean      @default(false) @map("tribe_can_add_to_my_appointments")
+  tribeCanAddToMyTodos            Boolean      @default(false) @map("tribe_can_add_to_my_todos")
+  tribeCanAddToMyRoutines         Boolean      @default(false) @map("tribe_can_add_to_my_routines")
+  tribeCanAddToMyGroceries        Boolean      @default(false) @map("tribe_can_add_to_my_groceries")
+  
+  // Can tribe remove items from my personal lists?
+  // NOTE: Even if false, users can ALWAYS delete their own items silently
+  tribeCanRemoveFromMyAppointments Boolean    @default(false) @map("tribe_can_remove_from_my_appointments")
+  tribeCanRemoveFromMyTodos       Boolean     @default(false) @map("tribe_can_remove_from_my_todos")
+  tribeCanRemoveFromMyRoutines     Boolean     @default(false) @map("tribe_can_remove_from_my_routines")
+  tribeCanRemoveFromMyGroceries    Boolean     @default(false) @map("tribe_can_remove_from_my_groceries")
+  
+  // Can tribe update items in my personal lists?
+  tribeCanUpdateMyAppointments     Boolean     @default(false) @map("tribe_can_update_my_appointments")
+  tribeCanUpdateMyTodos           Boolean     @default(false) @map("tribe_can_update_my_todos")
+  tribeCanUpdateMyRoutines        Boolean     @default(false) @map("tribe_can_update_my_routines")
+  tribeCanUpdateMyGroceries       Boolean     @default(false) @map("tribe_can_update_my_groceries")
+  
+  member                TribeMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  @@map("tribe_member_personal_item_permissions")
 }

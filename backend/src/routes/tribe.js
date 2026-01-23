@@ -7,6 +7,9 @@
  * - No social pressure (no visibility into acceptance status)
  * - One notification per proposal creation
  * - Clear context via color (blue=personal, green=tribe)
+ * - **SILENT DELETION**: Users can ALWAYS delete items from their personal lists
+ *   (appointments, todos, routines, groceries) without notifying the tribe or
+ *   the user who added them. This is a privacy-protecting feature.
  */
 
 import express from "express";
@@ -1327,6 +1330,215 @@ router.get("/:tribeId/shared", async (req, res) => {
     return res.json({ items: acceptedProposals.map(p => p.item) });
   } catch (err) {
     console.error("ERROR GET /tribes/:tribeId/shared:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// =============================================================================
+// TRIBE MESSAGING
+// =============================================================================
+
+/**
+ * GET /tribes/:tribeId/messages
+ * Get messages for a tribe (paginated)
+ */
+router.get("/:tribeId/messages", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+    const before = req.query.before ? new Date(req.query.before) : undefined;
+
+    // Verify user is a member
+    const member = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    // Get messages (not deleted)
+    const where = {
+      tribeId,
+      deletedAt: null,
+      ...(before ? { createdAt: { lt: before } } : {}),
+    };
+
+    const messages = await prisma.tribeMessage.findMany({
+      where,
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit,
+      include: {
+        // We'll need to join with User to get display names
+      },
+    });
+
+    // Reverse to show oldest first (for chat UI)
+    const reversed = messages.reverse();
+
+    return res.json({ messages: reversed });
+  } catch (err) {
+    console.error("ERROR GET /tribes/:tribeId/messages:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /tribes/:tribeId/messages
+ * Send a message to a tribe
+ */
+router.post("/:tribeId/messages", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId } = req.params;
+    const { message } = req.body;
+
+    if (!message || typeof message !== "string" || message.trim().length === 0) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    if (message.length > 2000) {
+      return res.status(400).json({ error: "Message too long (max 2000 characters)" });
+    }
+
+    // Verify user is a member
+    const member = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    // Create message
+    const tribeMessage = await prisma.tribeMessage.create({
+      data: {
+        tribeId,
+        userId,
+        message: message.trim(),
+      },
+    });
+
+    return res.json({ message: tribeMessage });
+  } catch (err) {
+    console.error("ERROR POST /tribes/:tribeId/messages:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * PATCH /tribes/:tribeId/messages/:messageId
+ * Edit a message (only by the sender)
+ */
+router.patch("/:tribeId/messages/:messageId", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId, messageId } = req.params;
+    const { message } = req.body;
+
+    if (!message || typeof message !== "string" || message.trim().length === 0) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Get message and verify ownership
+    const existingMessage = await prisma.tribeMessage.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!existingMessage || existingMessage.tribeId !== tribeId) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    if (existingMessage.userId !== userId) {
+      return res.status(403).json({ error: "Can only edit your own messages" });
+    }
+
+    if (existingMessage.deletedAt) {
+      return res.status(400).json({ error: "Cannot edit deleted message" });
+    }
+
+    // Update message
+    const updated = await prisma.tribeMessage.update({
+      where: { id: messageId },
+      data: {
+        message: message.trim(),
+        editedAt: new Date(),
+      },
+    });
+
+    return res.json({ message: updated });
+  } catch (err) {
+    console.error("ERROR PATCH /tribes/:tribeId/messages/:messageId:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * DELETE /tribes/:tribeId/messages/:messageId
+ * Delete a message (soft delete, only by the sender)
+ */
+router.delete("/:tribeId/messages/:messageId", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId, messageId } = req.params;
+
+    // Get message and verify ownership
+    const existingMessage = await prisma.tribeMessage.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!existingMessage || existingMessage.tribeId !== tribeId) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    if (existingMessage.userId !== userId) {
+      return res.status(403).json({ error: "Can only delete your own messages" });
+    }
+
+    // Soft delete
+    const deleted = await prisma.tribeMessage.update({
+      where: { id: messageId },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return res.json({ message: deleted });
+  } catch (err) {
+    console.error("ERROR DELETE /tribes/:tribeId/messages/:messageId:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
