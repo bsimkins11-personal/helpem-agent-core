@@ -60,10 +60,10 @@ struct TribeListView: View {
                         InvitationRow(
                             invitation: invitation,
                             onAccept: {
-                                await viewModel.acceptInvitation(tribeId: invitation.tribeId)
+                                try? await viewModel.acceptInvitation(invitation)
                             },
                             onDecline: {
-                                await viewModel.declineInvitation(tribeId: invitation.tribeId)
+                                // TODO: Implement decline invitation
                             }
                         )
                     }
@@ -147,11 +147,12 @@ struct TribeListView: View {
         let name = newTribeName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
         
-        await viewModel.createTribe(name: name)
-        
-        if viewModel.error == nil {
+        do {
+            _ = try await viewModel.createTribe(name: name)
             showingCreateTribe = false
             newTribeName = ""
+        } catch {
+            // Error is captured in viewModel.error and shown via alert
         }
     }
 }
