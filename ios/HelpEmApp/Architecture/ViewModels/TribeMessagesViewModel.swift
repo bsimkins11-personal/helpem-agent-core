@@ -14,6 +14,12 @@ class TribeMessagesViewModel: ObservableObject {
     @Published var error: Error?
     @Published var messageText = ""
     
+    // Current user ID (for determining which messages are from current user)
+    var currentUserId: String {
+        // TODO: Get from auth service
+        return ""
+    }
+    
     // MARK: - Dependencies
     
     private let repository: TribeRepository

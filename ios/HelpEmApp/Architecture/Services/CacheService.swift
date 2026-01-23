@@ -85,7 +85,7 @@ actor CacheService {
     private func scheduleCleanup() async {
         while true {
             try? await Task.sleep(nanoseconds: UInt64(cleanupInterval * 1_000_000_000))
-            await cleanup()
+            cleanup()
         }
     }
     

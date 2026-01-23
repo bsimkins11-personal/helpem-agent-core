@@ -68,9 +68,10 @@ struct TribeMessagesView: View {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         
+        viewModel.messageText = text
         messageText = ""
         Task {
-            await viewModel.sendMessage(tribeId: tribe.id, message: text)
+            try? await viewModel.sendMessage(tribeId: tribe.id)
         }
     }
 }
