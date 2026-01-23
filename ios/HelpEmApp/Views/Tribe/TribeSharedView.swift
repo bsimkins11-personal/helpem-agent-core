@@ -67,7 +67,8 @@ struct TribeItemRow: View {
            let title = data["title"] as? String {
             return title
         }
-        return "Untitled \(item.itemType.capitalized)"
+        let capitalized = item.itemType.prefix(1).uppercased() + item.itemType.dropFirst()
+        return "Untitled \(capitalized)"
     }
     
     private var itemDetails: String? {

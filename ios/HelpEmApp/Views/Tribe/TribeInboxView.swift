@@ -253,7 +253,8 @@ struct ProposalCard: View {
     
     private var itemType: String {
         guard let item = proposal.item else { return "Item" }
-        return item.itemType.capitalized
+        let capitalized = item.itemType.prefix(1).uppercased() + item.itemType.dropFirst()
+        return capitalized
     }
     
     private func handleAccept() async {
@@ -341,9 +342,10 @@ struct ItemDetailsView: View {
     private var routineDetails: some View {
         if let frequency = item.data["frequency"],
            case let freqString as String = frequency.value {
+            let capitalized = freqString.prefix(1).uppercased() + freqString.dropFirst()
             HStack {
                 Image(systemName: "repeat")
-                Text(freqString.capitalized)
+                Text(capitalized)
             }
         }
     }
