@@ -72,7 +72,7 @@ class TribeAPIRepository: TribeRepository {
     func getTribes() async throws -> [Tribe] {
         // Check cache first
         if let cached = await cacheService.get("tribes") as? [Tribe],
-           !cacheService.isExpired("tribes") {
+           !(await cacheService.isExpired("tribes")) {
             return cached
         }
         
@@ -85,7 +85,7 @@ class TribeAPIRepository: TribeRepository {
     func getTribe(id: String) async throws -> Tribe {
         let cacheKey = "tribe_\(id)"
         if let cached = await cacheService.get(cacheKey) as? Tribe,
-           !cacheService.isExpired(cacheKey) {
+           !(await cacheService.isExpired(cacheKey)) {
             return cached
         }
         
@@ -136,7 +136,7 @@ class TribeAPIRepository: TribeRepository {
     func getMembers(tribeId: String) async throws -> [TribeMember] {
         let cacheKey = "members_\(tribeId)"
         if let cached = await cacheService.get(cacheKey) as? [TribeMember],
-           !cacheService.isExpired(cacheKey) {
+           !(await cacheService.isExpired(cacheKey)) {
             return cached
         }
         
@@ -154,7 +154,7 @@ class TribeAPIRepository: TribeRepository {
     func getMemberRequests(tribeId: String) async throws -> [TribeMemberRequest] {
         let cacheKey = "member_requests_\(tribeId)"
         if let cached = await cacheService.get(cacheKey) as? [TribeMemberRequest],
-           !cacheService.isExpired(cacheKey) {
+           !(await cacheService.isExpired(cacheKey)) {
             return cached
         }
         
@@ -201,7 +201,7 @@ class TribeAPIRepository: TribeRepository {
     func getProposals(tribeId: String) async throws -> [TribeProposal] {
         let cacheKey = "proposals_\(tribeId)"
         if let cached = await cacheService.get(cacheKey) as? [TribeProposal],
-           !cacheService.isExpired(cacheKey) {
+           !(await cacheService.isExpired(cacheKey)) {
             return cached
         }
         
@@ -263,7 +263,7 @@ class TribeAPIRepository: TribeRepository {
     func getSharedItems(tribeId: String) async throws -> [TribeItem] {
         let cacheKey = "shared_\(tribeId)"
         if let cached = await cacheService.get(cacheKey) as? [TribeItem],
-           !cacheService.isExpired(cacheKey) {
+           !(await cacheService.isExpired(cacheKey)) {
             return cached
         }
         
@@ -296,7 +296,7 @@ class TribeAPIRepository: TribeRepository {
     func getPendingInvitations() async throws -> [TribeInvitation] {
         let cacheKey = "invitations"
         if let cached = await cacheService.get(cacheKey) as? [TribeInvitation],
-           !cacheService.isExpired(cacheKey) {
+           !(await cacheService.isExpired(cacheKey)) {
             return cached
         }
         
