@@ -6,6 +6,7 @@ import Combine
 struct TribeListView: View {
     @StateObject private var viewModel = AppContainer.shared.makeTribeListViewModel()
     @State private var showingCreateTribe = false
+    @State private var showError = false
     @State private var newTribeName = ""
     
     var body: some View {
@@ -32,12 +33,15 @@ struct TribeListView: View {
             .sheet(isPresented: $showingCreateTribe) {
                 createTribeSheet
             }
-            .alert("Error", isPresented: $viewModel.showError) {
+            .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
             } message: {
                 if let error = viewModel.error {
-                    Text(error.localizedDescription)
+                    Text(ErrorSanitizer.userFacingMessage(for: error))
                 }
+            }
+            .onChange(of: viewModel.error) { _, newError in
+                showError = newError != nil
             }
             .task {
                 await viewModel.loadTribes()
