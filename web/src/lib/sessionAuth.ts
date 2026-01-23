@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
  */
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const SESSION_EXPIRY = "14d"; // 14 days - UAT friendly, within 7-30 day range
+const SESSION_EXPIRY = "30d"; // 30 days - Aligned with backend for consistency
 
 export interface SessionPayload {
   userId: string;      // Our internal UUID

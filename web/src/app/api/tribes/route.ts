@@ -21,7 +21,18 @@ export async function GET(req: NextRequest) {
     if (!session.success) {
       if (session.status !== 500) {
         console.error("❌ Token verification failed:", session.error);
-        return NextResponse.json({ error: session.error }, { status: session.status });
+        
+        // Provide user-friendly error message for expired tokens
+        const userMessage = session.error === "Session expired" 
+          ? "Your session has expired. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
+          : session.error === "Invalid session token"
+          ? "Your session is invalid. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
+          : session.error;
+        
+        return NextResponse.json({ 
+          error: userMessage,
+          requiresReauth: true 
+        }, { status: session.status });
       }
       console.warn("JWT secrets missing in web env; proxying anyway");
     }
@@ -67,7 +78,17 @@ export async function POST(req: NextRequest) {
     const session = await verifySessionToken(req);
     if (!session.success) {
       if (session.status !== 500) {
-        return NextResponse.json({ error: session.error }, { status: session.status });
+        // Provide user-friendly error message for expired tokens
+        const userMessage = session.error === "Session expired" 
+          ? "Your session has expired. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
+          : session.error === "Invalid session token"
+          ? "Your session is invalid. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
+          : session.error;
+        
+        return NextResponse.json({ 
+          error: userMessage,
+          requiresReauth: true 
+        }, { status: session.status });
       }
       console.warn("JWT secrets missing in web env; proxying anyway");
     }
