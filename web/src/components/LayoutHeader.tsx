@@ -306,15 +306,13 @@ export function LayoutHeader() {
                   >
                     View Usage
                   </button>
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      alert("Connectors coming soon to help you manage your personal tech portfolio.");
-                    }}
-                    className="px-4 py-3 text-left text-purple-600 hover:bg-purple-50 rounded-lg transition-colors font-medium"
+                  <Link
+                    href="/connections"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-4 py-3 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors font-medium"
                   >
-                    Connectors
-                  </button>
+                    🔌 Connectors
+                  </Link>
                   <button
                     onClick={() => {
                       console.log("Get Support clicked");

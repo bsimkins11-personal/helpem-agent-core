@@ -14,6 +14,7 @@ struct TribeDetailView: View {
     
     @State private var selectedSection: TribeSection? = nil
     @State private var showingSettings = false
+    @Environment(\.dismiss) private var dismiss
     
     enum TribeSection: String, Identifiable {
         case messages = "Messages"
@@ -83,7 +84,12 @@ struct TribeDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingSettings) {
+        .sheet(isPresented: $showingSettings, onDismiss: {
+            // When settings sheet dismisses, check if tribe still exists
+            Task {
+                await checkTribeExists()
+            }
+        }) {
             NavigationStack {
                 TribeSettingsView(tribe: tribe)
                     .navigationTitle("Tribe Settings")
@@ -283,6 +289,20 @@ struct TribeDetailView: View {
             }
         } header: {
             Text("Information")
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func checkTribeExists() async {
+        // Try to fetch the tribe from the repository
+        // If it fails (tribe was deleted), dismiss this view
+        do {
+            _ = try await AppContainer.shared.tribeRepository.getTribe(id: tribe.id)
+        } catch {
+            // Tribe no longer exists, dismiss this view
+            AppLogger.info("Tribe \(tribe.id) no longer exists, dismissing detail view", logger: AppLogger.general)
+            dismiss()
         }
     }
 }

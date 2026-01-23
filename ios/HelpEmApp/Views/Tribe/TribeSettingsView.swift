@@ -549,9 +549,6 @@ struct InviteMemberView: View {
         do {
             AppLogger.info("Sending invite to userId: \(userId) for tribe: \(tribe.id)", logger: AppLogger.general)
             
-            let member = try await TribeAPIClient.shared.inviteMember(tribeId: tribe.id, userId: userId)
-            AppLogger.info("Member invited successfully: \(member.id)", logger: AppLogger.general)
-            
             let permissions = PermissionsUpdate(
                 canAddTasks: canAddTasks,
                 canRemoveTasks: canRemoveTasks,
@@ -562,12 +559,13 @@ struct InviteMemberView: View {
                 canAddGroceries: canAddGroceries,
                 canRemoveGroceries: canRemoveGroceries
             )
-
-            _ = try await TribeAPIClient.shared.updateMemberSettings(
+            
+            let member = try await AppContainer.shared.tribeRepository.inviteMember(
                 tribeId: tribe.id,
-                memberId: member.id,
+                userId: userId,
                 permissions: permissions
             )
+            AppLogger.info("Member invited successfully: \(member.id)", logger: AppLogger.general)
             
             AppLogger.info("Member permissions updated successfully", logger: AppLogger.general)
 
@@ -595,11 +593,20 @@ class TribeSettingsViewModel: ObservableObject {
     @Published var tribeLeft = false
     
     private var currentMemberId: String?
+    private let repository: TribeRepository
+    
+    init(repository: TribeRepository) {
+        self.repository = repository
+    }
+    
+    convenience init() {
+        self.init(repository: AppContainer.shared.tribeRepository)
+    }
     
     func loadSettings(tribeId: String) async {
         // Load current member settings
         do {
-            _ = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
+            _ = try await repository.getMembers(tribeId: tribeId)
             // Find current user's membership
             // Note: In real implementation, we'd need to know current user ID
             // For now, this is a placeholder
@@ -616,11 +623,13 @@ class TribeSettingsViewModel: ObservableObject {
         }
         
         do {
-            _ = try await TribeAPIClient.shared.updateMemberSettings(
+            _ = try await repository.updateMemberSettings(
                 tribeId: tribeId,
                 memberId: memberId,
+                managementScope: nil,
                 proposalNotifications: proposalNotifs,
-                digestNotifications: digestNotifs
+                digestNotifications: digestNotifs,
+                permissions: nil
             )
             AppLogger.info("Updated notification preferences", logger: AppLogger.general)
         } catch {
@@ -637,10 +646,13 @@ class TribeSettingsViewModel: ObservableObject {
         }
         
         do {
-            _ = try await TribeAPIClient.shared.updateMemberSettings(
+            _ = try await repository.updateMemberSettings(
                 tribeId: tribeId,
                 memberId: memberId,
-                managementScope: scope
+                managementScope: scope,
+                proposalNotifications: nil,
+                digestNotifications: nil,
+                permissions: nil
             )
             AppLogger.info("Updated management scope to: \(scope)", logger: AppLogger.general)
         } catch {
@@ -652,7 +664,7 @@ class TribeSettingsViewModel: ObservableObject {
     
     func renameTribe(tribeId: String, newName: String) async {
         do {
-            _ = try await TribeAPIClient.shared.renameTribe(tribeId: tribeId, newName: newName)
+            _ = try await repository.renameTribe(id: tribeId, newName: newName)
             AppLogger.info("Renamed tribe", logger: AppLogger.general)
         } catch {
             self.error = error
@@ -662,7 +674,7 @@ class TribeSettingsViewModel: ObservableObject {
     
     func deleteTribe(tribeId: String) async {
         do {
-            try await TribeAPIClient.shared.deleteTribe(tribeId: tribeId)
+            try await repository.deleteTribe(id: tribeId)
             AppLogger.info("Deleted tribe", logger: AppLogger.general)
             self.tribeDeleted = true
         } catch {
@@ -673,7 +685,7 @@ class TribeSettingsViewModel: ObservableObject {
     
     func leaveTribe(tribeId: String) async {
         do {
-            try await TribeAPIClient.shared.leaveTribe(tribeId: tribeId)
+            try await repository.leaveTribe(id: tribeId)
             AppLogger.info("Left tribe", logger: AppLogger.general)
             self.tribeLeft = true
         } catch {
@@ -703,6 +715,15 @@ class MemberDetailViewModel: ObservableObject {
     @Published var error: Error?
     
     private var memberId: String?
+    private let repository: TribeRepository
+    
+    init(repository: TribeRepository) {
+        self.repository = repository
+    }
+    
+    convenience init() {
+        self.init(repository: AppContainer.shared.tribeRepository)
+    }
     
     func loadMemberPermissions(member: TribeMember) {
         self.memberId = member.id
@@ -735,9 +756,12 @@ class MemberDetailViewModel: ObservableObject {
         )
         
         do {
-            let updatedMember = try await TribeAPIClient.shared.updateMemberSettings(
+            let updatedMember = try await repository.updateMemberSettings(
                 tribeId: tribeId,
                 memberId: memberId,
+                managementScope: nil,
+                proposalNotifications: nil,
+                digestNotifications: nil,
                 permissions: update
             )
             

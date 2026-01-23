@@ -46,6 +46,13 @@ struct TribeListView: View {
             .task {
                 await viewModel.loadTribes()
             }
+            .onAppear {
+                // Reload tribes when view reappears (e.g., after deleting a tribe)
+                // This ensures deleted tribes are removed from the UI
+                Task {
+                    await viewModel.loadTribes()
+                }
+            }
             .refreshable {
                 await viewModel.loadTribes()
             }
