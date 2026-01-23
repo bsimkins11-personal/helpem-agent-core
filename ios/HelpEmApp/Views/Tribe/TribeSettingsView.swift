@@ -10,6 +10,7 @@ import Combine
 struct TribeSettingsView: View {
     let tribe: Tribe
     @StateObject private var viewModel = TribeSettingsViewModel()
+    @Environment(\.dismiss) private var dismiss
     
     @State private var showingRename = false
     @State private var showingDeleteConfirm = false
@@ -26,6 +27,16 @@ struct TribeSettingsView: View {
         }
         .task {
             await viewModel.loadSettings(tribeId: tribe.id)
+        }
+        .onChange(of: viewModel.tribeDeleted) { deleted in
+            if deleted {
+                dismiss()
+            }
+        }
+        .onChange(of: viewModel.tribeLeft) { left in
+            if left {
+                dismiss()
+            }
         }
         .alert("Rename Tribe", isPresented: $showingRename) {
             TextField("Tribe Name", text: $newTribeName)
@@ -580,6 +591,8 @@ class TribeSettingsViewModel: ObservableObject {
     @Published var showingAdvancedWarning = false
     @Published var error: Error?
     @Published var showError = false
+    @Published var tribeDeleted = false
+    @Published var tribeLeft = false
     
     private var currentMemberId: String?
     
@@ -651,6 +664,7 @@ class TribeSettingsViewModel: ObservableObject {
         do {
             try await TribeAPIClient.shared.deleteTribe(tribeId: tribeId)
             AppLogger.info("Deleted tribe", logger: AppLogger.general)
+            self.tribeDeleted = true
         } catch {
             self.error = error
             self.showError = true
@@ -661,6 +675,7 @@ class TribeSettingsViewModel: ObservableObject {
         do {
             try await TribeAPIClient.shared.leaveTribe(tribeId: tribeId)
             AppLogger.info("Left tribe", logger: AppLogger.general)
+            self.tribeLeft = true
         } catch {
             self.error = error
             self.showError = true
