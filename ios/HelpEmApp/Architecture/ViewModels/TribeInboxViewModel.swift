@@ -61,7 +61,7 @@ class TribeInboxViewModel: ObservableObject {
         
         do {
             // Execute use case
-            let acceptedProposal = try await acceptProposalUseCase.execute(
+            _ = try await acceptProposalUseCase.execute(
                 tribeId: tribeId,
                 proposalId: proposal.id
             )
