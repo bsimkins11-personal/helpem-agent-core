@@ -188,9 +188,9 @@ export default function TribeSettingsPage() {
                     )}
                   </div>
                   
-                  {tribe.pendingProposals > 0 && (
+                  {(tribe.pendingProposalsCount ?? 0) > 0 && (
                     <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
-                      {tribe.pendingProposals} pending
+                      {tribe.pendingProposalsCount} pending
                     </span>
                   )}
                 </div>
