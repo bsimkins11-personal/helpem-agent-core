@@ -21,7 +21,7 @@ export function DemoTribeBanner() {
           <p className="text-xs text-purple-100 leading-relaxed">
             You're exploring <strong>synthetic tribes</strong> to see how collaboration works. 
             <span className="block mt-1">
-              ✨ <strong>Real tribes</strong> launch in early February—invite your actual family, roommates, or team!
+              ✨ When you create your first real tribe, these demos will automatically disappear!
             </span>
           </p>
         </div>
