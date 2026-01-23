@@ -21,7 +21,7 @@ class TribeMessagesViewModel: ObservableObject {
     // MARK: - Configuration
     
     private let pollingInterval: TimeInterval = 15.0 // 15 seconds
-    private var pollingTask: Task<Void, Never>?
+    nonisolated(unsafe) private var pollingTask: Task<Void, Never>?
     
     // MARK: - Initialization
     
