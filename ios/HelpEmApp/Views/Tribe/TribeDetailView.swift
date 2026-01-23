@@ -390,68 +390,8 @@ struct SectionRow: View {
 }
 
 // MARK: - View Model
-
-@MainActor
-class TribeDetailViewModel: ObservableObject {
-    @Published var pendingCount = 0
-    @Published var memberCount = 0
-    @Published var sharedCount = 0
-    @Published var unreadCount = 0
-    @Published var isLoading = false
-    
-    func loadTribeData(tribeId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        // Load all data in parallel
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask {
-                await self.loadProposals(tribeId: tribeId)
-            }
-            group.addTask {
-                await self.loadMembers(tribeId: tribeId)
-            }
-            group.addTask {
-                await self.loadShared(tribeId: tribeId)
-            }
-            group.addTask {
-                await self.loadUnreadMessages(tribeId: tribeId)
-            }
-        }
-    }
-    
-    private func loadProposals(tribeId: String) async {
-        do {
-            let proposals = try await TribeAPIClient.shared.getInbox(tribeId: tribeId)
-            pendingCount = proposals.filter { $0.state == .proposed }.count
-        } catch {
-            AppLogger.error("Failed to load proposals: \(error.localizedDescription)", logger: AppLogger.general)
-        }
-    }
-    
-    private func loadMembers(tribeId: String) async {
-        do {
-            let members = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
-            memberCount = members.filter { $0.isAccepted }.count
-        } catch {
-            AppLogger.error("Failed to load members: \(error.localizedDescription)", logger: AppLogger.general)
-        }
-    }
-    
-    private func loadShared(tribeId: String) async {
-        do {
-            let items = try await TribeAPIClient.shared.getSharedItems(tribeId: tribeId)
-            sharedCount = items.count
-        } catch {
-            AppLogger.error("Failed to load shared items: \(error.localizedDescription)", logger: AppLogger.general)
-        }
-    }
-    
-    private func loadUnreadMessages(tribeId: String) async {
-        // TODO: Implement when messaging is fully integrated
-        unreadCount = 0
-    }
-}
+// Note: TribeDetailViewModel has been moved to Architecture/ViewModels/TribeDetailViewModel.swift
+// This provides better separation of concerns and follows Clean Architecture principles
 
 // MARK: - Preview
 

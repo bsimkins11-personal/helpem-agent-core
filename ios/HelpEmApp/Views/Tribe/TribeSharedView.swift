@@ -125,22 +125,5 @@ struct TribeItemRow: View {
 }
 
 // MARK: - View Model
-
-@MainActor
-class TribeSharedViewModel: ObservableObject {
-    @Published var items: [TribeItem] = []
-    @Published var isLoading = false
-    
-    init() {}
-    
-    func loadSharedItems(tribeId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            items = try await TribeAPIClient.shared.getSharedItems(tribeId: tribeId)
-        } catch {
-            AppLogger.error("Failed to load shared items: \(error.localizedDescription)", logger: AppLogger.general)
-        }
-    }
-}
+// Note: TribeSharedViewModel is now in Architecture/ViewModels/TribeSharedViewModel.swift
+// This provides better separation of concerns and follows Clean Architecture principles

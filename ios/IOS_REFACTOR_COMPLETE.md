@@ -558,7 +558,7 @@ The refactoring is **additive** - all existing code continues to work. The old `
 ## Documentation
 
 ### Architecture Documentation
-- `Architecture/README.md` - Complete architecture guide
+- `Architecture/ARCHITECTURE_GUIDE.md` - Complete architecture guide
 - `TRIBE_COMPLETE_HANDOFF.md` - Product invariants and API docs
 - `IOS_REFACTOR_COMPLETE.md` - This document
 
@@ -615,7 +615,7 @@ The refactoring is **additive** - all existing code continues to work. The old `
 
 ### Questions?
 
-1. Review `Architecture/README.md`
+1. Review `Architecture/ARCHITECTURE_GUIDE.md`
 2. Check example implementations
 3. Review TRIBE_COMPLETE_HANDOFF.md for invariants
 4. Contact iOS architecture team

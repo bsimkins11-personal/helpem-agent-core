@@ -109,39 +109,5 @@ struct MessageBubble: View {
 }
 
 // MARK: - View Model
-
-@MainActor
-class TribeMessagesViewModel: ObservableObject {
-    @Published var messages: [TribeMessage] = []
-    @Published var isSending = false
-    @Published var isLoading = false
-    
-    init() {}
-    
-    var currentUserId: String {
-        KeychainHelper.shared.userId ?? ""
-    }
-    
-    func loadMessages(tribeId: String) async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            messages = try await TribeAPIClient.shared.getMessages(tribeId: tribeId)
-        } catch {
-            AppLogger.error("Failed to load messages: \(error.localizedDescription)", logger: AppLogger.general)
-        }
-    }
-    
-    func sendMessage(tribeId: String, message: String) async {
-        isSending = true
-        defer { isSending = false }
-        
-        do {
-            let newMessage = try await TribeAPIClient.shared.sendMessage(tribeId: tribeId, message: message)
-            messages.append(newMessage)
-        } catch {
-            AppLogger.error("Failed to send message: \(error.localizedDescription)", logger: AppLogger.general)
-        }
-    }
-}
+// Note: TribeMessagesViewModel has been moved to Architecture/ViewModels/TribeMessagesViewModel.swift
+// This provides better separation of concerns and follows Clean Architecture principles
