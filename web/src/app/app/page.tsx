@@ -8,7 +8,6 @@ import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
 import { useLife } from "@/state/LifeStore";
-import { useTribeStore } from "@/state/TribeStore";
 import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { usePersonalAnalyticsNotifications } from "@/hooks/usePersonalAnalyticsNotifications";
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
@@ -25,20 +24,45 @@ const PRIORITY_TABS = [
 ];
 const STACK_GAP_PX = 0;
 
+interface Tribe {
+  id: string;
+  name: string;
+  memberCount?: number;
+  unreadCount?: number;
+}
+
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
-  const { tribes, loadTribes } = useTribeStore();
   const { settings } = useNotificationSettings();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
+  const [tribes, setTribes] = useState<Tribe[]>([]);
 
   usePersonalAnalyticsNotifications(settings);
   
   // Load tribes on mount
   useEffect(() => {
+    const loadTribes = async () => {
+      try {
+        const token = localStorage.getItem("helpem_session");
+        if (!token) return;
+        
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tribes`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setTribes(data.tribes || []);
+        }
+      } catch (error) {
+        console.error("Failed to load tribes:", error);
+      }
+    };
+    
     loadTribes();
-  }, [loadTribes]);
+  }, []);
   
   console.log('🟦 ========================================');
   console.log('🟦 AppPage: RENDERING');
