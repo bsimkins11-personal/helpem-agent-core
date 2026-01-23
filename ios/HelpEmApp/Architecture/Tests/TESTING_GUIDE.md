@@ -61,7 +61,7 @@ YourProject/
 
 ## Example Tests
 
-See `TestExamples.swift.reference` for complete examples of:
+See `TestExamples.swift.reference` in this directory for complete examples of:
 
 ### Repository Tests
 - Testing with cache

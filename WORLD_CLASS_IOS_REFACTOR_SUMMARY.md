@@ -79,7 +79,7 @@ The Tribe iOS implementation has been transformed from a monolithic architecture
 - `AppContainer.swift` - IoC container with factory methods
 
 **Documentation:**
-- `Architecture/README.md` - Complete architecture guide (500+ lines)
+- `Architecture/ARCHITECTURE_GUIDE.md` - Complete architecture guide (500+ lines)
 - `IOS_REFACTOR_COMPLETE.md` - Detailed refactoring documentation (800+ lines)
 - `MIGRATION_CHECKLIST.md` - Step-by-step migration guide
 - `Architecture/Tests/ExampleTests.swift` - Test examples and mocks
