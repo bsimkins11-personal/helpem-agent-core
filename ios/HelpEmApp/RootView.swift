@@ -442,7 +442,7 @@ struct RootView: View {
                         }
                         .sheet(isPresented: $isTribeSettingsPresented) {
                             NavigationStack {
-                                TribeSettingsListView()
+                                TribeListView()
                                     .navigationTitle("Tribe Settings")
                                     .navigationBarTitleDisplayMode(.inline)
                                     .toolbar {
