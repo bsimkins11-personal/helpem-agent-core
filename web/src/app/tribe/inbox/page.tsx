@@ -15,8 +15,10 @@ type TribeMessage = {
 type Tribe = {
   id: string;
   name: string;
-  pendingProposals: number;
+  pendingProposalsCount?: number;
   isOwner: boolean;
+  memberCount?: number;
+  unreadMessageCount?: number;
 };
 
 /**
@@ -214,9 +216,9 @@ export default function TribeInboxPage() {
                       <span className="text-xs opacity-75">Owner</span>
                     )}
                   </div>
-                  {tribe.pendingProposals > 0 && (
+                  {(tribe.pendingProposalsCount ?? 0) > 0 && (
                     <div className="text-xs mt-1 opacity-75">
-                      {tribe.pendingProposals} pending
+                      {tribe.pendingProposalsCount} pending
                     </div>
                   )}
                 </button>

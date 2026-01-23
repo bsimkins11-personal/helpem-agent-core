@@ -8,7 +8,8 @@ type Tribe = {
   name: string;
   ownerId: string;
   isOwner: boolean;
-  pendingProposals: number;
+  pendingProposalsCount?: number;
+  memberCount?: number;
   joinedAt: string;
 };
 
