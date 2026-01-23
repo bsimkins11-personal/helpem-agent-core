@@ -51,55 +51,81 @@ router.get("/", async (req, res) => {
     // Add pending proposal counts, message counts, and member counts
     const tribesWithCounts = await Promise.all(
       validTribes.map(async (membership) => {
-        const pendingCount = await getPendingProposalsCount(membership.id);
-        
-        // Get member count
-        const memberCount = await prisma.tribeMember.count({
-          where: {
-            tribeId: membership.tribe.id,
-            acceptedAt: { not: null },
-            leftAt: null,
+        try {
+          const pendingCount = await getPendingProposalsCount(membership.id);
+          
+          // Get member count
+          const memberCount = await prisma.tribeMember.count({
+            where: {
+              tribeId: membership.tribe.id,
+              acceptedAt: { not: null },
+              leftAt: null,
+            }
+          });
+          
+          // Get unread message count (messages since user last viewed)
+          // For now, just count all recent messages (last 7 days)
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          
+          const recentMessages = await prisma.tribeMessage.count({
+            where: {
+              tribeId: membership.tribe.id,
+              createdAt: { gte: sevenDaysAgo },
+              userId: { not: userId }, // Don't count user's own messages
+              deletedAt: null,
+            }
+          });
+          
+          // Get last message
+          let lastMessage = null;
+          try {
+            const msg = await prisma.tribeMessage.findFirst({
+              where: {
+                tribeId: membership.tribe.id,
+                deletedAt: null,
+              },
+              orderBy: { createdAt: 'desc' },
+            });
+            
+            if (msg) {
+              lastMessage = {
+                text: msg.message,
+                senderName: await getUserDisplayName(msg.userId),
+                timestamp: msg.createdAt.toISOString(),
+              };
+            }
+          } catch (msgError) {
+            console.error(`Error fetching last message for tribe ${membership.tribe.id}:`, msgError);
+            // Continue without last message
           }
-        });
-        
-        // Get unread message count (messages since user last viewed)
-        // For now, just count all recent messages (last 7 days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        
-        const recentMessages = await prisma.tribeMessage.count({
-          where: {
-            tribeId: membership.tribe.id,
-            createdAt: { gte: sevenDaysAgo },
-            userId: { not: userId }, // Don't count user's own messages
-            deletedAt: null,
-          }
-        });
-        
-        // Get last message
-        const lastMessage = await prisma.tribeMessage.findFirst({
-          where: {
-            tribeId: membership.tribe.id,
-            deletedAt: null,
-          },
-          orderBy: { createdAt: 'desc' },
-        });
-        
-        return {
-          id: membership.tribe.id,
-          name: membership.tribe.name,
-          ownerId: membership.tribe.ownerId,
-          isOwner: membership.tribe.ownerId === userId,
-          pendingProposalsCount: pendingCount,
-          memberCount: memberCount,
-          unreadMessageCount: recentMessages,
-          lastMessage: lastMessage ? {
-            text: lastMessage.message,
-            senderName: await getUserDisplayName(lastMessage.userId),
-            timestamp: lastMessage.createdAt.toISOString(),
-          } : null,
-          joinedAt: membership.acceptedAt,
-        };
+          
+          return {
+            id: membership.tribe.id,
+            name: membership.tribe.name,
+            ownerId: membership.tribe.ownerId,
+            isOwner: membership.tribe.ownerId === userId,
+            pendingProposalsCount: pendingCount,
+            memberCount: memberCount,
+            unreadMessageCount: recentMessages,
+            lastMessage: lastMessage,
+            joinedAt: membership.acceptedAt,
+          };
+        } catch (tribeError) {
+          console.error(`Error processing tribe ${membership.tribe.id}:`, tribeError);
+          // Return basic tribe info if processing fails
+          return {
+            id: membership.tribe.id,
+            name: membership.tribe.name,
+            ownerId: membership.tribe.ownerId,
+            isOwner: membership.tribe.ownerId === userId,
+            pendingProposalsCount: 0,
+            memberCount: 0,
+            unreadMessageCount: 0,
+            lastMessage: null,
+            joinedAt: membership.acceptedAt,
+          };
+        }
       })
     );
 
