@@ -11,7 +11,7 @@
  * Usage: node backend/scripts/seed-demo-tribes.js YOUR_USER_ID
  */
 
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // Synthetic user data

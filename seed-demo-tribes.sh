@@ -26,7 +26,15 @@ echo ""
 # Check if DATABASE_URL is set
 if [ -z "$DATABASE_URL" ]; then
   echo "❌ Error: DATABASE_URL environment variable not set"
-  echo "Please set DATABASE_URL to your PostgreSQL connection string"
+  echo ""
+  echo "Please set DATABASE_URL. If using Railway:"
+  echo "  1. Go to your Railway project"
+  echo "  2. Copy the DATABASE_URL from Postgres variables"
+  echo "  3. Run: export DATABASE_URL='your-connection-string'"
+  echo ""
+  echo "Or run with inline environment:"
+  echo "  DATABASE_URL='postgres://...' ./seed-demo-tribes.sh YOUR_USER_ID"
+  echo ""
   exit 1
 fi
 
@@ -35,9 +43,17 @@ echo ""
 
 # Verify user exists
 echo "🔍 Verifying user exists..."
-USER_CHECK=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM users WHERE id = '$USER_ID';")
+USER_CHECK=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM users WHERE id = '$USER_ID';" 2>&1)
 
-if [ "$USER_CHECK" -eq "0" ]; then
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Could not connect to database"
+  echo "$USER_CHECK"
+  exit 1
+fi
+
+USER_COUNT=$(echo "$USER_CHECK" | tr -d ' ')
+
+if [ "$USER_COUNT" = "0" ]; then
   echo "❌ Error: User not found with ID: $USER_ID"
   echo ""
   echo "Available users:"
@@ -48,11 +64,16 @@ fi
 echo "✅ User found"
 echo ""
 
-# Run seed script
+# Generate Prisma client if needed
+echo "🔧 Ensuring Prisma client is generated..."
+cd "$(dirname "$0")/backend" && npx prisma generate > /dev/null 2>&1
+cd "$(dirname "$0")"
+
+# Run seed script with DATABASE_URL
 echo "🌱 Creating demo tribes..."
 echo ""
 
-cd "$(dirname "$0")" && node backend/scripts/seed-demo-tribes.js "$USER_ID"
+DATABASE_URL="$DATABASE_URL" node backend/scripts/seed-demo-tribes.js "$USER_ID"
 
 EXIT_CODE=$?
 
