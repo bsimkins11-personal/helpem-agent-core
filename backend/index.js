@@ -496,7 +496,9 @@ app.use("/tribes", apiLimiter, tribeRoutes);
 // DEBUG ROUTES (temporary)
 // =============================================================================
 
+import debugUserStateHandler from './routes/debug-user-state.js';
 app.get("/debug/tribes", debugTribesHandler);
+app.get("/debug/user-state", debugUserStateHandler);
 
 // Start server with migrations
 (async () => {
