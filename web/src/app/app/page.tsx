@@ -719,7 +719,7 @@ export default function AppPage() {
                           {/* Activity Summary */}
                           <div className="space-y-1.5">
                             {/* Messages */}
-                            {tribe.unreadMessageCount > 0 && (
+                            {(tribe.unreadMessageCount ?? 0) > 0 && (
                               <div className="flex items-center gap-2 text-xs">
                                 <span className="flex items-center gap-1 text-purple-600 font-medium">
                                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -731,7 +731,7 @@ export default function AppPage() {
                             )}
                             
                             {/* Inbox (Proposals) */}
-                            {tribe.pendingProposalsCount > 0 && (
+                            {(tribe.pendingProposalsCount ?? 0) > 0 && (
                               <div className="flex items-center gap-2 text-xs">
                                 <span className="flex items-center gap-1 text-amber-600 font-medium">
                                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -759,7 +759,7 @@ export default function AppPage() {
                         {/* Quick Actions */}
                         {hasActivity && (
                           <div className="px-3 pb-2 flex gap-2 border-t border-purple-200 pt-2">
-                            {tribe.unreadMessageCount > 0 && (
+                            {(tribe.unreadMessageCount ?? 0) > 0 && (
                               <button
                                 onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
                                 className="flex-1 px-2 py-1 rounded text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
@@ -767,7 +767,7 @@ export default function AppPage() {
                                 View messages
                               </button>
                             )}
-                            {tribe.pendingProposalsCount > 0 && (
+                            {(tribe.pendingProposalsCount ?? 0) > 0 && (
                               <button
                                 onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
                                 className="flex-1 px-2 py-1 rounded text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors"
