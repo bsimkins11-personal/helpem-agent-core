@@ -126,7 +126,7 @@ class TribeAPIClient {
     /// Request to add a member (for non-owners)
     func requestToAddMember(tribeId: String, userId: String) async throws -> TribeMemberRequest {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/members")!
-        let request = InviteMemberRequest(inviteeUserId: userId)
+        let request = InviteMemberRequest(inviteeUserId: userId, permissions: nil)
         let data = try await authenticatedRequest(url: url, method: "POST", body: request)
         let response = try decoder.decode([String: TribeMemberRequest].self, from: data)
         
