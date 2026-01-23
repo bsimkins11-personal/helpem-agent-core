@@ -1335,6 +1335,196 @@ router.get("/:tribeId/shared", async (req, res) => {
 });
 
 // =============================================================================
+// TRIBE ACTIVITY (Ambient Signal Layer)
+// =============================================================================
+
+/**
+ * GET /tribes/:tribeId/activities
+ * Get activity feed for a tribe (excludes user's hidden entries)
+ * 
+ * Activity is a read-only bulletin board - ambient awareness without obligation.
+ * It is NOT chat, NOT a task manager, and NOT a command queue.
+ */
+router.get("/:tribeId/activities", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId } = req.params;
+    const { limit = 50, before } = req.query;
+
+    // Verify membership
+    const member = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    // Get user's hidden activity IDs
+    const hiddenActivities = await prisma.tribeActivityHiddenBy.findMany({
+      where: { userId },
+      select: { activityId: true },
+    });
+    const hiddenIds = hiddenActivities.map(h => h.activityId);
+
+    // Build query
+    const where = {
+      tribeId,
+      id: hiddenIds.length > 0 ? { notIn: hiddenIds } : undefined,
+    };
+
+    if (before) {
+      where.createdAt = { lt: new Date(before) };
+    }
+
+    // Get activities (excluding hidden ones)
+    const activities = await prisma.tribeActivity.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: parseInt(limit),
+      include: {
+        hiddenBy: {
+          where: { userId },
+          select: { id: true },
+        },
+      },
+    });
+
+    return res.json({ activities });
+  } catch (err) {
+    console.error("ERROR GET /tribes/:tribeId/activities:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /tribes/:tribeId/activities/:activityId/hide
+ * Hide an activity entry for the current user
+ * 
+ * This is a per-user action - other users are not affected.
+ * Tribe and admins are never notified.
+ */
+router.post("/:tribeId/activities/:activityId/hide", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId, activityId } = req.params;
+
+    // Verify membership
+    const member = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    // Verify activity belongs to tribe
+    const activity = await prisma.tribeActivity.findFirst({
+      where: {
+        id: activityId,
+        tribeId,
+      },
+    });
+
+    if (!activity) {
+      return res.status(404).json({ error: "Activity not found" });
+    }
+
+    // Hide activity for this user (upsert to handle duplicates)
+    // Note: Prisma doesn't support composite unique constraints in upsert where clause
+    // So we check first, then create or update
+    const existing = await prisma.tribeActivityHiddenBy.findFirst({
+      where: {
+        activityId,
+        userId,
+      },
+    });
+
+    if (existing) {
+      await prisma.tribeActivityHiddenBy.update({
+        where: { id: existing.id },
+        data: { hiddenAt: new Date() },
+      });
+    } else {
+      await prisma.tribeActivityHiddenBy.create({
+        data: {
+          activityId,
+          userId,
+        },
+      });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("ERROR POST /tribes/:tribeId/activities/:activityId/hide:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * DELETE /tribes/:tribeId/activities/:activityId/hide
+ * Unhide an activity entry (undo hide action)
+ */
+router.delete("/:tribeId/activities/:activityId/hide", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId, activityId } = req.params;
+
+    // Verify membership
+    const member = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    // Remove hide entry
+    await prisma.tribeActivityHiddenBy.deleteMany({
+      where: {
+        activityId,
+        userId,
+      },
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("ERROR DELETE /tribes/:tribeId/activities/:activityId/hide:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// =============================================================================
 // TRIBE MESSAGING
 // =============================================================================
 

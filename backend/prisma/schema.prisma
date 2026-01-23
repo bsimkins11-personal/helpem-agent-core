@@ -282,9 +282,25 @@ model TribeActivity {
   createdAt   DateTime          @default(now()) @map("created_at")
   
   tribe       Tribe             @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  hiddenBy    TribeActivityHiddenBy[] // Per-user hidden state
   
   @@index([tribeId, createdAt])
   @@map("tribe_activities")
+}
+
+/// Per-user hidden state for activity entries
+/// Allows users to hide activities without affecting others
+model TribeActivityHiddenBy {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activityId  String         @db.Uuid @map("activity_id")
+  userId      String         @db.Uuid @map("user_id")
+  hiddenAt    DateTime       @default(now()) @map("hidden_at")
+  
+  activity    TribeActivity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  
+  @@unique([activityId, userId], name: "activityId_userId")
+  @@index([userId, hiddenAt])
+  @@map("tribe_activity_hidden_by")
 }
 
 /// Tribe messages - chat messages between tribe members
