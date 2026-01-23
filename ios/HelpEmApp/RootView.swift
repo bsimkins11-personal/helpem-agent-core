@@ -43,20 +43,12 @@ struct RootView: View {
     }
     
     private func openConnectorsModal() {
-        // Show coming soon alert
-        print("📱 iOS: openConnectorsModal called - showing coming soon alert")
-        
-        let alert = UIAlertController(
-            title: "Connectors",
-            message: "Connectors coming soon to help you manage your personal tech portfolio.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootViewController = windowScene.windows.first?.rootViewController {
-            rootViewController.present(alert, animated: true)
+        // Navigate to connections page
+        print("📱 iOS: openConnectorsModal called - navigating to connections page")
+        if webViewHandler == nil {
+            print("⚠️ iOS: webViewHandler is nil!")
         }
+        webViewHandler?.navigateConnections()
     }
     
     private func openClearDataModal() {
@@ -246,6 +238,21 @@ struct RootView: View {
                 return
             }
             print("📊 iOS: Loading analytics URL \(url.absoluteString)")
+            let request = URLRequest(url: url)
+            webView?.load(request)
+        }
+        
+        func navigateConnections() {
+            guard var components = URLComponents(string: AppEnvironment.webAppURL) else {
+                print("❌ iOS: Invalid connections URL")
+                return
+            }
+            components.path = "/connections"
+            guard let url = components.url else {
+                print("❌ iOS: Invalid connections URL components")
+                return
+            }
+            print("🔌 iOS: Loading connections URL \(url.absoluteString)")
             let request = URLRequest(url: url)
             webView?.load(request)
         }
