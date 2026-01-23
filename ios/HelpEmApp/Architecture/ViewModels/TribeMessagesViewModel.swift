@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 /// ViewModel for TribeMessagesView
 /// Handles messaging functionality

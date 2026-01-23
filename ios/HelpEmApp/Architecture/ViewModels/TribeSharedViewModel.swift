@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 /// ViewModel for TribeSharedView
 /// Displays shared (accepted) tribe items

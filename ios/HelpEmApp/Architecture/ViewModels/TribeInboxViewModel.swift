@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 /// ViewModel for TribeInboxView
 /// Handles proposal display and actions (accept, not now, dismiss)

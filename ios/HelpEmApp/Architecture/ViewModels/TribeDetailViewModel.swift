@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 /// ViewModel for TribeDetailView
 /// Hub for tribe data and coordination between sub-views
