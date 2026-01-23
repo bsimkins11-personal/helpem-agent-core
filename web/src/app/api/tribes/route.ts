@@ -9,12 +9,18 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await verifySessionToken(req);
-    if (!session.success) {
-      return NextResponse.json({ error: session.error }, { status: session.status });
+    const token = req.headers.get("authorization") || "";
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const token = req.headers.get("authorization") || "";
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      if (session.status !== 500) {
+        return NextResponse.json({ error: session.error }, { status: session.status });
+      }
+      console.warn("JWT secrets missing in web env; proxying anyway");
+    }
     
     const response = await fetch(`${BACKEND_URL}/tribes`, {
       method: "GET",
@@ -24,7 +30,8 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const data = await response.json();
+    const raw = await response.text();
+    const data = raw ? safeParseJson(raw) : {};
     
     if (!response.ok) {
       return NextResponse.json(data, { status: response.status });
@@ -46,12 +53,19 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await verifySessionToken(req);
-    if (!session.success) {
-      return NextResponse.json({ error: session.error }, { status: session.status });
+    const token = req.headers.get("authorization") || "";
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const token = req.headers.get("authorization") || "";
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      if (session.status !== 500) {
+        return NextResponse.json({ error: session.error }, { status: session.status });
+      }
+      console.warn("JWT secrets missing in web env; proxying anyway");
+    }
+
     const body = await req.json();
     
     const response = await fetch(`${BACKEND_URL}/tribes`, {
@@ -63,7 +77,8 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const raw = await response.text();
+    const data = raw ? safeParseJson(raw) : {};
     
     if (!response.ok) {
       return NextResponse.json(data, { status: response.status });
@@ -76,5 +91,13 @@ export async function POST(req: NextRequest) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+function safeParseJson(raw: string) {
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    return { error: raw || "Upstream error" };
   }
 }
