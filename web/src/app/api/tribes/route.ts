@@ -11,12 +11,16 @@ export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get("authorization") || "";
     if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error": "Unauthorized" }, { status: 401 });
     }
 
+    console.log("🔐 Verifying session token...");
     const session = await verifySessionToken(req);
+    console.log("🔐 Session verification result:", session.success ? "✅ SUCCESS" : `❌ FAIL: ${session.error}`);
+    
     if (!session.success) {
       if (session.status !== 500) {
+        console.error("❌ Token verification failed:", session.error);
         return NextResponse.json({ error: session.error }, { status: session.status });
       }
       console.warn("JWT secrets missing in web env; proxying anyway");
