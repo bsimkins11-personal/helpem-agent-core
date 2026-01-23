@@ -8,6 +8,9 @@ import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js
 import { prisma } from "./src/lib/prisma.js";
 import { migrateFeedbackTable } from "./src/migrate-feedback.js";
 import tribeRoutes from "./src/routes/tribe.js";
+import debugTribesHandler from './routes/debug-tribes.js';
+import demoTribesRoutes from './routes/demo-tribes.js';
+import demoTribesCleanupRoutes from './routes/demo-tribes-cleanup.js';
 
 // Run migrations on startup
 async function runMigrations() {
@@ -481,26 +484,19 @@ app.get("/migrate-feedback", async (req, res) => {
 });
 
 // =============================================================================
-// DEBUG ROUTES (temporary)
-// =============================================================================
-
-import debugTribesHandler from './routes/debug-tribes.js';
-app.get("/debug/tribes", debugTribesHandler);
-
-// =============================================================================
-// DEMO TRIBES (V1 Preview)
-// =============================================================================
-
-import demoTribesRoutes from './routes/demo-tribes.js';
-import demoTribesCleanupRoutes from './routes/demo-tribes-cleanup.js';
-app.use("/tribes/demo", apiLimiter, demoTribesRoutes);
-app.use("/tribes/demo/cleanup", apiLimiter, demoTribesCleanupRoutes);
-
-// =============================================================================
 // TRIBE ROUTES
 // =============================================================================
 
+// Demo tribes must come BEFORE general tribes route for proper matching
+app.use("/tribes/demo/cleanup", apiLimiter, demoTribesCleanupRoutes);
+app.use("/tribes/demo", apiLimiter, demoTribesRoutes);
 app.use("/tribes", apiLimiter, tribeRoutes);
+
+// =============================================================================
+// DEBUG ROUTES (temporary)
+// =============================================================================
+
+app.get("/debug/tribes", debugTribesHandler);
 
 // Start server with migrations
 (async () => {
