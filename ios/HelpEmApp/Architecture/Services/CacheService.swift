@@ -94,9 +94,11 @@ actor CacheService {
         let expiredKeys = cache.filter { now > $0.value.expiresAt }.map { $0.key }
         expiredKeys.forEach { cache.removeValue(forKey: $0) }
         
-        if !expiredKeys.isEmpty {
+        // Log on main actor if there were expired keys
+        let count = expiredKeys.count
+        if count > 0 {
             Task { @MainActor in
-                AppLogger.info("Cache cleanup: removed \(expiredKeys.count) expired entries", logger: AppLogger.general)
+                AppLogger.info("Cache cleanup: removed \(count) expired entries", logger: AppLogger.general)
             }
         }
     }
