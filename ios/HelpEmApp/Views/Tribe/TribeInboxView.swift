@@ -331,9 +331,10 @@ struct ItemDetailsView: View {
         
         if let priority = item.data["priority"],
            case let priorityString as String = priority.value {
+            let capitalized = priorityString.prefix(1).uppercased() + priorityString.dropFirst()
             HStack {
                 Image(systemName: "flag")
-                Text(priorityString.capitalized)
+                Text(capitalized)
             }
         }
     }
