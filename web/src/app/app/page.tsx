@@ -8,6 +8,7 @@ import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
 import { useLife } from "@/state/LifeStore";
+import { useTribeStore } from "@/state/TribeStore";
 import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { usePersonalAnalyticsNotifications } from "@/hooks/usePersonalAnalyticsNotifications";
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
@@ -26,12 +27,18 @@ const STACK_GAP_PX = 0;
 
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
+  const { tribes, loadTribes } = useTribeStore();
   const { settings } = useNotificationSettings();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
 
   usePersonalAnalyticsNotifications(settings);
+  
+  // Load tribes on mount
+  useEffect(() => {
+    loadTribes();
+  }, [loadTribes]);
   
   console.log('🟦 ========================================');
   console.log('🟦 AppPage: RENDERING');
@@ -48,6 +55,7 @@ export default function AppPage() {
   // Expand/collapse states for each module
   const [expandedModules, setExpandedModules] = useState({
     today: true,
+    tribes: true,
     todos: true,
     routines: true,
     groceries: true,
@@ -62,6 +70,7 @@ export default function AppPage() {
     const newState = !allExpanded;
     setExpandedModules({
       today: newState,
+      tribes: newState,
       todos: newState,
       routines: newState,
       groceries: newState,
@@ -616,6 +625,59 @@ export default function AppPage() {
                   <p className="text-sm text-brandTextLight text-center py-3 md:py-4">
                     No appointments {calendarView === "day" ? (isViewingToday ? "today" : "on this day") : `this ${calendarView}`}
                   </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tribes Module */}
+          <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <button
+                onClick={() => toggleModule('tribes')}
+                className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base hover:opacity-70 transition-opacity"
+              >
+                <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 text-xs md:text-sm">👥</span>
+                My Tribes
+                <svg className={`w-4 h-4 transition-transform ${expandedModules.tribes ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">{tribes.length} tribes</span>
+            </div>
+            {expandedModules.tribes && (
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {tribes.length > 0 ? (
+                  tribes.map((tribe) => (
+                    <button
+                      key={tribe.id}
+                      onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
+                      className="w-full p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all text-left"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-brandText text-sm truncate">{tribe.name}</h3>
+                          <p className="text-xs text-brandTextLight mt-0.5">
+                            {tribe.memberCount || 0} members
+                            {tribe.unreadCount > 0 && ` • ${tribe.unreadCount} unread`}
+                          </p>
+                        </div>
+                        <svg className="w-5 h-5 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-brandTextLight mb-2">No tribes yet</p>
+                    <button
+                      onClick={() => window.location.href = '/tribe/settings'}
+                      className="text-xs text-brandBlue hover:text-brandBlue/80 font-medium"
+                    >
+                      Create or join a tribe →
+                    </button>
+                  </div>
                 )}
               </div>
             )}
