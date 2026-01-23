@@ -31,12 +31,16 @@ struct PendingOperation: Codable, Identifiable {
 }
 
 /// Manager for pending operations
-/// Persists operations to disk and retries on app launch
+/// Persists operations to secure storage and retries on app launch
 /// Thread-safe using serial queue for synchronization
+/// 
+/// SECURITY: Uses SecureStorage instead of UserDefaults
+/// to prevent exposure of idempotency keys and tribe/proposal IDs
 class PendingOperationManager: ObservableObject {
     static let shared = PendingOperationManager()
     
     private let queue = DispatchQueue(label: "com.helpem.pendingops", qos: .userInitiated)
+    private let secureStorage = SecureStorage.shared
     
     @Published private(set) var pendingOperations: [PendingOperation] = []
     private let storageKey = "pending_tribe_operations"
@@ -96,18 +100,40 @@ class PendingOperationManager: ObservableObject {
         }
     }
     
-    /// Persist to UserDefaults
+    /// Persist to secure storage (Keychain)
     private func persist() {
-        if let encoded = try? JSONEncoder().encode(pendingOperations) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
+        do {
+            try secureStorage.save(pendingOperations, forKey: storageKey)
+        } catch {
+            AppLogger.error("Failed to persist pending operations: \(error)", logger: AppLogger.general)
+            // Fallback to UserDefaults as last resort
+            if let encoded = try? JSONEncoder().encode(pendingOperations) {
+                UserDefaults.standard.set(encoded, forKey: "\(storageKey)_fallback")
+            }
         }
     }
     
-    /// Load from UserDefaults
+    /// Load from secure storage (with fallback to UserDefaults for migration)
     private func load() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let decoded = try? JSONDecoder().decode([PendingOperation].self, from: data) {
-            pendingOperations = decoded
+        do {
+            // Try secure storage first
+            if let operations = try secureStorage.load(forKey: storageKey, as: [PendingOperation].self) {
+                pendingOperations = operations
+                return
+            }
+            
+            // Fallback: check old UserDefaults location (for migration)
+            if let data = UserDefaults.standard.data(forKey: storageKey),
+               let decoded = try? JSONDecoder().decode([PendingOperation].self, from: data) {
+                pendingOperations = decoded
+                // Migrate to secure storage
+                try? secureStorage.save(decoded, forKey: storageKey)
+                // Remove from UserDefaults
+                UserDefaults.standard.removeObject(forKey: storageKey)
+                AppLogger.info("Migrated pending operations to secure storage", logger: AppLogger.general)
+            }
+        } catch {
+            AppLogger.error("Failed to load pending operations: \(error)", logger: AppLogger.general)
         }
     }
     

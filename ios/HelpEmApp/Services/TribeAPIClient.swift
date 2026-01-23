@@ -344,6 +344,7 @@ class TribeAPIClient {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30 // PERFORMANCE: 30 second timeout
         
         // Get session token from Keychain
         guard let token = KeychainHelper.shared.sessionToken else {

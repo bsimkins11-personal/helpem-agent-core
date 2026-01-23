@@ -23,12 +23,16 @@ struct SuppressedOrigin: Codable, Identifiable, Equatable {
 }
 
 /// Manager for suppressed origins
-/// Persists to disk and checks on sync to prevent deleted items from reappearing
+/// Persists to secure storage and checks on sync to prevent deleted items from reappearing
 /// Thread-safe using serial queue for synchronization
+/// 
+/// SECURITY: Uses SecureStorage instead of UserDefaults
+/// to prevent exposure of user IDs and tribe item IDs
 class SuppressionManager: ObservableObject {
     static let shared = SuppressionManager()
     
     private let queue = DispatchQueue(label: "com.helpem.suppression", qos: .userInitiated)
+    private let secureStorage = SecureStorage.shared
     
     @Published private(set) var suppressedOrigins: [SuppressedOrigin] = []
     private let storageKey = "suppressed_tribe_origins"
@@ -79,18 +83,40 @@ class SuppressionManager: ObservableObject {
         }
     }
     
-    /// Persist to UserDefaults
+    /// Persist to secure storage (Keychain)
     private func persist() {
-        if let encoded = try? JSONEncoder().encode(suppressedOrigins) {
-            UserDefaults.standard.set(encoded, forKey: storageKey)
+        do {
+            try secureStorage.save(suppressedOrigins, forKey: storageKey)
+        } catch {
+            AppLogger.error("Failed to persist suppressed origins: \(error)", logger: AppLogger.general)
+            // Fallback to UserDefaults as last resort
+            if let encoded = try? JSONEncoder().encode(suppressedOrigins) {
+                UserDefaults.standard.set(encoded, forKey: "\(storageKey)_fallback")
+            }
         }
     }
     
-    /// Load from UserDefaults
+    /// Load from secure storage (with fallback to UserDefaults for migration)
     private func load() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let decoded = try? JSONDecoder().decode([SuppressedOrigin].self, from: data) {
-            suppressedOrigins = decoded
+        do {
+            // Try secure storage first
+            if let origins = try secureStorage.load(forKey: storageKey, as: [SuppressedOrigin].self) {
+                suppressedOrigins = origins
+                return
+            }
+            
+            // Fallback: check old UserDefaults location (for migration)
+            if let data = UserDefaults.standard.data(forKey: storageKey),
+               let decoded = try? JSONDecoder().decode([SuppressedOrigin].self, from: data) {
+                suppressedOrigins = decoded
+                // Migrate to secure storage
+                try? secureStorage.save(decoded, forKey: storageKey)
+                // Remove from UserDefaults
+                UserDefaults.standard.removeObject(forKey: storageKey)
+                AppLogger.info("Migrated suppressed origins to secure storage", logger: AppLogger.general)
+            }
+        } catch {
+            AppLogger.error("Failed to load suppressed origins: \(error)", logger: AppLogger.general)
         }
     }
 }

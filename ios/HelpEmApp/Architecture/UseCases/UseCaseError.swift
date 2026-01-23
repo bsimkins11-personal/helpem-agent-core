@@ -12,17 +12,23 @@ enum UseCaseError: LocalizedError {
     case invalidState(String)
     
     var errorDescription: String? {
+        // SECURITY: Use ErrorSanitizer for all user-facing messages
+        ErrorSanitizer.userFacingMessage(for: self)
+    }
+    
+    /// Internal debug description (for logging only, not shown to users)
+    var debugDescription: String {
         switch self {
         case .proposalNotFound(let id):
             return "Proposal \(id) not found"
         case .itemSuppressed:
-            return "This item was previously deleted and cannot be re-added"
+            return "Item suppressed: previously deleted by user"
         case .noRecipients:
             return "At least one recipient is required"
         case .invalidItemType(let type):
             return "Invalid item type: \(type)"
         case .permissionDenied:
-            return "You don't have permission to perform this action"
+            return "Permission denied"
         case .tribeNotFound(let id):
             return "Tribe \(id) not found"
         case .memberNotFound(let id):

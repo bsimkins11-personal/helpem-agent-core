@@ -77,14 +77,30 @@ class AcceptProposalUseCase {
         }
     }
     
-    /// Retry pending operations
+    /// Retry pending operations with exponential backoff
     /// Called on app startup or network reconnect
     func retryPendingOperations() async {
+        // Check network connectivity first
+        guard NetworkMonitor.shared.isConnected else {
+            AppLogger.info("Skipping retry: no network connection", logger: AppLogger.general)
+            return
+        }
+        
         let operations = pendingOperationManager.getOperationsToRetry()
             .filter { $0.type == .acceptProposal }
         
         for operation in operations {
             guard let proposalId = operation.proposalId else { continue }
+            
+            // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+            let backoffDelay = pow(2.0, Double(operation.retryCount))
+            let delayNanoseconds = UInt64(backoffDelay * 1_000_000_000)
+            
+            // Wait before retry (skip delay on first attempt)
+            if operation.retryCount > 0 {
+                AppLogger.info("Waiting \(backoffDelay)s before retry attempt \(operation.retryCount + 1)", logger: AppLogger.general)
+                try? await Task.sleep(nanoseconds: delayNanoseconds)
+            }
             
             do {
                 _ = try await repository.acceptProposal(
@@ -93,10 +109,10 @@ class AcceptProposalUseCase {
                     idempotencyKey: operation.idempotencyKey
                 )
                 pendingOperationManager.remove(id: operation.id)
-                AppLogger.info("Retried proposal accept: \(proposalId)", logger: AppLogger.general)
+                AppLogger.info("Successfully retried proposal accept: \(proposalId)", logger: AppLogger.general)
             } catch {
                 pendingOperationManager.incrementRetry(id: operation.id)
-                AppLogger.error("Retry failed for proposal \(proposalId): \(error.localizedDescription)", logger: AppLogger.general)
+                AppLogger.error("Retry attempt \(operation.retryCount + 1) failed for proposal \(proposalId): \(error.localizedDescription)", logger: AppLogger.general)
             }
         }
     }
