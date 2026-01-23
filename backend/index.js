@@ -27,7 +27,9 @@ async function runMigrations() {
 const app = express();
 
 // Trust proxy for Railway/Heroku/etc (required for rate limiting behind proxy)
-app.set('trust proxy', true);
+// In production, trust only first hop; in development, use loopback
+const trustProxyValue = process.env.NODE_ENV === "production" ? 1 : "loopback";
+app.set('trust proxy', trustProxyValue);
 
 const port = process.env.PORT || 8080;
 const MAX_BIAS_ENTRIES = 200;
