@@ -48,16 +48,59 @@ router.get("/", async (req, res) => {
     // Filter out any null tribes (in case of soft-deleted tribes)
     const validTribes = tribes.filter(membership => membership.tribe !== null);
 
-    // Add pending proposal counts
+    // Add pending proposal counts, message counts, and member counts
     const tribesWithCounts = await Promise.all(
       validTribes.map(async (membership) => {
         const pendingCount = await getPendingProposalsCount(membership.id);
+        
+        // Get member count
+        const memberCount = await prisma.tribeMember.count({
+          where: {
+            tribeId: membership.tribe.id,
+            acceptedAt: { not: null },
+            leftAt: null,
+          }
+        });
+        
+        // Get unread message count (messages since user last viewed)
+        // For now, just count all recent messages (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const recentMessages = await prisma.tribeMessage.count({
+          where: {
+            tribeId: membership.tribe.id,
+            createdAt: { gte: sevenDaysAgo },
+            userId: { not: userId }, // Don't count user's own messages
+            deletedAt: null,
+          }
+        });
+        
+        // Get last message
+        const lastMessage = await prisma.tribeMessage.findFirst({
+          where: {
+            tribeId: membership.tribe.id,
+            deletedAt: null,
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: true,
+          }
+        });
+        
         return {
           id: membership.tribe.id,
           name: membership.tribe.name,
           ownerId: membership.tribe.ownerId,
           isOwner: membership.tribe.ownerId === userId,
-          pendingProposals: pendingCount,
+          pendingProposalsCount: pendingCount,
+          memberCount: memberCount,
+          unreadMessageCount: recentMessages,
+          lastMessage: lastMessage ? {
+            text: lastMessage.message,
+            senderName: await getUserDisplayName(lastMessage.userId),
+            timestamp: lastMessage.createdAt.toISOString(),
+          } : null,
           joinedAt: membership.acceptedAt,
         };
       })
