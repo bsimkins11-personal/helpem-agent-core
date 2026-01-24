@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get("authorization") || "";
     if (!token) {
-      return NextResponse.json({ error": "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     console.log("🔐 Verifying session token...");
