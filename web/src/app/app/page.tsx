@@ -337,6 +337,7 @@ export default function AppPage() {
   const allExpanded = Object.values(expandedModules).every(v => v);
 
   const chatRef = useRef<HTMLDivElement>(null);
+  const tribesRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isHoldingToTalkRef = useRef(false);
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
@@ -344,6 +345,25 @@ export default function AppPage() {
   const [welcomeHeight, setWelcomeHeight] = useState(0);
   const welcomeRef = useRef<HTMLDivElement>(null);
   const [isNativeApp, setIsNativeApp] = useState(false);
+  
+  // Scroll to tribes section
+  const scrollToTribes = () => {
+    if (tribesRef.current && scrollContainerRef.current) {
+      // Expand tribes module if collapsed
+      if (!expandedModules.tribes) {
+        setExpandedModules(prev => ({ ...prev, tribes: true }));
+      }
+      // Scroll to tribes section
+      const container = scrollContainerRef.current;
+      const containerTop = container.getBoundingClientRect().top;
+      const elementTop = tribesRef.current.getBoundingClientRect().top;
+      const offsetPosition = elementTop - containerTop + container.scrollTop - 10;
+      container.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
+  };
 
   useEffect(() => {
     const checkNative = () => {
@@ -555,9 +575,7 @@ export default function AppPage() {
                 </button>
                 
                 <button
-                  onClick={() => {
-                    window.location.href = '/tribe/inbox';
-                  }}
+                  onClick={scrollToTribes}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
                 >
                   <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -748,8 +766,8 @@ export default function AppPage() {
             )}
           </div>
 
-          {/* Tribes Module - Messages & Inbox */}
-          <div className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
+          {/* Tribes Module */}
+          <div ref={tribesRef} className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <button
                 onClick={() => toggleModule('tribes')}
