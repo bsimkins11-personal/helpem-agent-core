@@ -1,47 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySessionToken } from "@/lib/sessionAuth";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
+const BACKEND_URL = process.env.BACKEND_URL || "https://api-production-2989.up.railway.app";
 
 /**
  * GET /api/tribes
  * Proxy to backend GET /tribes
+ * Note: Backend handles auth verification, we just proxy the request
  */
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get("authorization") || "";
+    
+    // Log for debugging (will show in Vercel function logs)
+    console.log("[tribes] GET request, token present:", !!token);
+    console.log("[tribes] BACKEND_URL:", BACKEND_URL);
+    
     if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Verify session token
-    let session;
-    try {
-      session = await verifySessionToken(req);
-    } catch (verifyError) {
-      console.error("Session verification threw error:", verifyError);
-      // Continue anyway - let backend handle it
-      session = { success: true };
+      return NextResponse.json({ error: "Unauthorized - no token" }, { status: 401 });
     }
     
-    if (!session.success) {
-      if (session.status !== 500) {
-        // Provide user-friendly error message for expired tokens
-        const userMessage = session.error === "Session expired" 
-          ? "Your session has expired. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
-          : session.error === "Invalid session token"
-          ? "Your session is invalid. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
-          : session.error;
-        
-        return NextResponse.json({ 
-          error: userMessage,
-          requiresReauth: true 
-        }, { status: session.status });
-      }
-      console.warn("JWT secrets missing in web env; proxying anyway");
-    }
+    // Directly proxy to backend - let backend handle auth
+    const backendUrl = `${BACKEND_URL}/tribes`;
+    console.log("[tribes] Fetching from:", backendUrl);
     
-    const response = await fetch(`${BACKEND_URL}/tribes`, {
+    const response = await fetch(backendUrl, {
       method: "GET",
       headers: {
         "Authorization": token,
@@ -49,27 +31,28 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    console.log("[tribes] Backend response status:", response.status);
+    
     const raw = await response.text();
     const data = raw ? safeParseJson(raw) : {};
     
     if (!response.ok) {
+      console.log("[tribes] Backend error:", response.status, raw.substring(0, 200));
       return NextResponse.json(buildUpstreamError(response.status, data, raw), {
         status: response.status,
       });
     }
 
+    console.log("[tribes] Success, tribes count:", data.tribes?.length || 0);
     return NextResponse.json(data);
   } catch (error: any) {
-    console.error("Error fetching tribes:", error);
-    console.error("Error details:", {
-      message: error?.message,
-      stack: error?.stack,
-      name: error?.name
-    });
+    console.error("[tribes] Error:", error?.message);
+    console.error("[tribes] Error stack:", error?.stack);
     return NextResponse.json(
       { 
         error: "Internal server error",
-        details: error?.message 
+        details: error?.message,
+        backendUrl: BACKEND_URL
       },
       { status: 500 }
     );
@@ -84,25 +67,7 @@ export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get("authorization") || "";
     if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const session = await verifySessionToken(req);
-    if (!session.success) {
-      if (session.status !== 500) {
-        // Provide user-friendly error message for expired tokens
-        const userMessage = session.error === "Session expired" 
-          ? "Your session has expired. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
-          : session.error === "Invalid session token"
-          ? "Your session is invalid. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
-          : session.error;
-        
-        return NextResponse.json({ 
-          error: userMessage,
-          requiresReauth: true 
-        }, { status: session.status });
-      }
-      console.warn("JWT secrets missing in web env; proxying anyway");
+      return NextResponse.json({ error: "Unauthorized - no token" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -126,10 +91,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error creating tribe:", error);
+  } catch (error: any) {
+    console.error("[tribes POST] Error:", error?.message);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error?.message },
       { status: 500 }
     );
   }
