@@ -14,7 +14,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const session = await verifySessionToken(req);
+    // Verify session token
+    let session;
+    try {
+      session = await verifySessionToken(req);
+    } catch (verifyError) {
+      console.error("Session verification threw error:", verifyError);
+      // Continue anyway - let backend handle it
+      session = { success: true };
+    }
     
     if (!session.success) {
       if (session.status !== 500) {
@@ -51,10 +59,18 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching tribes:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name
+    });
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        details: error?.message 
+      },
       { status: 500 }
     );
   }

@@ -45,76 +45,118 @@ export default function AppPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
   const [tribes, setTribes] = useState<Tribe[]>([]);
+  const [tribesLoading, setTribesLoading] = useState(true);
+  const [tribesError, setTribesError] = useState<string | null>(null);
 
   usePersonalAnalyticsNotifications(settings);
   
-  // Load tribes on mount
-  useEffect(() => {
-    const loadTribes = async () => {
-      try {
-        const token = getClientSessionToken();
-        console.log("🔐 Tribes: Token exists?", !!token);
+  // Reusable function to load tribes - can be called manually for refresh
+  const loadTribesData = useCallback(async (isRetry = false) => {
+    setTribesLoading(true);
+    setTribesError(null);
+    
+    try {
+      // Wait for token to be available (iOS injects it async)
+      // This mirrors the pattern used in LifeStore for data loading
+      let token: string | null = null;
+      const maxAttempts = isRetry ? 15 : 10; // More attempts on manual retry
+      
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Wait before checking (longer delay for first attempt to let page settle)
+        await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 100 : 150));
         
-        if (!token) {
-          console.log("❌ No session token - skipping tribe load");
-          return;
-        }
+        token = getClientSessionToken();
         
-        // Use Next.js API proxy route (same as tribes pages)
-        const url = "/api/tribes";
-        console.log("🌐 Fetching tribes from:", url);
-        
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` }
+        console.log(`🔐 Tribes: Token check attempt ${attempt + 1}/${maxAttempts}:`, {
+          hasToken: !!token,
+          tokenLength: token?.length || 0,
+          hasNativeToken: typeof window !== 'undefined' && !!(window as any).__nativeSessionToken,
+          hasCookie: typeof document !== 'undefined' && document.cookie.includes('session_token'),
         });
         
-        console.log("📡 Tribes API response status:", res.status);
+        if (token) {
+          console.log("✅ Token found on attempt", attempt + 1);
+          break;
+        }
+      }
+      
+      if (!token) {
+        console.log("❌ No session token after all attempts - skipping tribe load");
+        console.log("ℹ️ User may not be authenticated or token injection failed");
+        setTribesLoading(false);
+        setTribesError("Not signed in. Please sign in to see your tribes.");
+        return;
+      }
+      
+      // Use Next.js API proxy route (same as tribes pages)
+      const url = "/api/tribes";
+      console.log("🌐 Fetching tribes from:", url);
+      
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log("📡 Tribes API response status:", res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log("✅ Tribes data received:", data);
+        console.log("📊 Number of tribes:", data.tribes?.length || 0);
         
-        if (res.ok) {
-          const data = await res.json();
-          console.log("✅ Tribes data received:", data);
-          console.log("📊 Number of tribes:", data.tribes?.length || 0);
-          
-          // Auto-seed demo tribes if user has none
-          if (!data.tribes || data.tribes.length === 0) {
-            console.log("🎬 No tribes found, seeding demo tribes...");
-            try {
-              const seedRes = await fetch("/api/tribes/demo/seed", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+        // Auto-seed demo tribes if user has none
+        if (!data.tribes || data.tribes.length === 0) {
+          console.log("🎬 No tribes found, seeding demo tribes...");
+          try {
+            const seedRes = await fetch("/api/tribes/demo/seed", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            
+            if (seedRes.ok) {
+              const seedData = await seedRes.json();
+              console.log("✅ Demo tribes created:", seedData);
+              // Reload tribes after seeding
+              const reloadRes = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` }
               });
-              
-              if (seedRes.ok) {
-                const seedData = await seedRes.json();
-                console.log("✅ Demo tribes created:", seedData);
-                // Reload tribes after seeding
-                const reloadRes = await fetch(url, {
-                  headers: { Authorization: `Bearer ${token}` }
-                });
-                if (reloadRes.ok) {
-                  const reloadData = await reloadRes.json();
-                  setTribes(reloadData.tribes || []);
-                }
-              } else {
-                console.warn("Demo seed failed, showing empty state");
+              if (reloadRes.ok) {
+                const reloadData = await reloadRes.json();
+                setTribes(reloadData.tribes || []);
+                console.log("✅ Tribes state updated after seeding:", reloadData.tribes?.length || 0, "tribes");
               }
-            } catch (seedError) {
-              console.error("Failed to seed demo tribes:", seedError);
+            } else {
+              const seedError = await seedRes.text();
+              console.warn("Demo seed failed:", seedRes.status, seedError);
+              // Don't set error - just show empty state
             }
-          } else {
-            setTribes(data.tribes || []);
+          } catch (seedError) {
+            console.error("Failed to seed demo tribes:", seedError);
           }
         } else {
-          const errorText = await res.text();
-          console.error("❌ Tribes API error:", res.status, errorText);
+          setTribes(data.tribes || []);
+          console.log("✅ Tribes state updated:", data.tribes?.length || 0, "tribes");
         }
-      } catch (error) {
-        console.error("💥 Failed to load tribes:", error);
+      } else {
+        const errorText = await res.text();
+        console.error("❌ Tribes API error:", res.status, errorText);
+        if (res.status === 401) {
+          setTribesError("Session expired. Please sign out and sign back in.");
+        } else {
+          setTribesError("Failed to load tribes. Tap to retry.");
+        }
       }
-    };
-    
-    loadTribes();
+    } catch (error) {
+      console.error("💥 Failed to load tribes:", error);
+      setTribesError("Network error. Tap to retry.");
+    } finally {
+      setTribesLoading(false);
+    }
   }, []);
+  
+  // Load tribes on mount
+  useEffect(() => {
+    loadTribesData();
+  }, [loadTribesData]);
   
   console.log('🟦 ========================================');
   console.log('🟦 AppPage: RENDERING');
@@ -720,17 +762,60 @@ export default function AppPage() {
                 </svg>
               </button>
               <div className="flex items-center gap-2">
+                {/* Refresh button */}
+                <button
+                  onClick={() => loadTribesData(true)}
+                  disabled={tribesLoading}
+                  className={`p-1.5 rounded-full transition-colors ${tribesLoading ? 'opacity-50' : 'hover:bg-gray-100'}`}
+                  title="Refresh tribes"
+                >
+                  <svg className={`w-4 h-4 text-brandTextLight ${tribesLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
                 {tribes.reduce((sum, t) => sum + (t.unreadMessageCount || 0) + (t.pendingProposalsCount || 0), 0) > 0 && (
                   <span className="px-2 py-1 rounded-full bg-red-500 text-white text-xs font-medium">
                     {tribes.reduce((sum, t) => sum + (t.unreadMessageCount || 0) + (t.pendingProposalsCount || 0), 0)}
                   </span>
                 )}
-                <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">{tribes.length}</span>
+                <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">
+                  {tribesLoading ? '...' : tribes.length}
+                </span>
               </div>
             </div>
             {expandedModules.tribes && (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {tribes.length > 0 ? (
+                {/* Loading state */}
+                {tribesLoading && tribes.length === 0 ? (
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                      <svg className="w-6 h-6 text-purple-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-brandTextLight">Loading tribes...</p>
+                  </div>
+                ) : tribesError ? (
+                  /* Error state with retry */
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-brandText font-medium mb-1">Couldn&apos;t load tribes</p>
+                    <p className="text-xs text-brandTextLight mb-3">{tribesError}</p>
+                    <button
+                      onClick={() => loadTribesData(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Try again
+                    </button>
+                  </div>
+                ) : tribes.length > 0 ? (
                   tribes.map((tribe) => {
                     const hasActivity = (tribe.unreadMessageCount || 0) > 0 || (tribe.pendingProposalsCount || 0) > 0;
                     
@@ -835,15 +920,26 @@ export default function AppPage() {
                     </div>
                     <p className="text-sm text-brandText font-medium mb-1">No tribes yet</p>
                     <p className="text-xs text-brandTextLight mb-3">Create or join a tribe to collaborate with others</p>
-                    <button
-                      onClick={() => window.location.href = '/tribe/settings'}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 transition-colors"
-                    >
-                      Get started
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => loadTribesData(true)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-brandTextLight text-xs font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh
+                      </button>
+                      <button
+                        onClick={() => window.location.href = '/tribe/settings'}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 transition-colors"
+                      >
+                        Get started
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
