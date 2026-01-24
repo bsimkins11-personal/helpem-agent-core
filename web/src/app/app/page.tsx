@@ -817,10 +817,9 @@ export default function AppPage() {
                   </div>
                 ) : tribes.length > 0 ? (
                   tribes.map((tribe) => (
-                    <button
+                    <div
                       key={tribe.id}
-                      onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-left"
+                      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white"
                     >
                       {/* Tribe Icon */}
                       <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -844,12 +843,7 @@ export default function AppPage() {
                           )}
                         </p>
                       </div>
-                      
-                      {/* Arrow */}
-                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
+                    </div>
                   ))
                 ) : (
                   <div className="text-center py-6">
