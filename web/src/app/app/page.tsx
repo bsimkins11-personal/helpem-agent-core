@@ -7,11 +7,11 @@ import { AppointmentCard } from "@/components/AppointmentCard";
 import { GroceryList } from "@/components/GroceryList";
 import { AlphaFeedbackBanner } from "@/components/AlphaFeedbackBanner";
 import { UsageAlertBanner } from "@/components/UsageAlertBanner";
+import { TribesFullScreen } from "@/components/TribesFullScreen";
 import { useLife } from "@/state/LifeStore";
 import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { usePersonalAnalyticsNotifications } from "@/hooks/usePersonalAnalyticsNotifications";
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
-import { getClientSessionToken } from "@/lib/clientSession";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
 type PriorityFilter = "all" | "high" | "medium" | "low";
@@ -25,138 +25,15 @@ const PRIORITY_TABS = [
 ];
 const STACK_GAP_PX = 0;
 
-interface Tribe {
-  id: string;
-  name: string;
-  memberCount?: number;
-  unreadMessageCount?: number;
-  lastMessage?: {
-    text: string;
-    senderName?: string;
-    timestamp: string;
-  };
-  pendingProposalsCount?: number;
-}
-
 export default function AppPage() {
   const { todos, habits, appointments } = useLife();
   const { settings } = useNotificationSettings();
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
-  const [tribes, setTribes] = useState<Tribe[]>([]);
-  const [tribesLoading, setTribesLoading] = useState(true);
-  const [tribesError, setTribesError] = useState<string | null>(null);
+  const [isTribesOpen, setIsTribesOpen] = useState(false);
 
   usePersonalAnalyticsNotifications(settings);
-  
-  // Reusable function to load tribes - can be called manually for refresh
-  const loadTribesData = useCallback(async (isRetry = false) => {
-    setTribesLoading(true);
-    setTribesError(null);
-    
-    try {
-      // Wait for token to be available (iOS injects it async)
-      // This mirrors the pattern used in LifeStore for data loading
-      let token: string | null = null;
-      const maxAttempts = isRetry ? 15 : 10; // More attempts on manual retry
-      
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        // Wait before checking (longer delay for first attempt to let page settle)
-        await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 100 : 150));
-        
-        token = getClientSessionToken();
-        
-        console.log(`🔐 Tribes: Token check attempt ${attempt + 1}/${maxAttempts}:`, {
-          hasToken: !!token,
-          tokenLength: token?.length || 0,
-          hasNativeToken: typeof window !== 'undefined' && !!(window as any).__nativeSessionToken,
-          hasCookie: typeof document !== 'undefined' && document.cookie.includes('session_token'),
-        });
-        
-        if (token) {
-          console.log("✅ Token found on attempt", attempt + 1);
-          break;
-        }
-      }
-      
-      if (!token) {
-        console.log("❌ No session token after all attempts - skipping tribe load");
-        console.log("ℹ️ User may not be authenticated or token injection failed");
-        setTribesLoading(false);
-        setTribesError("Not signed in. Please sign in to see your tribes.");
-        return;
-      }
-      
-      // Use Next.js API proxy route (same as tribes pages)
-      const url = "/api/tribes";
-      console.log("🌐 Fetching tribes from:", url);
-      
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      console.log("📡 Tribes API response status:", res.status);
-      
-      if (res.ok) {
-        const data = await res.json();
-        console.log("✅ Tribes data received:", data);
-        console.log("📊 Number of tribes:", data.tribes?.length || 0);
-        
-        // Auto-seed demo tribes if user has none
-        if (!data.tribes || data.tribes.length === 0) {
-          console.log("🎬 No tribes found, seeding demo tribes...");
-          try {
-            const seedRes = await fetch("/api/tribes/demo/seed", {
-              method: "POST",
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            
-            if (seedRes.ok) {
-              const seedData = await seedRes.json();
-              console.log("✅ Demo tribes created:", seedData);
-              // Reload tribes after seeding
-              const reloadRes = await fetch(url, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              if (reloadRes.ok) {
-                const reloadData = await reloadRes.json();
-                setTribes(reloadData.tribes || []);
-                console.log("✅ Tribes state updated after seeding:", reloadData.tribes?.length || 0, "tribes");
-              }
-            } else {
-              const seedError = await seedRes.text();
-              console.warn("Demo seed failed:", seedRes.status, seedError);
-              // Don't set error - just show empty state
-            }
-          } catch (seedError) {
-            console.error("Failed to seed demo tribes:", seedError);
-          }
-        } else {
-          setTribes(data.tribes || []);
-          console.log("✅ Tribes state updated:", data.tribes?.length || 0, "tribes");
-        }
-      } else {
-        const errorText = await res.text();
-        console.error("❌ Tribes API error:", res.status, errorText);
-        if (res.status === 401) {
-          setTribesError("Session expired. Please sign out and sign back in.");
-        } else {
-          setTribesError("Failed to load tribes. Tap to retry.");
-        }
-      }
-    } catch (error) {
-      console.error("💥 Failed to load tribes:", error);
-      setTribesError("Network error. Tap to retry.");
-    } finally {
-      setTribesLoading(false);
-    }
-  }, []);
-  
-  // Load tribes on mount
-  useEffect(() => {
-    loadTribesData();
-  }, [loadTribesData]);
   
   console.log('🟦 ========================================');
   console.log('🟦 AppPage: RENDERING');
@@ -173,7 +50,6 @@ export default function AppPage() {
   // Expand/collapse states for each module
   const [expandedModules, setExpandedModules] = useState({
     today: true,
-    tribes: true,
     todos: true,
     routines: true,
     groceries: true,
@@ -188,7 +64,6 @@ export default function AppPage() {
     const newState = !allExpanded;
     setExpandedModules({
       today: newState,
-      tribes: newState,
       todos: newState,
       routines: newState,
       groceries: newState,
@@ -337,7 +212,6 @@ export default function AppPage() {
   const allExpanded = Object.values(expandedModules).every(v => v);
 
   const chatRef = useRef<HTMLDivElement>(null);
-  const tribesRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isHoldingToTalkRef = useRef(false);
   const [inputMode, setInputMode] = useState<"type" | "talk">("type");
@@ -345,25 +219,6 @@ export default function AppPage() {
   const [welcomeHeight, setWelcomeHeight] = useState(0);
   const welcomeRef = useRef<HTMLDivElement>(null);
   const [isNativeApp, setIsNativeApp] = useState(false);
-  
-  // Scroll to tribes section
-  const scrollToTribes = () => {
-    if (tribesRef.current && scrollContainerRef.current) {
-      // Expand tribes module if collapsed
-      if (!expandedModules.tribes) {
-        setExpandedModules(prev => ({ ...prev, tribes: true }));
-      }
-      // Scroll to tribes section
-      const container = scrollContainerRef.current;
-      const containerTop = container.getBoundingClientRect().top;
-      const elementTop = tribesRef.current.getBoundingClientRect().top;
-      const offsetPosition = elementTop - containerTop + container.scrollTop - 10;
-      container.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
-      });
-    }
-  };
 
   useEffect(() => {
     const checkNative = () => {
@@ -508,6 +363,9 @@ export default function AppPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      {/* Full-screen Tribes overlay */}
+      <TribesFullScreen isOpen={isTribesOpen} onClose={() => setIsTribesOpen(false)} />
+      
       {/* ========== FIXED CONTAINER - STARTS AT HEADER, BLOCKS ALL CONTENT ========== */}
       <div 
         ref={fixedStackRef}
@@ -575,8 +433,8 @@ export default function AppPage() {
                 </button>
                 
                 <button
-                  onClick={scrollToTribes}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all bg-white text-brandTextLight hover:bg-gray-100 border border-gray-200"
+                  onClick={() => setIsTribesOpen(true)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-all bg-purple-600 text-white hover:bg-purple-700 border border-purple-600"
                 >
                   <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -761,138 +619,6 @@ export default function AppPage() {
                   <p className="text-sm text-brandTextLight text-center py-3 md:py-4">
                     No appointments {calendarView === "day" ? (isViewingToday ? "today" : "on this day") : `this ${calendarView}`}
                   </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Tribes Module */}
-          <div ref={tribesRef} className="bg-white rounded-xl md:rounded-2xl p-4 md:p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <button
-                onClick={() => toggleModule('tribes')}
-                className="font-semibold flex items-center gap-2 text-brandText text-sm md:text-base hover:opacity-70 transition-opacity"
-              >
-                <span className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 text-xs md:text-sm">💬</span>
-                My Tribes
-                <svg className={`w-4 h-4 transition-transform ${expandedModules.tribes ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div className="flex items-center gap-2">
-                {/* Refresh button */}
-                <button
-                  onClick={() => loadTribesData(true)}
-                  disabled={tribesLoading}
-                  className={`p-1.5 rounded-full transition-colors ${tribesLoading ? 'opacity-50' : 'hover:bg-gray-100'}`}
-                  title="Refresh tribes"
-                >
-                  <svg className={`w-4 h-4 text-brandTextLight ${tribesLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-                {tribes.reduce((sum, t) => sum + (t.unreadMessageCount || 0) + (t.pendingProposalsCount || 0), 0) > 0 && (
-                  <span className="px-2 py-1 rounded-full bg-red-500 text-white text-xs font-medium">
-                    {tribes.reduce((sum, t) => sum + (t.unreadMessageCount || 0) + (t.pendingProposalsCount || 0), 0)}
-                  </span>
-                )}
-                <span className="text-xs text-brandTextLight bg-gray-100 px-2 py-1 rounded-full">
-                  {tribesLoading ? '...' : tribes.length}
-                </span>
-              </div>
-            </div>
-            {expandedModules.tribes && (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {/* Loading state */}
-                {tribesLoading && tribes.length === 0 ? (
-                  <div className="text-center py-6">
-                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3 animate-pulse">
-                      <svg className="w-6 h-6 text-purple-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </div>
-                    <p className="text-sm text-brandTextLight">Loading tribes...</p>
-                  </div>
-                ) : tribesError ? (
-                  /* Error state with retry */
-                  <div className="text-center py-6">
-                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                    </div>
-                    <p className="text-sm text-brandText font-medium mb-1">Couldn&apos;t load tribes</p>
-                    <p className="text-xs text-brandTextLight mb-3">{tribesError}</p>
-                    <button
-                      onClick={() => loadTribesData(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Try again
-                    </button>
-                  </div>
-                ) : tribes.length > 0 ? (
-                  tribes.map((tribe) => (
-                    <div
-                      key={tribe.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white"
-                    >
-                      {/* Tribe Icon */}
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                        <span className="text-lg">{tribe.name.match(/[\p{Emoji}]/u)?.[0] || '👥'}</span>
-                      </div>
-                      
-                      {/* Tribe Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-brandText text-sm truncate">
-                            {tribe.name.replace(/[\p{Emoji}]/gu, '').trim() || tribe.name}
-                          </h3>
-                          {((tribe.pendingProposalsCount || 0) > 0 || (tribe.unreadMessageCount || 0) > 0) && (
-                            <span className="flex-shrink-0 w-2 h-2 rounded-full bg-purple-500"></span>
-                          )}
-                        </div>
-                        <p className="text-xs text-brandTextLight">
-                          {tribe.memberCount || 0} member{(tribe.memberCount || 0) !== 1 ? 's' : ''}
-                          {(tribe.pendingProposalsCount || 0) > 0 && (
-                            <span className="text-amber-600 ml-2">• {tribe.pendingProposalsCount} pending</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6">
-                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                    </div>
-                    <p className="text-sm text-brandText font-medium mb-1">No tribes yet</p>
-                    <p className="text-xs text-brandTextLight mb-3">Create or join a tribe to collaborate with others</p>
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => loadTribesData(true)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-brandTextLight text-xs font-medium hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Refresh
-                      </button>
-                      <button
-                        onClick={() => window.location.href = '/tribe/settings'}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-medium hover:bg-purple-700 transition-colors"
-                      >
-                        Get started
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
                 )}
               </div>
             )}
