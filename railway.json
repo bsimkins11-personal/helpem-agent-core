@@ -2,17 +2,11 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "cd backend && npm install --omit=dev --no-audit --no-fund"
+    "rootDirectory": "backend"
   },
   "deploy": {
-    "startCommand": "cd backend && npm run start",
+    "startCommand": "npm run start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
-  },
-  "crons": [
-    {
-      "schedule": "0 3 * * *",
-      "command": "npm --prefix backend run rules:aggregate"
-    }
-  ]
+  }
 }
