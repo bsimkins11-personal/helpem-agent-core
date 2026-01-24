@@ -816,101 +816,41 @@ export default function AppPage() {
                     </button>
                   </div>
                 ) : tribes.length > 0 ? (
-                  tribes.map((tribe) => {
-                    const hasActivity = (tribe.unreadMessageCount || 0) > 0 || (tribe.pendingProposalsCount || 0) > 0;
-                    
-                    return (
-                      <div
-                        key={tribe.id}
-                        className={`rounded-lg border transition-all ${
-                          hasActivity 
-                            ? 'border-purple-300 bg-purple-50' 
-                            : 'border-gray-200 bg-white hover:bg-gray-50'
-                        }`}
-                      >
-                        <button
-                          onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
-                          className="w-full p-3 text-left"
-                        >
-                          {/* Tribe Header */}
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-brandText text-sm truncate flex items-center gap-2">
-                                {tribe.name}
-                                {hasActivity && (
-                                  <span className="flex-shrink-0 w-2 h-2 rounded-full bg-red-500"></span>
-                                )}
-                              </h3>
-                              <p className="text-xs text-brandTextLight">
-                                {tribe.memberCount || 0} members
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Activity Summary */}
-                          <div className="space-y-1.5">
-                            {/* Messages */}
-                            {(tribe.unreadMessageCount ?? 0) > 0 && (
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="flex items-center gap-1 text-purple-600 font-medium">
-                                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3.293 3.293 3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                                  </svg>
-                                  {tribe.unreadMessageCount ?? 0} new message{(tribe.unreadMessageCount ?? 0) > 1 ? 's' : ''}
-                                </span>
-                              </div>
-                            )}
-                            
-                            {/* Inbox (Proposals) */}
-                            {(tribe.pendingProposalsCount ?? 0) > 0 && (
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="flex items-center gap-1 text-amber-600 font-medium">
-                                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                  </svg>
-                                  {tribe.pendingProposalsCount ?? 0} pending proposal{(tribe.pendingProposalsCount ?? 0) > 1 ? 's' : ''}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Last Message Preview */}
-                            {!hasActivity && tribe.lastMessage && (
-                              <p className="text-xs text-brandTextLight truncate">
-                                <span className="font-medium">{tribe.lastMessage.senderName || 'Someone'}:</span> {tribe.lastMessage.text}
-                              </p>
-                            )}
-                            
-                            {/* No Activity */}
-                            {!hasActivity && !tribe.lastMessage && (
-                              <p className="text-xs text-brandTextLight italic">No recent activity</p>
-                            )}
-                          </div>
-                        </button>
-
-                        {/* Quick Actions */}
-                        {hasActivity && (
-                          <div className="px-3 pb-2 flex gap-2 border-t border-purple-200 pt-2">
-                            {(tribe.unreadMessageCount ?? 0) > 0 && (
-                              <button
-                                onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
-                                className="flex-1 px-2 py-1 rounded text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
-                              >
-                                View messages
-                              </button>
-                            )}
-                            {(tribe.pendingProposalsCount ?? 0) > 0 && (
-                              <button
-                                onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
-                                className="flex-1 px-2 py-1 rounded text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors"
-                              >
-                                Review proposals
-                              </button>
-                            )}
-                          </div>
-                        )}
+                  tribes.map((tribe) => (
+                    <button
+                      key={tribe.id}
+                      onClick={() => window.location.href = `/tribe/inbox?tribeId=${tribe.id}`}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-left"
+                    >
+                      {/* Tribe Icon */}
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-lg">{tribe.name.match(/[\p{Emoji}]/u)?.[0] || '👥'}</span>
                       </div>
-                    );
-                  })
+                      
+                      {/* Tribe Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-brandText text-sm truncate">
+                            {tribe.name.replace(/[\p{Emoji}]/gu, '').trim() || tribe.name}
+                          </h3>
+                          {((tribe.pendingProposalsCount || 0) > 0 || (tribe.unreadMessageCount || 0) > 0) && (
+                            <span className="flex-shrink-0 w-2 h-2 rounded-full bg-purple-500"></span>
+                          )}
+                        </div>
+                        <p className="text-xs text-brandTextLight">
+                          {tribe.memberCount || 0} member{(tribe.memberCount || 0) !== 1 ? 's' : ''}
+                          {(tribe.pendingProposalsCount || 0) > 0 && (
+                            <span className="text-amber-600 ml-2">• {tribe.pendingProposalsCount} pending</span>
+                          )}
+                        </p>
+                      </div>
+                      
+                      {/* Arrow */}
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  ))
                 ) : (
                   <div className="text-center py-6">
                     <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
