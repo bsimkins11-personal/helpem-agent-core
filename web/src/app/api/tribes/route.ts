@@ -14,14 +14,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("🔐 Verifying session token...");
     const session = await verifySessionToken(req);
-    console.log("🔐 Session verification result:", session.success ? "✅ SUCCESS" : `❌ FAIL: ${session.error}`);
     
     if (!session.success) {
       if (session.status !== 500) {
-        console.error("❌ Token verification failed:", session.error);
-        
         // Provide user-friendly error message for expired tokens
         const userMessage = session.error === "Session expired" 
           ? "Your session has expired. Please sign in again by tapping the menu and selecting 'Logout', then sign back in."
