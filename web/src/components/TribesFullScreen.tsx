@@ -620,7 +620,7 @@ function MessagesTab({
   sendMessage: () => void;
   sending: boolean;
   handleKeyPress: (e: React.KeyboardEvent) => void;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
   error: string | null;
   setError: (err: string | null) => void;
 }) {
