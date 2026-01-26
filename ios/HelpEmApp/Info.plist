@@ -7,6 +7,8 @@
 	<string>helpem uses your microphone to record voice messages and commands.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>helpem uses speech recognition to convert your voice into text for easy input.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>helpem uses your contacts to help you invite friends and family to your tribes.</string>
 	
 	<!-- App Transport Security -->
 	<key>NSAppTransportSecurity</key>
