@@ -40,7 +40,7 @@ class AppleCalendarService: ObservableObject {
                 return granted
             }
         } catch {
-            Logger.error("Failed to request calendar access: \(error)")
+            print("❌ Calendar: Failed to request calendar access: \(error)")
             return false
         }
     }
@@ -61,7 +61,7 @@ class AppleCalendarService: ObservableObject {
     /// Fetch events from the user's calendars within a date range
     func fetchEvents(from startDate: Date, to endDate: Date) async -> [CalendarEvent] {
         guard isAuthorized else {
-            Logger.warning("Calendar access not authorized")
+            print("⚠️ Calendar: Calendar access not authorized")
             return []
         }
         
@@ -111,7 +111,7 @@ class AppleCalendarService: ObservableObject {
         
         try eventStore.save(event, span: .thisEvent)
         
-        Logger.info("Created calendar event: \(title)")
+        print("📅 Calendar: Created event: \(title)")
         
         return CalendarEvent(from: event)
     }
@@ -161,7 +161,7 @@ class AppleCalendarService: ObservableObject {
         
         try eventStore.save(event, span: .thisEvent)
         
-        Logger.info("Updated calendar event: \(event.title ?? "Unknown")")
+        print("📅 Calendar: Updated event: \(event.title ?? "Unknown")")
         
         return CalendarEvent(from: event)
     }
@@ -180,7 +180,7 @@ class AppleCalendarService: ObservableObject {
         
         try eventStore.remove(event, span: .thisEvent)
         
-        Logger.info("Deleted calendar event: \(event.title ?? "Unknown")")
+        print("📅 Calendar: Deleted event: \(event.title ?? "Unknown")")
     }
     
     // MARK: - Sync with helpem
