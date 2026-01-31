@@ -4,10 +4,10 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tribeId: string; requestId: string } }
+  context: { params: Promise<{ tribeId: string; requestId: string }> }
 ) {
   try {
-    const { tribeId, requestId } = params;
+    const { tribeId, requestId } = await context.params;
     
     // Forward to backend
     const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}/member-requests/${requestId}/deny`;

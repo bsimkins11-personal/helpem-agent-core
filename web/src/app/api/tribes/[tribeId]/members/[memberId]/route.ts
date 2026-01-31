@@ -4,10 +4,10 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { tribeId: string; memberId: string } }
+  context: { params: Promise<{ tribeId: string; memberId: string }> }
 ) {
   try {
-    const { tribeId, memberId } = params;
+    const { tribeId, memberId } = await context.params;
     
     // Forward to backend
     const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}/members/${memberId}`;
@@ -34,10 +34,10 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { tribeId: string; memberId: string } }
+  context: { params: Promise<{ tribeId: string; memberId: string }> }
 ) {
   try {
-    const { tribeId, memberId } = params;
+    const { tribeId, memberId } = await context.params;
     const body = await request.json();
     
     // Forward to backend
