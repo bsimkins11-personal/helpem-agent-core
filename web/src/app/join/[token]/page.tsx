@@ -8,7 +8,44 @@ type TribeInfo = {
   id: string;
   name: string;
   memberCount: number;
+  inviterName?: string;
 };
+
+// Pricing tiers based on GPT-4o-mini at 75% gross margin
+const PRICING_TIERS = [
+  {
+    name: "Free",
+    price: "$0",
+    period: "/month",
+    interactions: "Up to 100",
+    items: "3 of each",
+    highlight: false,
+  },
+  {
+    name: "Basic",
+    price: "$4.99",
+    period: "/month",
+    interactions: "Up to 3,000",
+    items: "20 of each",
+    highlight: true,
+    badge: "Same as Trial",
+  },
+  {
+    name: "Premium",
+    price: "$9.99",
+    period: "/month",
+    interactions: "Up to 7,500",
+    items: "Unlimited",
+    highlight: false,
+  },
+];
+
+const VALUE_PROPS = [
+  { icon: "🤖", title: "AI Life Assistant", desc: "Smart categorization and helpful responses" },
+  { icon: "✅", title: "Manage Everything", desc: "Todos, appointments, habits, groceries" },
+  { icon: "👥", title: "Coordinate Together", desc: "Share and sync with your tribe" },
+  { icon: "🎙️", title: "Voice or Text", desc: "Speak naturally or type - your choice" },
+];
 
 export default function JoinTribePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -19,14 +56,11 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
   const [joined, setJoined] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check authentication and load tribe info
   useEffect(() => {
     const checkAuthAndLoadTribe = async () => {
-      // Check if user is authenticated
       const sessionToken = getClientSessionToken();
       setIsAuthenticated(!!sessionToken);
 
-      // Load tribe info (doesn't require auth)
       try {
         const res = await fetch(`/api/tribes/join/${token}`);
         const data = await res.json();
@@ -36,7 +70,7 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
         } else {
           setError(data.error || "Invalid invite link");
         }
-      } catch (err) {
+      } catch {
         setError("Failed to load invite information");
       } finally {
         setLoading(false);
@@ -50,7 +84,6 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
     const sessionToken = getClientSessionToken();
     
     if (!sessionToken) {
-      // Redirect to app with the invite token to handle after sign in
       window.location.href = `/app?invite=${token}`;
       return;
     }
@@ -61,19 +94,16 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
     try {
       const res = await fetch(`/api/tribes/join/${token}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-        },
+        headers: { Authorization: `Bearer ${sessionToken}` },
       });
 
       const data = await res.json();
-
       if (res.ok) {
         setJoined(true);
       } else {
         setError(data.error || "Failed to join tribe");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to join tribe. Please try again.");
     } finally {
       setJoining(false);
@@ -81,95 +111,45 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
   };
 
   const openInApp = () => {
-    // Try to open the app using a custom URL scheme
     const appUrl = `helpem://join/${token}`;
-    const webUrl = window.location.href;
-    
-    // Try to open in app, fall back to App Store
     const appStoreUrl = "https://apps.apple.com/app/helpem/id6738968880";
     
-    // Create a hidden iframe to try opening the app
     const iframe = document.createElement("iframe");
     iframe.style.display = "none";
     iframe.src = appUrl;
     document.body.appendChild(iframe);
     
-    // After a short delay, if the page is still visible, redirect to App Store
     setTimeout(() => {
       document.body.removeChild(iframe);
-      // If document is still visible, app didn't open
       if (!document.hidden) {
         window.location.href = appStoreUrl;
       }
     }, 2000);
   };
 
+  // Loading state
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        background: "linear-gradient(to bottom right, #f9fafb, white)"
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ 
-            width: "48px", 
-            height: "48px", 
-            border: "4px solid #e5e7eb", 
-            borderTopColor: "#8b5cf6",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 16px"
-          }} />
-          <p style={{ color: "#6b7280" }}>Loading invitation...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500">Loading your invitation...</p>
         </div>
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }
 
+  // Error state (invalid invite)
   if (error && !tribe) {
     return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        background: "linear-gradient(to bottom right, #f9fafb, white)",
-        padding: "24px"
-      }}>
-        <div style={{ 
-          textAlign: "center",
-          background: "white",
-          padding: "48px",
-          borderRadius: "24px",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-          maxWidth: "400px"
-        }}>
-          <div style={{ fontSize: "64px", marginBottom: "24px" }}>😕</div>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold", color: "#1f2937", marginBottom: "12px" }}>
-            Invalid Invite
-          </h1>
-          <p style={{ color: "#6b7280", marginBottom: "24px" }}>
-            {error}
-          </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white p-6">
+        <div className="text-center bg-white p-12 rounded-3xl shadow-xl max-w-md">
+          <div className="text-6xl mb-6">😕</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Invalid Invite</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
           <Link
             href="/app"
-            style={{
-              display: "inline-block",
-              padding: "12px 24px",
-              background: "linear-gradient(to right, #8b5cf6, #7c3aed)",
-              color: "white",
-              borderRadius: "12px",
-              textDecoration: "none",
-              fontWeight: "500"
-            }}
+            className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
             Go to helpem
           </Link>
@@ -178,42 +158,17 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
     );
   }
 
+  // Success state (joined)
   if (joined) {
     return (
-      <div style={{ 
-        minHeight: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        background: "linear-gradient(to bottom right, #f9fafb, white)",
-        padding: "24px"
-      }}>
-        <div style={{ 
-          textAlign: "center",
-          background: "white",
-          padding: "48px",
-          borderRadius: "24px",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-          maxWidth: "400px"
-        }}>
-          <div style={{ fontSize: "64px", marginBottom: "24px" }}>🎉</div>
-          <h1 style={{ fontSize: "24px", fontWeight: "bold", color: "#1f2937", marginBottom: "12px" }}>
-            Welcome to {tribe?.name}!
-          </h1>
-          <p style={{ color: "#6b7280", marginBottom: "24px" }}>
-            You&apos;ve successfully joined the tribe.
-          </p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white p-6">
+        <div className="text-center bg-white p-12 rounded-3xl shadow-xl max-w-md">
+          <div className="text-6xl mb-6">🎉</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Welcome to {tribe?.name}!</h1>
+          <p className="text-gray-600 mb-6">You&apos;ve successfully joined the tribe. Your 30-day trial has started!</p>
           <Link
             href="/app"
-            style={{
-              display: "inline-block",
-              padding: "12px 24px",
-              background: "linear-gradient(to right, #8b5cf6, #7c3aed)",
-              color: "white",
-              borderRadius: "12px",
-              textDecoration: "none",
-              fontWeight: "500"
-            }}
+            className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
             Open helpem
           </Link>
@@ -222,130 +177,199 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
     );
   }
 
+  // Main join page - warm, welcoming experience
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "center",
-      background: "linear-gradient(to bottom right, #f9fafb, white)",
-      padding: "24px"
-    }}>
-      <div style={{ 
-        textAlign: "center",
-        background: "white",
-        padding: "48px",
-        borderRadius: "24px",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-        maxWidth: "400px",
-        width: "100%"
-      }}>
-        {/* Logo */}
-        <div style={{ 
-          fontSize: "48px", 
-          marginBottom: "24px",
-          background: "linear-gradient(to bottom right, #8b5cf6, #7c3aed)",
-          width: "80px",
-          height: "80px",
-          borderRadius: "20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          margin: "0 auto 24px"
-        }}>
-          👥
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      {/* Sticky CTA for mobile */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg md:hidden z-50">
+        <button
+          onClick={isAuthenticated ? handleJoin : openInApp}
+          disabled={joining}
+          className="w-full py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold text-lg shadow-lg disabled:opacity-70"
+        >
+          {joining ? "Joining..." : isAuthenticated ? "Join Tribe" : "Get Started Free"}
+        </button>
+      </div>
 
-        <h1 style={{ fontSize: "28px", fontWeight: "bold", color: "#1f2937", marginBottom: "8px" }}>
-          Join {tribe?.name}
-        </h1>
+      <div className="max-w-4xl mx-auto px-4 py-8 pb-32 md:pb-8">
         
-        <p style={{ color: "#6b7280", marginBottom: "8px" }}>
-          You&apos;ve been invited to join a tribe on helpem
-        </p>
-        
-        <p style={{ color: "#9ca3af", fontSize: "14px", marginBottom: "32px" }}>
-          {tribe?.memberCount} member{tribe?.memberCount !== 1 ? "s" : ""}
-        </p>
+        {/* Section 1: Welcome Hero */}
+        <section className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <span>👋</span>
+            <span>You&apos;ve been invited!</span>
+          </div>
+          
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Join <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-500">{tribe?.name}</span>
+          </h1>
+          
+          <p className="text-lg text-gray-600 mb-2">
+            {tribe?.inviterName ? `${tribe.inviterName} wants you to join their tribe on helpem` : "Your friend wants you to join their tribe on helpem"}
+          </p>
+          
+          <p className="text-gray-400 text-sm">
+            {tribe?.memberCount} member{tribe?.memberCount !== 1 ? "s" : ""} already here
+          </p>
+        </section>
+
+        {/* Section 2: Trial Offer (PROMINENT) */}
+        <section className="mb-10">
+          <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-3xl p-1">
+            <div className="bg-white rounded-[22px] p-6 md:p-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-3xl">🎁</span>
+                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">FREE TRIAL</span>
+                  </div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                    30 days free
+                  </h2>
+                  <p className="text-gray-600 text-lg mb-1">
+                    Up to <span className="font-bold text-blue-600">3,000 AI interactions</span> included
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    No credit card required. Try everything, decide later.
+                  </p>
+                </div>
+                <div className="hidden md:block">
+                  <button
+                    onClick={isAuthenticated ? handleJoin : openInApp}
+                    disabled={joining}
+                    className="px-8 py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-70 whitespace-nowrap"
+                  >
+                    {joining ? "Joining..." : "Get Started Free"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 3: What is helpem? */}
+        <section className="mb-10">
+          <h3 className="text-xl font-bold text-gray-900 text-center mb-6">
+            What is helpem?
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {VALUE_PROPS.map((prop, i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 text-center shadow-sm border border-gray-100">
+                <div className="text-3xl mb-2">{prop.icon}</div>
+                <h4 className="font-semibold text-gray-900 text-sm mb-1">{prop.title}</h4>
+                <p className="text-gray-500 text-xs">{prop.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Section 4: Pricing Preview */}
+        <section className="mb-10">
+          <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+            Simple, transparent pricing
+          </h3>
+          <p className="text-gray-500 text-center text-sm mb-6">
+            Choose your plan after your trial ends. Downgrade to Free anytime.
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-4">
+            {PRICING_TIERS.map((tier, i) => (
+              <div 
+                key={i} 
+                className={`bg-white rounded-2xl p-5 border-2 transition-all ${
+                  tier.highlight 
+                    ? "border-blue-500 shadow-lg relative" 
+                    : "border-gray-100 hover:border-gray-200"
+                }`}
+              >
+                {tier.badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      {tier.badge}
+                    </span>
+                  </div>
+                )}
+                <div className="text-center">
+                  <h4 className="font-bold text-gray-900 mb-1">{tier.name}</h4>
+                  <div className="mb-3">
+                    <span className="text-3xl font-bold text-gray-900">{tier.price}</span>
+                    <span className="text-gray-500 text-sm">{tier.period}</span>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span className="text-gray-700">{tier.interactions} interactions</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span className="text-gray-700">{tier.items} items</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Section 5: Tribe Card & CTA */}
+        <section className="hidden md:block">
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center text-3xl text-white">
+                  👥
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-lg">{tribe?.name}</h4>
+                  <p className="text-gray-500 text-sm">
+                    {tribe?.memberCount} member{tribe?.memberCount !== 1 ? "s" : ""} waiting for you
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={isAuthenticated ? handleJoin : openInApp}
+                  disabled={joining}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-70"
+                >
+                  {joining ? "Joining..." : isAuthenticated ? "Join Tribe" : "Sign In with Apple"}
+                </button>
+                {!isAuthenticated && (
+                  <button
+                    onClick={handleJoin}
+                    className="px-6 py-2 text-blue-500 text-sm font-medium hover:underline"
+                  >
+                    Already have helpem? Sign in
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
 
         {error && (
-          <div style={{ 
-            background: "#fef2f2", 
-            color: "#dc2626", 
-            padding: "12px", 
-            borderRadius: "8px",
-            marginBottom: "24px",
-            fontSize: "14px"
-          }}>
+          <div className="mt-6 bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm">
             {error}
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {isAuthenticated ? (
-            <button
-              onClick={handleJoin}
-              disabled={joining}
-              style={{
-                padding: "14px 24px",
-                background: "linear-gradient(to right, #8b5cf6, #7c3aed)",
-                color: "white",
-                border: "none",
-                borderRadius: "12px",
-                fontSize: "16px",
-                fontWeight: "600",
-                cursor: joining ? "not-allowed" : "pointer",
-                opacity: joining ? 0.7 : 1
-              }}
+        {/* Footer */}
+        <footer className="mt-10 text-center text-gray-400 text-sm">
+          <p className="mb-2">
+            Don&apos;t have the app?{" "}
+            <a 
+              href="https://apps.apple.com/app/helpem/id6738968880"
+              className="text-blue-500 hover:underline"
             >
-              {joining ? "Joining..." : "Join Tribe"}
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={openInApp}
-                style={{
-                  padding: "14px 24px",
-                  background: "linear-gradient(to right, #8b5cf6, #7c3aed)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "12px",
-                  fontSize: "16px",
-                  fontWeight: "600",
-                  cursor: "pointer"
-                }}
-              >
-                Open in App
-              </button>
-              
-              <button
-                onClick={handleJoin}
-                style={{
-                  padding: "14px 24px",
-                  background: "white",
-                  color: "#8b5cf6",
-                  border: "2px solid #8b5cf6",
-                  borderRadius: "12px",
-                  fontSize: "16px",
-                  fontWeight: "500",
-                  cursor: "pointer"
-                }}
-              >
-                Sign In to Join
-              </button>
-            </>
-          )}
-        </div>
-
-        <p style={{ color: "#9ca3af", fontSize: "12px", marginTop: "24px" }}>
-          Don&apos;t have the app?{" "}
-          <a 
-            href="https://apps.apple.com/app/helpem/id6738968880"
-            style={{ color: "#8b5cf6", textDecoration: "underline" }}
-          >
-            Download helpem
-          </a>
-        </p>
+              Download helpem
+            </a>
+          </p>
+          <p>
+            <Link href="/pricing" className="hover:underline">View full pricing</Link>
+            {" · "}
+            <Link href="/" className="hover:underline">Learn more about helpem</Link>
+          </p>
+        </footer>
       </div>
     </div>
   );

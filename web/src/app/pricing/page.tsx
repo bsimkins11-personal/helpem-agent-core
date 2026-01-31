@@ -12,7 +12,7 @@ export default function PricingPage() {
       tagline: "Perfect for getting started",
       price: { monthly: 0, annual: 0 },
       features: [
-        "100 AI messages/month",
+        "Up to 100 AI interactions/month",
         "3 todos, 3 appointments, 3 habits",
         "Unlimited grocery items",
         "Voice + text input",
@@ -34,7 +34,7 @@ export default function PricingPage() {
       tagline: "For busy individuals",
       price: { monthly: 4.99, annual: 50 },
       features: [
-        "300 AI messages/month",
+        "Up to 3,000 AI interactions/month",
         "20 todos, 20 appointments, 20 habits",
         "Unlimited grocery items",
         "Premium voice (Zoe/Neural)",
@@ -45,7 +45,7 @@ export default function PricingPage() {
         "Email support (5-7 days)"
       ],
       limitations: [],
-      cta: "Start 7-Day Free Trial",
+      cta: "Start 30-Day Free Trial",
       href: "/app",
       popular: true,
       color: "blue"
@@ -55,7 +55,7 @@ export default function PricingPage() {
       tagline: "For power users",
       price: { monthly: 9.99, annual: 100 },
       features: [
-        "Unlimited AI messages*",
+        "Up to 7,500 AI interactions/month",
         "Unlimited todos, appointments, habits",
         "Unlimited grocery items",
         "Premium voice (Zoe/Neural)",
@@ -68,7 +68,7 @@ export default function PricingPage() {
         "Early access to new features"
       ],
       limitations: [],
-      cta: "Start 7-Day Free Trial",
+      cta: "Start 30-Day Free Trial",
       href: "/app",
       popular: false,
       color: "green"
@@ -101,7 +101,7 @@ export default function PricingPage() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-lg sm:text-xl text-brandTextLight max-w-3xl mx-auto mb-10">
-            Choose the plan that fits your life. 7-day free trial. Cancel anytime.
+            Choose the plan that fits your life. 30-day free trial with 3,000 interactions. Cancel anytime.
           </p>
 
           {/* Billing toggle */}
@@ -232,11 +232,11 @@ export default function PricingPage() {
             ))}
           </div>
           
-          {/* Fair Use Disclaimer */}
+          {/* Fair Use Note */}
           <div className="mt-8 text-center">
             <p className="text-sm text-brandTextLight max-w-3xl mx-auto">
-              * Premium "Unlimited" is subject to fair use policy (approximately 3,000 AI messages/month for typical users). 
-              We've designed our limits to be generous for real-world use while preventing abuse.
+              AI interactions include chat messages, voice commands, and smart categorization. 
+              Most users find Basic (3,000/month) more than enough for daily use.
             </p>
           </div>
         </div>
@@ -267,18 +267,18 @@ export default function PricingPage() {
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-brandText mb-2">
-                What does "unlimited" mean for Premium?
+                What counts as an AI interaction?
               </h3>
               <p className="text-brandTextLight">
-                Unlimited means no hard limits on AI messages, todos, appointments, or habits. Subject to fair use (approximately 3,000 AI messages/month for typical users). We designed Premium for power users who want to use helpem without thinking about limits.
+                An AI interaction includes sending a message, using voice commands, smart categorization, and any AI-powered feature. Basic gives you 3,000/month (about 100/day), Premium gives you 7,500/month (about 250/day). Most users find Basic more than enough.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-brandText mb-2">
-                How does the 7-day free trial work?
+                How does the 30-day free trial work?
               </h3>
               <p className="text-brandTextLight">
-                Start any paid plan with a 7-day free trial. No charges during the trial. At the end of 7 days, we'll ask you to confirm if you want to continue. Only after you confirm will billing begin. Cancel anytime with no questions asked.
+                New users get 30 days free with up to 3,000 AI interactions (same as Basic). No credit card required to start. At the end of your trial, choose to continue with Basic, upgrade to Premium, or downgrade to Free. You decide, no pressure.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
