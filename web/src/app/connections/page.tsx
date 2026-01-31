@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { getClientSessionToken } from "@/lib/clientSession";
 
 type Connection = {
   id: string;
@@ -15,13 +17,15 @@ type Connection = {
 };
 
 export default function ConnectionsPage() {
+  const searchParams = useSearchParams();
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [connections, setConnections] = useState<Connection[]>([
     // Calendar Integrations
     {
       id: "google-calendar",
       name: "Google Calendar",
-      description: "Sync your Google Calendar events to helpem",
+      description: "Sync your Google Calendar events to helpem (read & write)",
       icon: "📅",
       status: "available",
       category: "calendar",
@@ -29,7 +33,7 @@ export default function ConnectionsPage() {
     {
       id: "apple-calendar",
       name: "Apple Calendar",
-      description: "Import events from Apple Calendar",
+      description: "Import events from Apple Calendar (iOS app only)",
       icon: "📆",
       status: "available",
       category: "calendar",
@@ -39,7 +43,7 @@ export default function ConnectionsPage() {
       name: "Outlook Calendar",
       description: "Connect your Microsoft Outlook calendar",
       icon: "📬",
-      status: "available",
+      status: "coming_soon",
       category: "calendar",
     },
     
@@ -108,90 +112,160 @@ export default function ConnectionsPage() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const handleConnect = async (connectionId: string) => {
-    setConnecting(connectionId);
-    
-    // Save connection to localStorage
+  // Load Google Calendar connection status from backend
+  const loadGoogleConnectionStatus = useCallback(async () => {
     try {
-      const savedConnections = localStorage.getItem('helpem_connections');
-      const connections = savedConnections ? JSON.parse(savedConnections) : [];
-      
-      const newConnection = {
-        id: connectionId,
-        connectedAt: new Date().toISOString(),
-        status: 'connected'
-      };
-      
-      connections.push(newConnection);
-      localStorage.setItem('helpem_connections', JSON.stringify(connections));
-      
-      // Update state
-      setConnections(prev => 
-        prev.map(conn => 
-          conn.id === connectionId 
-            ? { ...conn, status: 'connected', connectedAt: new Date().toISOString() }
-            : conn
-        )
-      );
-      
-      // Handle specific calendar integrations
-      if (connectionId === 'apple-calendar') {
-        alert('Apple Calendar integration enabled! You can now add events to your calendar.');
-      } else if (connectionId === 'google-calendar') {
-        alert('Google Calendar integration enabled! You can now sync your events.');
-      } else if (connectionId === 'outlook-calendar') {
-        alert('Outlook Calendar integration enabled! You can now connect your calendar.');
+      const token = getClientSessionToken();
+      if (!token) return;
+
+      const res = await fetch("/api/google/connection", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.connected) {
+          setConnections(prev =>
+            prev.map(conn =>
+              conn.id === "google-calendar"
+                ? { ...conn, status: "connected", email: data.email, connectedAt: data.connectedAt }
+                : conn
+            )
+          );
+        }
       }
     } catch (error) {
-      console.error('Failed to connect:', error);
-      alert('Failed to connect. Please try again.');
+      console.error("Failed to load Google connection:", error);
+    }
+  }, []);
+
+  // Handle OAuth callback params
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+
+    if (success === "google_connected") {
+      setNotification({ type: "success", message: "Google Calendar connected successfully!" });
+      loadGoogleConnectionStatus();
+      // Clear the URL params
+      window.history.replaceState({}, "", "/connections");
+    } else if (error) {
+      const errorMessages: Record<string, string> = {
+        oauth_denied: "Google Calendar authorization was denied.",
+        missing_params: "Invalid OAuth response. Please try again.",
+        invalid_state: "Security token expired. Please try again.",
+        state_expired: "Authorization session expired. Please try again.",
+        callback_failed: "Failed to connect Google Calendar. Please try again.",
+      };
+      setNotification({ type: "error", message: errorMessages[error] || "An error occurred." });
+      window.history.replaceState({}, "", "/connections");
+    }
+  }, [searchParams, loadGoogleConnectionStatus]);
+
+  // Load connection status on mount
+  useEffect(() => {
+    loadGoogleConnectionStatus();
+  }, [loadGoogleConnectionStatus]);
+
+  // Auto-dismiss notification
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const handleConnectGoogle = async () => {
+    setConnecting("google-calendar");
+    
+    try {
+      const token = getClientSessionToken();
+      if (!token) {
+        setNotification({ type: "error", message: "Please sign in first." });
+        return;
+      }
+
+      const res = await fetch("/api/google/oauth/start", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.authUrl) {
+        // Redirect to Google OAuth
+        window.location.href = data.authUrl;
+      } else if (data.connected) {
+        setNotification({ type: "error", message: "Already connected to Google Calendar." });
+        loadGoogleConnectionStatus();
+      } else {
+        setNotification({ type: "error", message: data.error || "Failed to start connection." });
+      }
+    } catch (error) {
+      console.error("Failed to connect Google:", error);
+      setNotification({ type: "error", message: "Failed to connect. Please try again." });
     } finally {
       setConnecting(null);
     }
   };
 
-  const handleDisconnect = (connectionId: string) => {
+  const handleDisconnectGoogle = async () => {
     try {
-      const savedConnections = localStorage.getItem('helpem_connections');
-      const connections = savedConnections ? JSON.parse(savedConnections) : [];
-      
-      const filtered = connections.filter((c: any) => c.id !== connectionId);
-      localStorage.setItem('helpem_connections', JSON.stringify(filtered));
-      
-      setConnections(prev => 
-        prev.map(conn => 
-          conn.id === connectionId 
-            ? { ...conn, status: 'available', connectedAt: undefined }
-            : conn
-        )
-      );
-      
-      alert(`${connectionId} disconnected successfully`);
+      const token = getClientSessionToken();
+      if (!token) return;
+
+      const res = await fetch("/api/google/oauth/disconnect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        setConnections(prev =>
+          prev.map(conn =>
+            conn.id === "google-calendar"
+              ? { ...conn, status: "available", email: undefined, connectedAt: undefined }
+              : conn
+          )
+        );
+        setNotification({ type: "success", message: "Google Calendar disconnected." });
+      } else {
+        const data = await res.json();
+        setNotification({ type: "error", message: data.error || "Failed to disconnect." });
+      }
     } catch (error) {
-      console.error('Failed to disconnect:', error);
+      console.error("Failed to disconnect Google:", error);
+      setNotification({ type: "error", message: "Failed to disconnect. Please try again." });
     }
   };
 
-  // Load saved connections from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedConnections = localStorage.getItem('helpem_connections');
-      if (savedConnections) {
-        const saved = JSON.parse(savedConnections);
-        setConnections(prev => 
-          prev.map(conn => {
-            const savedConn = saved.find((s: any) => s.id === conn.id);
-            if (savedConn) {
-              return { ...conn, status: 'connected', connectedAt: savedConn.connectedAt };
-            }
-            return conn;
-          })
-        );
-      }
-    } catch (error) {
-      console.error('Failed to load connections:', error);
+  const handleConnect = async (connectionId: string) => {
+    if (connectionId === "google-calendar") {
+      return handleConnectGoogle();
     }
-  }, []);
+
+    if (connectionId === "apple-calendar") {
+      setNotification({ 
+        type: "success", 
+        message: "Apple Calendar is connected via the iOS app. Open the app to sync your calendar." 
+      });
+      return;
+    }
+
+    // Placeholder for other integrations
+    setConnecting(connectionId);
+    setTimeout(() => {
+      setConnecting(null);
+      setNotification({ type: "error", message: "This integration is coming soon!" });
+    }, 1000);
+  };
+
+  const handleDisconnect = (connectionId: string) => {
+    if (connectionId === "google-calendar") {
+      return handleDisconnectGoogle();
+    }
+    
+    // Placeholder for other integrations
+    setNotification({ type: "error", message: "Disconnect not implemented for this integration." });
+  };
 
   const categories = [
     { id: "all", name: "All Integrations", icon: "🔌" },
@@ -210,6 +284,27 @@ export default function ConnectionsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #f9fafb, white)' }}>
+      {/* Notification Toast */}
+      {notification && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+            padding: '12px 24px',
+            borderRadius: '12px',
+            background: notification.type === 'success' ? '#10b981' : '#ef4444',
+            color: 'white',
+            fontWeight: '500',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {notification.message}
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background: 'white', borderBottom: '1px solid #f3f4f6', padding: '24px 20px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -341,9 +436,16 @@ export default function ConnectionsPage() {
               <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>
                 {connection.name}
               </h3>
-              <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+              <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
                 {connection.description}
               </p>
+              
+              {/* Connected Email */}
+              {connection.status === "connected" && connection.email && (
+                <p style={{ fontSize: '12px', color: '#10b981', marginBottom: '16px' }}>
+                  {connection.email}
+                </p>
+              )}
 
               {/* Action Button */}
               <div style={{ marginTop: 'auto', paddingTop: '16px' }}>

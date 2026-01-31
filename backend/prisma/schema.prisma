@@ -407,3 +407,96 @@ model TribeMemberPersonalItemPermissions {
   
   @@map("tribe_member_personal_item_permissions")
 }
+
+// =============================================================================
+// GOOGLE CALENDAR INTEGRATION
+// =============================================================================
+
+/// Stores Google OAuth tokens for calendar integration
+/// Tokens are encrypted at rest using AES-256
+model GoogleConnection {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @unique @db.Uuid @map("user_id")
+  
+  // OAuth tokens (encrypted with AES-256)
+  accessToken     String    @map("access_token")
+  refreshToken    String    @map("refresh_token")
+  tokenExpiresAt  DateTime  @map("token_expires_at")
+  
+  // Connection metadata
+  googleEmail     String    @map("google_email")
+  scope           String    @default("https://www.googleapis.com/auth/calendar")
+  
+  // Sync state
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  syncEnabled     Boolean   @default(true) @map("sync_enabled")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  @@map("google_connections")
+}
+
+// =============================================================================
+// PUSH NOTIFICATIONS
+// =============================================================================
+
+/// Stores device tokens for push notifications (APNs)
+model UserDevice {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @db.Uuid @map("user_id")
+  
+  // Device info
+  deviceToken     String    @unique @map("device_token")
+  platform        String    @default("ios") // ios, android
+  deviceName      String?   @map("device_name")
+  
+  // Notification preferences
+  notificationsEnabled Boolean @default(true) @map("notifications_enabled")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastActiveAt    DateTime  @default(now()) @map("last_active_at")
+  
+  @@index([userId])
+  @@map("user_devices")
+}
+
+/// Tracks sent notifications to prevent duplicates
+model NotificationLog {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @db.Uuid @map("user_id")
+  
+  // Notification details
+  type            String    // "tribe_digest", "tribe_invite", etc.
+  referenceId     String?   @map("reference_id") // tribeId, etc.
+  
+  sentAt          DateTime  @default(now()) @map("sent_at")
+  
+  @@index([userId, type, sentAt])
+  @@index([userId, referenceId, type])
+  @@map("notification_logs")
+}
+
+/// Tribe invite tokens for shareable links
+model TribeInviteToken {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tribeId         String    @db.Uuid @map("tribe_id")
+  
+  // Token for the invite link
+  token           String    @unique
+  
+  // Who created this invite
+  createdBy       String    @db.Uuid @map("created_by")
+  
+  // Optional: limit uses or set expiry
+  maxUses         Int?      @map("max_uses")
+  usedCount       Int       @default(0) @map("used_count")
+  expiresAt       DateTime? @map("expires_at")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@index([token])
+  @@index([tribeId])
+  @@map("tribe_invite_tokens")
+}

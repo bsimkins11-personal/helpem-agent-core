@@ -8,6 +8,9 @@ import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js
 import { prisma } from "./src/lib/prisma.js";
 import { migrateFeedbackTable } from "./src/migrate-feedback.js";
 import tribeRoutes from "./src/routes/tribe.js";
+import tribeInviteLinksRoutes from "./src/routes/tribe-invite-links.js";
+import googleCalendarRoutes from "./src/routes/google-calendar.js";
+import notificationsRoutes from "./src/routes/notifications.js";
 import debugTribesHandler from './routes/debug-tribes.js';
 import demoTribesRoutes from './routes/demo-tribes.js';
 import demoTribesCleanupRoutes from './routes/demo-tribes-cleanup.js';
@@ -484,12 +487,25 @@ app.get("/migrate-feedback", async (req, res) => {
 });
 
 // =============================================================================
+// GOOGLE CALENDAR ROUTES
+// =============================================================================
+
+app.use("/google", apiLimiter, googleCalendarRoutes);
+
+// =============================================================================
+// NOTIFICATIONS ROUTES
+// =============================================================================
+
+app.use("/notifications", apiLimiter, notificationsRoutes);
+
+// =============================================================================
 // TRIBE ROUTES
 // =============================================================================
 
 // Demo tribes must come BEFORE general tribes route for proper matching
 app.use("/tribes/demo/cleanup", apiLimiter, demoTribesCleanupRoutes);
 app.use("/tribes/demo", apiLimiter, demoTribesRoutes);
+app.use("/tribes", apiLimiter, tribeInviteLinksRoutes); // Invite links
 app.use("/tribes", apiLimiter, tribeRoutes);
 
 // =============================================================================
