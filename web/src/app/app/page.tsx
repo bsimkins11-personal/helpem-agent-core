@@ -9,6 +9,12 @@ import Link from "next/link";
  * Shows Sign In / Sign Up options
  * Handles tribe invite tokens for post-signup flow
  */
+function AppLandingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [tribeInvite, setTribeInvite] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(true);
+
   useEffect(() => {
     // CRITICAL: Always show splash for 800ms first for better UX
     const minimumSplashTime = 800;
