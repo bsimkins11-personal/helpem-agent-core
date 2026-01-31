@@ -104,6 +104,7 @@ router.get("/", async (req, res) => {
             id: membership.tribe.id,
             name: membership.tribe.name,
             ownerId: membership.tribe.ownerId,
+            tribeType: membership.tribe.tribeType,
             isOwner: membership.tribe.ownerId === userId,
             pendingProposalsCount: pendingCount,
             memberCount: memberCount,
@@ -118,6 +119,7 @@ router.get("/", async (req, res) => {
             id: membership.tribe.id,
             name: membership.tribe.name,
             ownerId: membership.tribe.ownerId,
+            tribeType: membership.tribe.tribeType || 'friend', // Default if missing
             isOwner: membership.tribe.ownerId === userId,
             pendingProposalsCount: 0,
             memberCount: 0,
@@ -189,10 +191,17 @@ router.post("/", async (req, res) => {
     }
 
     const userId = session.session.userId;
-    const { name } = req.body;
+    const { name, tribeType } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return res.status(400).json({ error: "Tribe name is required" });
+    }
+
+    // Validate tribe type (required, no default)
+    if (!tribeType || (tribeType !== "friend" && tribeType !== "family")) {
+      return res.status(400).json({ 
+        error: "Tribe type is required and must be either 'friend' or 'family'" 
+      });
     }
 
     // Verify user exists in database
@@ -210,6 +219,7 @@ router.post("/", async (req, res) => {
       data: {
         name: name.trim(),
         ownerId: userId,
+        tribeType: tribeType,
         members: {
           create: {
             userId,
@@ -243,6 +253,7 @@ router.post("/", async (req, res) => {
       id: tribe.id,
       name: tribe.name,
       ownerId: tribe.ownerId,
+      tribeType: tribe.tribeType,
       isOwner: true, // Creator is always owner
       pendingProposals: pendingCount,
       joinedAt: tribe.members[0]?.acceptedAt || tribe.createdAt,
@@ -299,29 +310,78 @@ router.patch("/:tribeId", async (req, res) => {
 
     const userId = session.session.userId;
     const { tribeId } = req.params;
-    const { name } = req.body;
+    const { name, tribeType } = req.body;
 
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Tribe name is required" });
+    // At least one field must be provided
+    if (!name && !tribeType) {
+      return res.status(400).json({ error: "Either name or tribeType must be provided" });
     }
 
-    // Verify ownership
+    // Validate name if provided
+    if (name && (typeof name !== "string" || name.trim().length === 0)) {
+      return res.status(400).json({ error: "Tribe name must be a non-empty string" });
+    }
+
+    // Validate tribe type if provided
+    if (tribeType && tribeType !== "friend" && tribeType !== "family") {
+      return res.status(400).json({ 
+        error: "Tribe type must be either 'friend' or 'family'" 
+      });
+    }
+
+    // Verify tribe exists and user has admin permissions
     const tribe = await prisma.tribe.findUnique({
       where: { id: tribeId },
+      include: {
+        members: {
+          where: {
+            userId: userId,
+            acceptedAt: { not: null },
+            leftAt: null,
+          },
+          include: {
+            permissions: true,
+          },
+        },
+      },
     });
 
     if (!tribe || tribe.deletedAt) {
       return res.status(404).json({ error: "Tribe not found" });
     }
 
-    if (tribe.ownerId !== userId) {
-      return res.status(403).json({ error: "Only the owner can rename a Tribe" });
+    const membership = tribe.members[0];
+    if (!membership) {
+      return res.status(403).json({ error: "You are not a member of this tribe" });
     }
+
+    // Only admins (owner or members with admin permissions) can update tribe
+    const isOwner = tribe.ownerId === userId;
+    const isAdmin = isOwner; // For now, only owner is admin (can be extended)
+
+    if (!isAdmin) {
+      return res.status(403).json({ error: "Only admins can update tribe settings" });
+    }
+
+    // Build update data
+    const updateData = {};
+    if (name) updateData.name = name.trim();
+    if (tribeType) updateData.tribeType = tribeType;
 
     const updated = await prisma.tribe.update({
       where: { id: tribeId },
-      data: { name: name.trim() },
+      data: updateData,
     });
+
+    // Log activity if tribe type changed
+    if (tribeType && tribeType !== tribe.tribeType) {
+      await createTribeActivity({
+        tribeId: tribeId,
+        type: "ADMIN",
+        message: `changed tribe type to ${tribeType}`,
+        createdBy: userId,
+      });
+    }
 
     return res.json({ tribe: updated });
   } catch (err) {
@@ -1279,6 +1339,24 @@ router.post("/:tribeId/items", async (req, res) => {
     // Validate item type
     if (!["task", "routine", "appointment", "grocery"].includes(itemType)) {
       return res.status(400).json({ error: "Invalid itemType" });
+    }
+
+    // Check tribe type and validate allowed item types
+    const tribe = await prisma.tribe.findUnique({
+      where: { id: tribeId },
+      select: { tribeType: true, deletedAt: true },
+    });
+
+    if (!tribe || tribe.deletedAt) {
+      return res.status(404).json({ error: "Tribe not found" });
+    }
+
+    // Friend tribes can only share tasks, appointments, and chat
+    // Family tribes can share everything including routines and groceries
+    if (tribe.tribeType === "friend" && (itemType === "routine" || itemType === "grocery")) {
+      return res.status(403).json({ 
+        error: `Friend tribes cannot share ${itemType}s. Only family tribes can share routines and groceries.` 
+      });
     }
 
     // Validate recipients

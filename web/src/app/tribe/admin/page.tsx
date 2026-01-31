@@ -35,6 +35,7 @@ type Tribe = {
   id: string;
   name: string;
   ownerId: string;
+  tribeType: "friend" | "family";
   isOwner: boolean;
   pendingProposalsCount?: number;
   memberCount?: number;
@@ -67,6 +68,7 @@ export default function TribeAdminPage() {
   // Create tribe state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTribeName, setNewTribeName] = useState("");
+  const [newTribeType, setNewTribeType] = useState<"friend" | "family" | "">("");
   const [creating, setCreating] = useState(false);
   
   // Members state
@@ -177,9 +179,18 @@ export default function TribeAdminPage() {
 
   const handleCreateTribe = async () => {
     const name = newTribeName.trim();
-    if (!name) return;
+    if (!name) {
+      setError("Tribe name is required");
+      return;
+    }
+
+    if (!newTribeType) {
+      setError("Please select a tribe type (Friend or Family)");
+      return;
+    }
 
     setCreating(true);
+    setError(null);
     try {
       const token = getClientSessionToken();
       const res = await fetch("/api/tribes", {
@@ -188,14 +199,18 @@ export default function TribeAdminPage() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, tribeType: newTribeType }),
       });
 
-      if (!res.ok) throw new Error("Failed to create tribe");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to create tribe");
+      }
 
       await loadTribes();
       setShowCreateForm(false);
       setNewTribeName("");
+      setNewTribeType("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create tribe");
     } finally {
@@ -339,10 +354,48 @@ export default function TribeAdminPage() {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-brandText focus:outline-none focus:ring-2 focus:ring-brandBlue/50"
                 autoFocus
               />
+              
+              {/* Tribe Type Selector */}
+              <div>
+                <label className="block text-sm font-medium text-brandText mb-2">
+                  Tribe Type <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setNewTribeType("friend")}
+                    className={`px-4 py-3 rounded-xl border-2 transition-all ${
+                      newTribeType === "friend"
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-gray-200 bg-white text-brandText hover:border-blue-300"
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">👥</div>
+                    <div className="font-semibold text-sm">Friend</div>
+                    <div className="text-xs mt-1 opacity-75">
+                      Appointments, todos, chat
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setNewTribeType("family")}
+                    className={`px-4 py-3 rounded-xl border-2 transition-all ${
+                      newTribeType === "family"
+                        ? "border-green-500 bg-green-50 text-green-700"
+                        : "border-gray-200 bg-white text-brandText hover:border-green-300"
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">👨‍👩‍👧‍👦</div>
+                    <div className="font-semibold text-sm">Family</div>
+                    <div className="text-xs mt-1 opacity-75">
+                      + Routines & groceries
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateTribe}
-                  disabled={!newTribeName.trim() || creating}
+                  disabled={!newTribeName.trim() || !newTribeType || creating}
                   className="flex-1 px-6 py-3 bg-brandBlue text-white rounded-xl font-medium hover:opacity-90 transition-all disabled:opacity-50"
                 >
                   {creating ? "Creating..." : "Create"}
@@ -351,6 +404,7 @@ export default function TribeAdminPage() {
                   onClick={() => {
                     setShowCreateForm(false);
                     setNewTribeName("");
+                    setNewTribeType("");
                   }}
                   className="px-6 py-3 bg-gray-100 text-brandText rounded-xl font-medium hover:bg-gray-200 transition-all"
                 >
@@ -395,8 +449,11 @@ export default function TribeAdminPage() {
                           : "hover:bg-gray-50 text-brandText"
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium truncate">{tribe.name}</span>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium truncate flex-1">{tribe.name}</span>
+                        <span className="text-base">
+                          {tribe.tribeType === "family" ? "👨‍👩‍👧‍👦" : "👥"}
+                        </span>
                         {tribe.isOwner && (
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
                             selectedTribeId === tribe.id 
@@ -408,7 +465,7 @@ export default function TribeAdminPage() {
                         )}
                       </div>
                       <div className="text-xs mt-1 opacity-75">
-                        {tribe.memberCount || 0} members
+                        {tribe.tribeType === "family" ? "Family" : "Friend"} • {tribe.memberCount || 0} members
                       </div>
                     </button>
                   ))}
@@ -1146,6 +1203,43 @@ function MemberRequestsTab({
 
 // Settings Tab Component
 function SettingsTab({ tribe, onUpdate }: { tribe: Tribe; onUpdate: () => void }) {
+  const [changingType, setChangingType] = useState(false);
+  const [newType, setNewType] = useState<"friend" | "family">(tribe.tribeType);
+
+  const handleChangeTribeType = async () => {
+    if (newType === tribe.tribeType) return;
+
+    if (!confirm(`Change tribe type to ${newType}? This will ${newType === "family" ? "enable" : "disable"} sharing routines and groceries.`)) {
+      setNewType(tribe.tribeType);
+      return;
+    }
+
+    setChangingType(true);
+    try {
+      const token = getClientSessionToken();
+      const res = await fetch(`/api/tribes/${tribe.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ tribeType: newType }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update tribe type");
+      }
+
+      onUpdate();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update tribe type");
+      setNewType(tribe.tribeType);
+    } finally {
+      setChangingType(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -1162,6 +1256,59 @@ function SettingsTab({ tribe, onUpdate }: { tribe: Tribe; onUpdate: () => void }
               disabled
             />
             <p className="text-xs text-brandTextLight mt-1">Use the rename button in the header to change the name</p>
+          </div>
+
+          {/* Tribe Type Selector */}
+          <div>
+            <label className="block text-sm font-medium text-brandText mb-2">
+              Tribe Type
+            </label>
+            <div className="grid grid-cols-2 gap-3 mb-2">
+              <button
+                onClick={() => setNewType("friend")}
+                disabled={changingType}
+                className={`px-4 py-3 rounded-xl border-2 transition-all ${
+                  newType === "friend"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-200 bg-white text-brandText hover:border-blue-300"
+                } disabled:opacity-50`}
+              >
+                <div className="text-2xl mb-1">👥</div>
+                <div className="font-semibold text-sm">Friend</div>
+                <div className="text-xs mt-1 opacity-75">
+                  Appointments, todos, chat
+                </div>
+              </button>
+              <button
+                onClick={() => setNewType("family")}
+                disabled={changingType}
+                className={`px-4 py-3 rounded-xl border-2 transition-all ${
+                  newType === "family"
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-gray-200 bg-white text-brandText hover:border-green-300"
+                } disabled:opacity-50`}
+              >
+                <div className="text-2xl mb-1">👨‍👩‍👧‍👦</div>
+                <div className="font-semibold text-sm">Family</div>
+                <div className="text-xs mt-1 opacity-75">
+                  + Routines & groceries
+                </div>
+              </button>
+            </div>
+            {newType !== tribe.tribeType && (
+              <button
+                onClick={handleChangeTribeType}
+                disabled={changingType}
+                className="w-full px-4 py-2 bg-brandBlue text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50"
+              >
+                {changingType ? "Updating..." : "Save Tribe Type"}
+              </button>
+            )}
+            <p className="text-xs text-brandTextLight mt-2">
+              {newType === "family" 
+                ? "Family tribes can share all item types including routines and groceries" 
+                : "Friend tribes can only share appointments, todos, and chat messages"}
+            </p>
           </div>
           
           <div>
