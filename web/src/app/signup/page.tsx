@@ -1,18 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { TrialOfferCard } from "@/components/TrialOfferCard";
+import { PricingPreview } from "@/components/PricingPreview";
 
 const VALUE_PROPS = [
   { icon: "🤖", title: "AI Life Assistant", desc: "Smart categorization and helpful responses" },
   { icon: "✅", title: "Manage Everything", desc: "Todos, appointments, habits, groceries" },
   { icon: "👥", title: "Coordinate Together", desc: "Share and sync with your tribe" },
   { icon: "🎙️", title: "Voice or Text", desc: "Speak naturally or type—your choice" },
-];
-
-const PRICING_TIERS = [
-  { name: "Free", price: "$0", interactions: "Up to 100", items: "3 of each" },
-  { name: "Basic", price: "$4.99", interactions: "Up to 3,000", items: "20 of each", highlight: true, badge: "After Trial" },
-  { name: "Premium", price: "$9.99", interactions: "Up to 7,500", items: "Unlimited" },
 ];
 
 export default function SignUpPage() {
@@ -54,35 +50,10 @@ export default function SignUpPage() {
 
         {/* Trial Offer */}
         <section className="mb-10">
-          <div className="bg-gradient-to-r from-blue-500 to-green-500 rounded-3xl p-1">
-            <div className="bg-white rounded-[22px] p-6 md:p-8">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-3xl">🎁</span>
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">FREE TRIAL</span>
-                  </div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                    30 days free
-                  </h2>
-                  <p className="text-gray-600 text-lg mb-1">
-                    Up to <span className="font-bold text-blue-600">3,000 AI interactions</span> included
-                  </p>
-                  <p className="text-gray-400 text-sm">
-                    No credit card required. Try everything, decide later.
-                  </p>
-                </div>
-                <div className="hidden md:block">
-                  <Link
-                    href="/app"
-                    className="inline-block px-8 py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
-                  >
-                    Get Started Free
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+          <TrialOfferCard
+            onGetStarted={() => window.location.href = "/app"}
+            buttonText="Get Started Free"
+          />
         </section>
 
         {/* What is helpem? */}
@@ -102,58 +73,9 @@ export default function SignUpPage() {
         </section>
 
         {/* Pricing Preview */}
-        <section className="mb-10">
-          <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
-            Simple, transparent pricing
-          </h3>
-          <p className="text-gray-500 text-center text-sm mb-6">
-            Choose your plan after your trial ends. Downgrade to Free anytime.
-          </p>
-          
-          <div className="grid md:grid-cols-3 gap-4">
-            {PRICING_TIERS.map((tier, i) => (
-              <div 
-                key={i} 
-                className={`bg-white rounded-2xl p-5 border-2 transition-all ${
-                  tier.highlight 
-                    ? "border-blue-500 shadow-lg relative" 
-                    : "border-gray-100"
-                }`}
-              >
-                {tier.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      {tier.badge}
-                    </span>
-                  </div>
-                )}
-                <div className="text-center">
-                  <h4 className="font-bold text-gray-900 mb-1">{tier.name}</h4>
-                  <div className="mb-3">
-                    <span className="text-3xl font-bold text-gray-900">{tier.price}</span>
-                    <span className="text-gray-500 text-sm">/month</span>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span className="text-gray-700">{tier.interactions} interactions</span>
-                    </div>
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span className="text-gray-700">{tier.items} items</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <p className="text-center mt-4">
-            <Link href="/pricing" className="text-blue-500 text-sm hover:underline">
-              View full pricing details →
-            </Link>
-          </p>
-        </section>
+        <div className="mb-10">
+          <PricingPreview />
+        </div>
 
         {/* Desktop CTA */}
         <section className="hidden md:block">
