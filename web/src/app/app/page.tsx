@@ -9,55 +9,99 @@ import Link from "next/link";
  * Shows Sign In / Sign Up options
  * Handles tribe invite tokens for post-signup flow
  */
-function AppLandingContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [tribeInvite, setTribeInvite] = useState<string | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
-
   useEffect(() => {
-    console.log("🔵 App Landing Page - Rendering");
+    // CRITICAL: Always show splash for 800ms first for better UX
+    const minimumSplashTime = 800;
+    const startTime = Date.now();
+    
+    console.log("🔵 App Landing - Starting auth check");
     console.log("Current URL:", window.location.href);
     console.log("Cookies:", document.cookie);
+    console.log("UserAgent:", navigator.userAgent);
+    
+    // Check for force_auth parameter to show auth gate even when logged in
+    const forceAuth = searchParams.get("force_auth");
+    const logout = searchParams.get("logout");
+    
+    // Handle logout
+    if (logout === "true") {
+      console.log("🚪 Logout requested - clearing all auth data");
+      // Clear all cookies
+      document.cookie.split(";").forEach(c => {
+        const name = c.trim().split("=")[0];
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.helpem.ai`;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+      });
+      localStorage.clear();
+      sessionStorage.clear();
+      delete (window as any).__nativeSessionToken;
+      
+      // Remove logout param and show auth gate after minimum splash time
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, minimumSplashTime - elapsed);
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/app');
+        setIsChecking(false);
+        console.log("✅ Logout complete - showing auth gate");
+      }, remaining);
+      return;
+    }
     
     // Check if there's a tribe invite token in URL
     const inviteToken = searchParams.get("invite") || searchParams.get("token");
-    
     if (inviteToken) {
-      // Store invite token for after sign up
       localStorage.setItem("pendingTribeInvite", inviteToken);
       setTribeInvite(inviteToken);
-      console.log("Stored tribe invite token:", inviteToken);
+      console.log("📨 Stored tribe invite token:", inviteToken);
     }
 
-    // Check if user is already authenticated (has real session, not demo)
-    const hasSession = document.cookie.includes("session_token");
-    const hasNativeToken = (window as any).__nativeSessionToken;
-    
-    console.log("Has session cookie?", hasSession);
-    console.log("Has native token?", !!hasNativeToken);
-    
-    if (hasSession || hasNativeToken) {
-      console.log("✅ User authenticated, redirecting to dashboard");
-      // Already signed in, go to dashboard
-      setTimeout(() => {
-        router.push("/app/dashboard");
-      }, 100);
-    } else {
-      console.log("❌ No session, showing auth gate");
-      setIsChecking(false);
+    // Check if user is already authenticated (unless force_auth is set)
+    if (!forceAuth) {
+      const hasSession = document.cookie.includes("session_token");
+      const hasNativeToken = (window as any).__nativeSessionToken;
+      
+      console.log("Session check:", { hasSession, hasNativeToken: !!hasNativeToken });
+      
+      if (hasSession || hasNativeToken) {
+        console.log("✅ User is authenticated");
+        // Wait for minimum splash time, then redirect
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, minimumSplashTime - elapsed);
+        setTimeout(() => {
+          console.log("→ Redirecting to dashboard");
+          router.push("/app/dashboard");
+        }, remaining);
+        return;
+      }
     }
+    
+    // No session - show auth gate after minimum splash time
+    console.log("❌ No session found");
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, minimumSplashTime - elapsed);
+    setTimeout(() => {
+      console.log("→ Showing auth gate");
+      setIsChecking(false);
+    }, remaining);
   }, [searchParams, router]);
 
-  // Show loading while checking auth
+  // Show beautiful splash screen while checking auth
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-green-500 rounded-3xl flex items-center justify-center shadow-2xl mb-4 animate-pulse">
-            <img src="/helpem-logo.png" alt="helpem" className="h-16 w-auto" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-400 to-green-500 flex items-center justify-center relative overflow-hidden">
+        {/* Animated background circles */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -left-40 w-80 h-80 bg-white/10 rounded-full animate-pulse"></div>
+          <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-white/10 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+        </div>
+        
+        {/* Logo and brand */}
+        <div className="text-center relative z-10">
+          <div className="w-32 h-32 mx-auto bg-white rounded-3xl flex items-center justify-center shadow-2xl mb-6 animate-bounce">
+            <img src="/helpem-logo.png" alt="helpem" className="h-20 w-auto" />
           </div>
-          <p className="text-gray-600">Loading helpem...</p>
+          <h1 className="text-4xl font-bold text-white mb-2">helpem</h1>
+          <p className="text-white/90 text-lg">Built for you.</p>
         </div>
       </div>
     );

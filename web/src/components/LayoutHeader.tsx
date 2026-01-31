@@ -342,17 +342,23 @@ export function LayoutHeader() {
                   </button>
                   <button
                     onClick={() => {
-                      // Clear session
-                      document.cookie = "session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-                      document.cookie = "session_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                      console.log("🚪 Logout clicked");
+                      // Clear all session data
+                      document.cookie.split(";").forEach(c => {
+                        const name = c.trim().split("=")[0];
+                        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;domain=.helpem.ai`;
+                        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+                      });
                       localStorage.clear();
+                      sessionStorage.clear();
+                      delete (window as any).__nativeSessionToken;
                       setMobileMenuOpen(false);
-                      // Redirect to home
-                      window.location.href = "/";
+                      // Redirect to auth gate with logout flag
+                      window.location.href = "/app?logout=true";
                     }}
                     className="px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
                   >
-                    Logout
+                    🚪 Logout
                   </button>
                 </>
               )}
