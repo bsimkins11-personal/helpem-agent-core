@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ import Link from "next/link";
  * Shows Sign In / Sign Up options
  * Handles tribe invite tokens for post-signup flow
  */
-export default function AppLandingPage() {
+function AppLandingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tribeInvite, setTribeInvite] = useState<string | null>(null);
@@ -165,5 +165,17 @@ export default function AppLandingPage() {
         <p className="mt-4 text-xs text-gray-400">© 2026 helpem. All rights reserved.</p>
       </footer>
     </div>
+  );
+}
+
+export default function AppLandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <AppLandingContent />
+    </Suspense>
   );
 }
