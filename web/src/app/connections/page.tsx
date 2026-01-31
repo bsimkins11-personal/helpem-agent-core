@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getClientSessionToken } from "@/lib/clientSession";
@@ -16,7 +16,7 @@ type Connection = {
   email?: string;
 };
 
-export default function ConnectionsPage() {
+function ConnectionsContent() {
   const searchParams = useSearchParams();
   const [connecting, setConnecting] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -523,5 +523,36 @@ export default function ConnectionsPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+// Wrap with Suspense to support useSearchParams
+export default function ConnectionsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(to bottom right, #f9fafb, white)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '48px', 
+            height: '48px', 
+            border: '4px solid #e5e7eb', 
+            borderTopColor: '#0077CC',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px'
+          }} />
+          <p style={{ color: '#6b7280' }}>Loading...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
+      </div>
+    }>
+      <ConnectionsContent />
+    </Suspense>
   );
 }
