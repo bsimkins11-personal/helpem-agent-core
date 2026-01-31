@@ -868,8 +868,8 @@ function MembersTab({
                       {isPending 
                         ? `Invited ${new Date(member.invitedAt).toLocaleDateString()}` 
                         : hasLeft 
-                        ? `Left ${new Date(member.leftAt).toLocaleDateString()}`
-                        : `Joined ${new Date(member.acceptedAt).toLocaleDateString()}`
+                        ? `Left ${member.leftAt ? new Date(member.leftAt).toLocaleDateString() : 'Recently'}`
+                        : `Joined ${member.acceptedAt ? new Date(member.acceptedAt).toLocaleDateString() : 'Recently'}`
                       }
                     </div>
                     
