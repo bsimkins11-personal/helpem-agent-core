@@ -21,7 +21,7 @@ export default function SignUpPage() {
             <img src="/helpem-logo.png" alt="helpem" className="h-8 w-auto" />
             <span className="text-lg font-bold text-gray-900">helpem</span>
           </Link>
-          <Link href="/app" className="text-blue-600 font-medium hover:underline">
+          <Link href="/app/signin" className="text-blue-600 font-medium hover:underline">
             Sign In
           </Link>
         </div>
@@ -30,7 +30,7 @@ export default function SignUpPage() {
       {/* Sticky CTA for mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg md:hidden z-50">
         <Link
-          href="/app"
+          href="/app/onboarding"
           className="block w-full py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white text-center rounded-xl font-bold text-lg shadow-lg"
         >
           Get Started Free
@@ -51,7 +51,7 @@ export default function SignUpPage() {
         {/* Trial Offer */}
         <section className="mb-10">
           <TrialOfferCard
-            onGetStarted={() => window.location.href = "/app"}
+            onGetStarted={() => window.location.href = "/app/onboarding"}
             buttonText="Get Started Free"
           />
         </section>
@@ -83,13 +83,13 @@ export default function SignUpPage() {
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Ready to get organized?</h3>
             <p className="text-gray-600 mb-6">Start your 30-day free trial with Sign In with Apple.</p>
             <Link
-              href="/app"
+              href="/app/onboarding"
               className="inline-block px-10 py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
             >
               Sign In with Apple
             </Link>
             <p className="mt-4 text-sm text-gray-500">
-              Already have an account? <Link href="/app" className="text-blue-500 hover:underline">Sign in</Link>
+              Already have an account? <Link href="/app/signin" className="text-blue-500 hover:underline">Sign in</Link>
             </p>
           </div>
         </section>

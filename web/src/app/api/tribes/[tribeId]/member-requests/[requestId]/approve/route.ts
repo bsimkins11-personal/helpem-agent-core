@@ -4,14 +4,14 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tribeId: string } }
+  { params }: { params: { tribeId: string; requestId: string } }
 ) {
   try {
-    const { tribeId } = params;
-    const body = await request.json();
+    const { tribeId, requestId } = params;
+    const body = await request.json().catch(() => ({}));
     
     // Forward to backend
-    const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}/invite-contact`;
+    const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}/member-requests/${requestId}/approve`;
     const authHeader = request.headers.get("authorization");
     
     const backendRes = await fetch(backendUrl, {
@@ -27,7 +27,7 @@ export async function POST(
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (error) {
-    console.error("Error proxying POST /tribes/[tribeId]/invite-contact:", error);
+    console.error("Error proxying POST /tribes/[tribeId]/member-requests/[requestId]/approve:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

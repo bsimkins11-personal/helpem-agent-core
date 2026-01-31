@@ -2,32 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
-export async function POST(
+export async function GET(
   request: NextRequest,
   { params }: { params: { tribeId: string } }
 ) {
   try {
     const { tribeId } = params;
-    const body = await request.json();
     
     // Forward to backend
-    const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}/invite-contact`;
+    const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}/member-requests`;
     const authHeader = request.headers.get("authorization");
     
     const backendRes = await fetch(backendUrl, {
-      method: "POST",
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
-      body: JSON.stringify(body),
     });
 
     const data = await backendRes.json();
 
     return NextResponse.json(data, { status: backendRes.status });
   } catch (error) {
-    console.error("Error proxying POST /tribes/[tribeId]/invite-contact:", error);
+    console.error("Error proxying GET /tribes/[tribeId]/member-requests:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

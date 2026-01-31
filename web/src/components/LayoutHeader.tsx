@@ -306,14 +306,21 @@ export function LayoutHeader() {
                   >
                     View Usage
                   </button>
-                  <Link
-                    href="/connections"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-4 py-3 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors font-medium"
-                  >
-                    🔌 Connectors
-                  </Link>
-                  <button
+              <Link
+                href="/connections"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-4 py-3 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors font-medium"
+              >
+                🔌 Connectors
+              </Link>
+              <Link
+                href="/tribe/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-4 py-3 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+              >
+                👥 My Tribes
+              </Link>
+              <button
                     onClick={() => {
                       console.log("Get Support clicked");
                       setMobileMenuOpen(false);

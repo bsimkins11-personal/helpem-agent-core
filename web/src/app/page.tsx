@@ -51,7 +51,7 @@ export default function LandingPage() {
 
             {/* Sign Up - New user journey */}
             <Link
-              href="/signup"
+              href="/app"
               className="block w-full py-4 px-6 bg-white text-gray-900 font-semibold text-lg rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:text-blue-600 transition-all"
             >
               Create Account

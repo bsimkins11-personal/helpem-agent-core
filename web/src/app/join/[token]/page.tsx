@@ -30,6 +30,10 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    // Store the invite token for after sign up
+    localStorage.setItem("pendingTribeInvite", token);
+    console.log("Stored tribe invite token:", token);
+    
     const checkAuthAndLoadTribe = async () => {
       const sessionToken = getClientSessionToken();
       setIsAuthenticated(!!sessionToken);
@@ -121,11 +125,17 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Invalid Invite</h1>
           <p className="text-gray-600 mb-6">{error}</p>
           <Link
-            href="/app"
+            href={`/app?invite=${token}`}
             className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
-            Go to helpem
+            Sign Up to Join
           </Link>
+          <p className="mt-4 text-sm text-gray-500">
+            Already have an account?{" "}
+            <Link href={`/app/signin?invite=${token}`} className="text-blue-500 hover:underline">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     );

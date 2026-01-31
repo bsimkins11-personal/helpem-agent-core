@@ -955,6 +955,78 @@ router.post("/:tribeId/member-requests/:requestId/deny", async (req, res) => {
 });
 
 /**
+ * DELETE /tribes/:tribeId/members/:memberId
+ * Remove a member from Tribe (OWNER ONLY)
+ */
+router.delete("/:tribeId/members/:memberId", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId, memberId } = req.params;
+
+    // Get the tribe
+    const tribe = await prisma.tribe.findUnique({
+      where: { id: tribeId },
+    });
+
+    if (!tribe || tribe.deletedAt) {
+      return res.status(404).json({ error: "Tribe not found" });
+    }
+
+    // Only owner can remove members
+    if (tribe.ownerId !== userId) {
+      return res.status(403).json({ error: "Only the tribe owner can remove members" });
+    }
+
+    // Get the member being removed
+    const member = await prisma.tribeMember.findFirst({
+      where: {
+        id: memberId,
+        tribeId,
+      },
+    });
+
+    if (!member) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    // Owner cannot remove themselves
+    if (member.userId === userId) {
+      return res.status(400).json({ error: "Owner cannot remove themselves. Delete the tribe instead." });
+    }
+
+    // Mark member as left (soft delete)
+    const updated = await prisma.tribeMember.update({
+      where: { id: memberId },
+      data: { leftAt: new Date() },
+    });
+
+    // Create activity entry
+    try {
+      const adminName = await getUserDisplayName(userId);
+      const targetName = await getUserDisplayName(member.userId);
+      await createTribeActivity({
+        tribeId,
+        type: "SYSTEM",
+        message: `${adminName} removed ${targetName} from the tribe`,
+        createdBy: userId,
+      });
+    } catch (activityError) {
+      console.error("Failed to create activity entry (non-critical):", activityError);
+    }
+
+    return res.json({ success: true, member: updated });
+  } catch (err) {
+    console.error("ERROR DELETE /tribes/:tribeId/members/:memberId:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * POST /tribes/:tribeId/accept
  * Accept Tribe invitation
  */
