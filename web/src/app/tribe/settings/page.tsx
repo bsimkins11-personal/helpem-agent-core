@@ -9,6 +9,7 @@ type Tribe = {
   name: string;
   ownerId: string;
   isOwner: boolean;
+  avatarUrl?: string | null;
   pendingProposalsCount?: number;
   memberCount?: number;
   joinedAt: string;
@@ -27,6 +28,60 @@ export default function TribeSettingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTribeName, setNewTribeName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [uploadingTribeId, setUploadingTribeId] = useState<string | null>(null);
+
+  const resizeAvatar = (file: File, size = 256, quality = 0.85): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          reject(new Error("Canvas unavailable"));
+          return;
+        }
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        URL.revokeObjectURL(url);
+        resolve(dataUrl);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Image load failed"));
+      };
+      img.src = url;
+    });
+  };
+
+  const handleAvatarSelect = async (tribeId: string, file: File) => {
+    setUploadingTribeId(tribeId);
+    try {
+      const dataUrl = await resizeAvatar(file);
+      const token = getClientSessionToken();
+      const res = await fetch(`/api/tribes/${tribeId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ avatarUrl: dataUrl }),
+      });
+      if (res.ok) {
+        setTribes(prev => prev.map(t => (t.id === tribeId ? { ...t, avatarUrl: dataUrl } : t)));
+      } else {
+        setError("Failed to upload tribe photo");
+      }
+    } finally {
+      setUploadingTribeId(null);
+    }
+  };
 
   useEffect(() => {
     loadTribes();
@@ -189,13 +244,22 @@ export default function TribeSettingsPage() {
                 className="bg-white rounded-xl border border-gray-200 shadow-sm p-6"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-brandText mb-1">{tribe.name}</h3>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-purple-100 overflow-hidden flex items-center justify-center">
+                      {tribe.avatarUrl ? (
+                        <img src={tribe.avatarUrl} alt={tribe.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xl">{tribe.name.match(/[\p{Emoji}]/u)?.[0] || "👥"}</span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-brandText mb-1">{tribe.name}</h3>
                     {tribe.isOwner && (
                       <span className="inline-block px-2 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
                         Owner
                       </span>
                     )}
+                    </div>
                   </div>
                   
                   {(tribe.pendingProposalsCount ?? 0) > 0 && (
@@ -206,6 +270,31 @@ export default function TribeSettingsPage() {
                 </div>
 
                 <div className="flex gap-2">
+                  {tribe.isOwner && (
+                    <>
+                      <input
+                        id={`tribe-avatar-admin-${tribe.id}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAvatarSelect(tribe.id, file);
+                        }}
+                      />
+                      <label
+                        htmlFor={`tribe-avatar-admin-${tribe.id}`}
+                        className={`px-3 py-2 rounded-lg font-medium text-sm ${
+                          uploadingTribeId === tribe.id
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-gray-50 text-brandText hover:bg-gray-100 cursor-pointer"
+                        }`}
+                        aria-disabled={uploadingTribeId === tribe.id}
+                      >
+                        {uploadingTribeId === tribe.id ? "Uploading..." : "Upload Photo"}
+                      </label>
+                    </>
+                  )}
                   <button
                     onClick={() => router.push(`/tribe/inbox?tribe=${tribe.id}`)}
                     className="flex-1 px-4 py-2 bg-green-50 text-green-600 rounded-lg font-medium hover:bg-green-100 transition-all"

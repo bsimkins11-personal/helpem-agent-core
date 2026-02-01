@@ -74,7 +74,6 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [uploadingTribeId, setUploadingTribeId] = useState<string | null>(null);
 
   // Load tribes when opened
   useEffect(() => {
@@ -248,60 +247,6 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
     }, 5000);
   };
 
-  const resizeAvatar = (file: File, size = 256, quality = 0.85): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          URL.revokeObjectURL(url);
-          reject(new Error("Canvas unavailable"));
-          return;
-        }
-        const minSide = Math.min(img.width, img.height);
-        const sx = (img.width - minSide) / 2;
-        const sy = (img.height - minSide) / 2;
-        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-        const dataUrl = canvas.toDataURL("image/jpeg", quality);
-        URL.revokeObjectURL(url);
-        resolve(dataUrl);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("Image load failed"));
-      };
-      img.src = url;
-    });
-  };
-
-  const handleAvatarSelect = async (tribeId: string, file: File) => {
-    setUploadingTribeId(tribeId);
-    try {
-      const dataUrl = await resizeAvatar(file);
-
-      const token = getClientSessionToken();
-      const res = await fetch(`/api/tribes/${tribeId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ avatarUrl: dataUrl }),
-      });
-
-      if (res.ok) {
-        setTribes(prev =>
-          prev.map(t => (t.id === tribeId ? { ...t, avatarUrl: dataUrl } : t))
-        );
-      }
-    } finally {
-      setUploadingTribeId(null);
-    }
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -520,32 +465,6 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
                         Tribe chat active
                       </div>
                       <div className="flex items-center gap-2">
-                        {tribe.isOwner && (
-                          <>
-                            <input
-                              id={`tribe-avatar-${tribe.id}`}
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleAvatarSelect(tribe.id, file);
-                              }}
-                            />
-                            <label
-                              htmlFor={`tribe-avatar-${tribe.id}`}
-                              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold ${
-                                uploadingTribeId === tribe.id
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer"
-                              }`}
-                              title="Upload tribe photo"
-                              aria-disabled={uploadingTribeId === tribe.id}
-                            >
-                              {uploadingTribeId === tribe.id ? "Uploading..." : "📷 Photo"}
-                            </label>
-                          </>
-                        )}
                         <button
                         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700"
                         title="Hold to talk to this tribe"
