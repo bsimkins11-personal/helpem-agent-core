@@ -7,6 +7,7 @@ import UIKit
 
 struct SignInView: View {
     @ObservedObject var authManager: AuthManager
+    @State private var showSignUp = false
 
     var body: some View {
         ZStack {
@@ -21,7 +22,7 @@ struct SignInView: View {
                 Spacer()
 
                 VStack(spacing: 24) {
-                    // helpem text logo
+                    // helpem text logo (wordmark)
                     HStack(spacing: 0) {
                         Text("help")
                             .foregroundColor(.white)
@@ -58,6 +59,22 @@ struct SignInView: View {
                                         authManager.signInWithApple()
                                     }
                             )
+                        
+                        Button(action: {
+                            showSignUp = true
+                        }) {
+                            Text("Create Account")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(Color.white.opacity(0.15))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
+                                )
+                                .cornerRadius(10)
+                        }
                     }
 
                     if let error = authManager.error {
@@ -72,6 +89,25 @@ struct SignInView: View {
 
                 Spacer()
                     .frame(height: 60)
+            }
+        }
+        .sheet(isPresented: $showSignUp) {
+            NavigationStack {
+                OnboardingWebView(authManager: authManager)
+                    .navigationTitle("Get Started")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") {
+                                showSignUp = false
+                            }
+                        }
+                    }
+            }
+        }
+        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+            if isAuthenticated {
+                showSignUp = false
             }
         }
     }

@@ -61,7 +61,7 @@ export default function SignInPage() {
       <header className="px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/app" className="flex items-center gap-3">
-            <img src="/helpem-logo.png" alt="helpem" className="h-10 w-auto" />
+            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-10 w-auto" />
             <span className="text-xl font-bold text-gray-900">helpem</span>
           </Link>
           <Link href="/app" className="text-gray-600 hover:text-gray-900 text-sm">
@@ -75,7 +75,7 @@ export default function SignInPage() {
         <div className="max-w-md w-full text-center">
           {/* Logo */}
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-green-500 rounded-3xl flex items-center justify-center shadow-2xl mb-8">
-            <img src="/helpem-logo.png" alt="helpem" className="h-16 w-auto" />
+            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-16 w-auto" />
           </div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-4">

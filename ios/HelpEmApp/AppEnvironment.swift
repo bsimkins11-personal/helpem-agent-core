@@ -40,18 +40,33 @@ struct AppEnvironment {
     }
     
     // MARK: - Environment URLs
+
+    /// Base web URL for the current environment
+    static var webBaseURL: String {
+        switch current {
+        case .production:
+            return "https://app.helpem.ai"
+        case .staging:
+            return "https://staging.helpem.ai"
+        case .development:
+            return "http://localhost:3000"
+        }
+    }
     
     /// Web app URL for the current environment
     /// This loads the auth-aware landing page which redirects to dashboard if logged in
     static var webAppURL: String {
-        switch current {
-        case .production:
-            return "https://app.helpem.ai/app?t=\(Int(Date().timeIntervalSince1970))"
-        case .staging:
-            return "https://staging.helpem.ai/app?t=\(Int(Date().timeIntervalSince1970))"
-        case .development:
-            return "http://localhost:3000/app?t=\(Int(Date().timeIntervalSince1970))"
-        }
+        "\(webBaseURL)/app?t=\(Int(Date().timeIntervalSince1970))"
+    }
+
+    /// Dashboard URL for authenticated users
+    static var webDashboardURL: String {
+        "\(webBaseURL)/app/dashboard?t=\(Int(Date().timeIntervalSince1970))"
+    }
+
+    /// Marketing/onboarding URL for sign-up flow
+    static var onboardingURL: String {
+        "\(webBaseURL)/app/onboarding?t=\(Int(Date().timeIntervalSince1970))"
     }
     
     /// API base URL for the current environment

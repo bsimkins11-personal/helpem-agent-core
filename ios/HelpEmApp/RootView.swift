@@ -217,7 +217,7 @@ struct RootView: View {
         }
         
         func navigateHome() {
-            guard let url = URL(string: AppEnvironment.webAppURL) else {
+            guard let url = URL(string: AppEnvironment.webDashboardURL) else {
                 print("❌ iOS: Invalid home URL")
                 return
             }

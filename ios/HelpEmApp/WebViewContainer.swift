@@ -112,7 +112,7 @@ struct WebViewContainer: UIViewRepresentable {
         }
         
         // Load web app
-        guard let url = URL(string: AppEnvironment.webAppURL) else {
+        guard let url = URL(string: AppEnvironment.webDashboardURL) else {
             AppLogger.error("Invalid web app URL", logger: AppLogger.webview)
             return webView
         }
@@ -550,7 +550,7 @@ struct WebViewContainer: UIViewRepresentable {
         }
         
         private func retryLoad() {
-            guard let url = URL(string: AppEnvironment.webAppURL) else { return }
+            guard let url = URL(string: AppEnvironment.webDashboardURL) else { return }
             var request = URLRequest(url: url)
             if let token = KeychainHelper.shared.sessionToken, !token.isEmpty {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

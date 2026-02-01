@@ -16,7 +16,7 @@ function AppLandingContent() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // CRITICAL: Always show splash for 800ms first for better UX
+    // Show splash briefly unless we can immediately route to dashboard
     const minimumSplashTime = 800;
     const startTime = Date.now();
     
@@ -70,9 +70,9 @@ function AppLandingContent() {
       
       if (hasSession || hasNativeToken) {
         console.log("✅ User is authenticated");
-        // Wait for minimum splash time, then redirect
+        // Skip splash for authenticated users to avoid flashing UI in native app
         const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, minimumSplashTime - elapsed);
+        const remaining = Math.max(0, 0 - elapsed);
         setTimeout(() => {
           console.log("→ Redirecting to dashboard");
           router.push("/app/dashboard");
@@ -104,7 +104,7 @@ function AppLandingContent() {
         {/* Logo and brand */}
         <div className="text-center relative z-10">
           <div className="w-32 h-32 mx-auto bg-white rounded-3xl flex items-center justify-center shadow-2xl mb-6 animate-bounce">
-            <img src="/helpem-logo.png" alt="helpem" className="h-20 w-auto" />
+            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-20 w-auto" />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">helpem</h1>
           <p className="text-white/90 text-lg">Built for you.</p>
@@ -130,7 +130,7 @@ function AppLandingContent() {
       <header className="px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/helpem-logo.png" alt="helpem" className="h-10 w-auto" />
+            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-10 w-auto" />
             <span className="text-xl font-bold text-gray-900">helpem</span>
           </Link>
         </div>
@@ -142,7 +142,7 @@ function AppLandingContent() {
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-green-500 rounded-3xl flex items-center justify-center shadow-2xl mb-6">
-              <img src="/helpem-logo.png" alt="helpem" className="h-16 w-auto" />
+              <img src="/helpem-logo.png?v=1" alt="helpem" className="h-16 w-auto" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
               Welcome to helpem

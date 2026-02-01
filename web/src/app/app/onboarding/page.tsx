@@ -58,7 +58,7 @@ export default function OnboardingPage() {
       <header className="px-6 py-4 border-b border-gray-100">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/helpem-logo.png" alt="helpem" className="h-8 w-auto" />
+            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-8 w-auto" />
             <span className="text-lg font-bold text-gray-900">helpem</span>
           </Link>
           <div className="flex items-center gap-4">
@@ -94,7 +94,7 @@ export default function OnboardingPage() {
           <div className="space-y-8 animate-fade-in">
             <section className="text-center">
               <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-green-500 rounded-3xl flex items-center justify-center shadow-xl mb-6">
-                <img src="/helpem-logo.png" alt="helpem" className="h-12 w-auto" />
+                <img src="/helpem-logo.png?v=1" alt="helpem" className="h-12 w-auto" />
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                 Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-500">helpem</span>
