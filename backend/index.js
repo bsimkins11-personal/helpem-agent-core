@@ -574,6 +574,18 @@ app.get("/debug/pending-invitations", async (req, res) => {
   }
 });
 
+// Temporary: Check user by phone
+app.get("/debug/user-by-phone/:phone", async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { phone: req.params.phone }
+    });
+    return res.json({ found: !!user, user });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server with migrations
 (async () => {
   // Run migrations before starting server
