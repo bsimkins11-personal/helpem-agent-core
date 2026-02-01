@@ -598,6 +598,19 @@ app.get("/debug/users", async (req, res) => {
   }
 });
 
+// Temporary: List tribe members
+app.get("/debug/tribe-members/:tribeId", async (req, res) => {
+  try {
+    const members = await prisma.tribeMember.findMany({
+      where: { tribeId: req.params.tribeId },
+      select: { id: true, userId: true, acceptedAt: true, invitedAt: true, leftAt: true }
+    });
+    return res.json({ count: members.length, members });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Temporary: Add user to tribe directly (for testing)
 app.post("/debug/add-member", async (req, res) => {
   try {
