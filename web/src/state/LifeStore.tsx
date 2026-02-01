@@ -224,15 +224,34 @@ export function LifeProvider({ children }: LifeProviderProps) {
     setTodos(prev => [...prev, todo]);
   }, []);
 
-  const completeTodo = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, completedAt: new Date() } : t));
-    
+  const completeTodo = useCallback(async (id: string) => {
+    const completedAt = new Date();
+    // Optimistic update
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, completedAt } : t));
+
     // Cancel notification when todo is completed (iOS only)
     if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
       window.webkit.messageHandlers.native.postMessage({
         action: "cancelNotification",
         id: id,
       });
+    }
+
+    // Persist to database
+    try {
+      const response = await fetch("/api/todos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, completedAt: completedAt.toISOString() }),
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to complete todo in database');
+      } else {
+        console.log('✅ Todo completed in database');
+      }
+    } catch (error) {
+      console.error('❌ Error completing todo:', error);
     }
   }, []);
 
