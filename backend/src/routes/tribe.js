@@ -1660,7 +1660,16 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
     });
   } catch (err) {
     console.error("ERROR POST /tribes/:tribeId/invite-contact:", err);
-    return res.status(500).json({ error: "Internal server error" });
+
+    // Handle specific Prisma errors
+    if (err.code === 'P2021' || err.message?.includes('does not exist')) {
+      return res.status(500).json({ error: "Database table not found. Migration may need to run." });
+    }
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: "An invitation has already been sent to this contact" });
+    }
+
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 });
 
