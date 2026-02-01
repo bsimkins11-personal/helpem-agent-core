@@ -70,16 +70,40 @@ class TribeAPIClient {
     /// Update tribe avatar (owner only)
     func updateTribeAvatar(tribeId: String, avatarUrl: String) async throws -> Tribe {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!
-        let request = UpdateTribeRequest(name: nil, tribeType: nil, avatarUrl: avatarUrl)
+        let request = UpdateTribeRequest(avatarUrl: avatarUrl)
         let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
         let response = try decoder.decode([String: Tribe].self, from: data)
-        
+
         guard let tribe = response["tribe"] else {
             throw TribeAPIError.invalidResponse
         }
         return tribe
     }
-    
+
+    /// Update tribe default permissions (owner only)
+    func updateTribeDefaultPermissions(
+        tribeId: String,
+        defaultTasksPermission: String?,
+        defaultAppointmentsPermission: String?,
+        defaultRoutinesPermission: String?,
+        defaultGroceriesPermission: String?
+    ) async throws -> Tribe {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!
+        let request = UpdateTribeRequest(
+            defaultTasksPermission: defaultTasksPermission,
+            defaultAppointmentsPermission: defaultAppointmentsPermission,
+            defaultRoutinesPermission: defaultRoutinesPermission,
+            defaultGroceriesPermission: defaultGroceriesPermission
+        )
+        let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
+        let response = try decoder.decode([String: Tribe].self, from: data)
+
+        guard let tribe = response["tribe"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return tribe
+    }
+
     /// Delete a Tribe (owner only, soft delete)
     func deleteTribe(tribeId: String) async throws {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!

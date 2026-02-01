@@ -33,6 +33,7 @@ struct TribeSettingsView: View {
             dangerZoneSection
         }
         .task {
+            viewModel.loadDefaultPermissions(from: tribe)
             await viewModel.loadSettings(tribeId: tribe.id)
         }
         .onChange(of: viewModel.tribeDeleted) { deleted in
@@ -217,6 +218,9 @@ struct TribeSettingsView: View {
                             }
                             .pickerStyle(.segmented)
                             .frame(width: 180)
+                            .onChange(of: viewModel.defaultTasksPermission) { _, _ in
+                                Task { await viewModel.updateDefaultPermissions(tribeId: tribe.id) }
+                            }
                         }
 
                         // Appointments
@@ -229,6 +233,9 @@ struct TribeSettingsView: View {
                             }
                             .pickerStyle(.segmented)
                             .frame(width: 180)
+                            .onChange(of: viewModel.defaultAppointmentsPermission) { _, _ in
+                                Task { await viewModel.updateDefaultPermissions(tribeId: tribe.id) }
+                            }
                         }
 
                         // Routines
@@ -241,6 +248,9 @@ struct TribeSettingsView: View {
                             }
                             .pickerStyle(.segmented)
                             .frame(width: 180)
+                            .onChange(of: viewModel.defaultRoutinesPermission) { _, _ in
+                                Task { await viewModel.updateDefaultPermissions(tribeId: tribe.id) }
+                            }
                         }
 
                         // Groceries
@@ -253,6 +263,9 @@ struct TribeSettingsView: View {
                             }
                             .pickerStyle(.segmented)
                             .frame(width: 180)
+                            .onChange(of: viewModel.defaultGroceriesPermission) { _, _ in
+                                Task { await viewModel.updateDefaultPermissions(tribeId: tribe.id) }
+                            }
                         }
                     }
                     .padding(.vertical, 8)
@@ -1019,6 +1032,32 @@ class TribeSettingsViewModel: ObservableObject {
             AppLogger.error("Failed to load settings: \(error)", logger: AppLogger.general)
         }
     }
+
+    /// Load default permissions from tribe
+    func loadDefaultPermissions(from tribe: Tribe) {
+        defaultTasksPermission = tribe.defaultTasksPermission
+        defaultAppointmentsPermission = tribe.defaultAppointmentsPermission
+        defaultRoutinesPermission = tribe.defaultRoutinesPermission
+        defaultGroceriesPermission = tribe.defaultGroceriesPermission
+    }
+
+    /// Update tribe default permissions (owner only)
+    func updateDefaultPermissions(tribeId: String) async {
+        do {
+            _ = try await repository.updateTribeDefaultPermissions(
+                id: tribeId,
+                defaultTasksPermission: defaultTasksPermission,
+                defaultAppointmentsPermission: defaultAppointmentsPermission,
+                defaultRoutinesPermission: defaultRoutinesPermission,
+                defaultGroceriesPermission: defaultGroceriesPermission
+            )
+            AppLogger.info("Updated tribe default permissions", logger: AppLogger.general)
+        } catch {
+            self.error = error
+            self.showError = true
+            AppLogger.error("Failed to update default permissions: \(error)", logger: AppLogger.general)
+        }
+    }
     
     func updateNotificationPreferences(tribeId: String, proposalNotifs: Bool, digestNotifs: Bool) async {
         guard let memberId = currentMemberId else {
@@ -1182,12 +1221,11 @@ class MemberDetailViewModel: ObservableObject {
             defaultRoutinesPermission = "none"
             defaultGroceriesPermission = "none"
         } else {
-            // Family tribes: defaults can be configured (for now, default to propose)
-            // TODO: Load actual tribe defaults from backend
-            defaultTasksPermission = "propose"
-            defaultAppointmentsPermission = "propose"
-            defaultRoutinesPermission = "propose"
-            defaultGroceriesPermission = "propose"
+            // Family tribes: load actual tribe defaults
+            defaultTasksPermission = tribe.defaultTasksPermission
+            defaultAppointmentsPermission = tribe.defaultAppointmentsPermission
+            defaultRoutinesPermission = tribe.defaultRoutinesPermission
+            defaultGroceriesPermission = tribe.defaultGroceriesPermission
         }
 
         hasUnsavedChanges = false

@@ -11,6 +11,13 @@ protocol TribeRepository {
     func createTribe(name: String, tribeType: TribeType) async throws -> Tribe
     func renameTribe(id: String, newName: String) async throws -> Tribe
     func updateTribeAvatar(id: String, avatarUrl: String) async throws -> Tribe
+    func updateTribeDefaultPermissions(
+        id: String,
+        defaultTasksPermission: String?,
+        defaultAppointmentsPermission: String?,
+        defaultRoutinesPermission: String?,
+        defaultGroceriesPermission: String?
+    ) async throws -> Tribe
     func deleteTribe(id: String) async throws
     func acceptInvitation(tribeId: String) async throws -> TribeMember
     func leaveTribe(id: String) async throws
@@ -123,7 +130,26 @@ class TribeAPIRepository: TribeRepository {
         await cacheService.invalidate("tribe_\(id)")
         return tribe
     }
-    
+
+    func updateTribeDefaultPermissions(
+        id: String,
+        defaultTasksPermission: String?,
+        defaultAppointmentsPermission: String?,
+        defaultRoutinesPermission: String?,
+        defaultGroceriesPermission: String?
+    ) async throws -> Tribe {
+        let tribe = try await apiClient.updateTribeDefaultPermissions(
+            tribeId: id,
+            defaultTasksPermission: defaultTasksPermission,
+            defaultAppointmentsPermission: defaultAppointmentsPermission,
+            defaultRoutinesPermission: defaultRoutinesPermission,
+            defaultGroceriesPermission: defaultGroceriesPermission
+        )
+        await cacheService.invalidate("tribes")
+        await cacheService.invalidate("tribe_\(id)")
+        return tribe
+    }
+
     func deleteTribe(id: String) async throws {
         try await apiClient.deleteTribe(tribeId: id)
         await cacheService.invalidate("tribes")

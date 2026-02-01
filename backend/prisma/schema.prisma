@@ -145,21 +145,29 @@ model Tribe {
   name        String
   ownerId     String         @db.Uuid @map("owner_id")
   avatarUrl   String?        @map("avatar_url")
-  
+
   // Tribe type: friend or family
   // friend: appointments, todos, chat only
   // family: all features including routines and groceries
   tribeType   String         @map("tribe_type")
-  
+
+  // Default permissions for members (family tribes)
+  // "propose" = members must propose items for approval
+  // "add" = members can add items directly
+  defaultTasksPermission        String  @default("propose") @map("default_tasks_permission")
+  defaultAppointmentsPermission String  @default("propose") @map("default_appointments_permission")
+  defaultRoutinesPermission     String  @default("propose") @map("default_routines_permission")
+  defaultGroceriesPermission    String  @default("propose") @map("default_groceries_permission")
+
   createdAt   DateTime       @default(now()) @map("created_at")
   deletedAt   DateTime?      @map("deleted_at")
-  
+
   members     TribeMember[]
   items       TribeItem[]
   memberRequests TribeMemberRequest[]
   activities  TribeActivity[]
   messages    TribeMessage[]
-  
+
   @@map("tribes")
 }
 

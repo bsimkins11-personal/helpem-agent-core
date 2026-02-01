@@ -106,6 +106,10 @@ router.get("/", async (req, res) => {
             ownerId: membership.tribe.ownerId,
             avatarUrl: membership.tribe.avatarUrl,
             tribeType: membership.tribe.tribeType,
+            defaultTasksPermission: membership.tribe.defaultTasksPermission || 'propose',
+            defaultAppointmentsPermission: membership.tribe.defaultAppointmentsPermission || 'propose',
+            defaultRoutinesPermission: membership.tribe.defaultRoutinesPermission || 'propose',
+            defaultGroceriesPermission: membership.tribe.defaultGroceriesPermission || 'propose',
             isOwner: membership.tribe.ownerId === userId,
             pendingProposalsCount: pendingCount,
             memberCount: memberCount,
@@ -122,6 +126,10 @@ router.get("/", async (req, res) => {
             ownerId: membership.tribe.ownerId,
             avatarUrl: membership.tribe.avatarUrl,
             tribeType: membership.tribe.tribeType || 'friend', // Default if missing
+            defaultTasksPermission: membership.tribe.defaultTasksPermission || 'propose',
+            defaultAppointmentsPermission: membership.tribe.defaultAppointmentsPermission || 'propose',
+            defaultRoutinesPermission: membership.tribe.defaultRoutinesPermission || 'propose',
+            defaultGroceriesPermission: membership.tribe.defaultGroceriesPermission || 'propose',
             isOwner: membership.tribe.ownerId === userId,
             pendingProposalsCount: 0,
             memberCount: 0,
@@ -312,11 +320,36 @@ router.patch("/:tribeId", async (req, res) => {
 
     const userId = session.session.userId;
     const { tribeId } = req.params;
-    const { name, tribeType, avatarUrl } = req.body;
+    const {
+      name,
+      tribeType,
+      avatarUrl,
+      defaultTasksPermission,
+      defaultAppointmentsPermission,
+      defaultRoutinesPermission,
+      defaultGroceriesPermission
+    } = req.body;
 
     // At least one field must be provided
-    if (!name && !tribeType && avatarUrl === undefined) {
-      return res.status(400).json({ error: "Either name, tribeType, or avatarUrl must be provided" });
+    const hasDefaultPermission = defaultTasksPermission || defaultAppointmentsPermission ||
+                                  defaultRoutinesPermission || defaultGroceriesPermission;
+    if (!name && !tribeType && avatarUrl === undefined && !hasDefaultPermission) {
+      return res.status(400).json({ error: "At least one field must be provided" });
+    }
+
+    // Validate default permissions if provided
+    const validPermissions = ["propose", "add"];
+    if (defaultTasksPermission && !validPermissions.includes(defaultTasksPermission)) {
+      return res.status(400).json({ error: "defaultTasksPermission must be 'propose' or 'add'" });
+    }
+    if (defaultAppointmentsPermission && !validPermissions.includes(defaultAppointmentsPermission)) {
+      return res.status(400).json({ error: "defaultAppointmentsPermission must be 'propose' or 'add'" });
+    }
+    if (defaultRoutinesPermission && !validPermissions.includes(defaultRoutinesPermission)) {
+      return res.status(400).json({ error: "defaultRoutinesPermission must be 'propose' or 'add'" });
+    }
+    if (defaultGroceriesPermission && !validPermissions.includes(defaultGroceriesPermission)) {
+      return res.status(400).json({ error: "defaultGroceriesPermission must be 'propose' or 'add'" });
     }
 
     // Validate name if provided
@@ -374,6 +407,10 @@ router.patch("/:tribeId", async (req, res) => {
     if (name) updateData.name = name.trim();
     if (tribeType) updateData.tribeType = tribeType;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (defaultTasksPermission) updateData.defaultTasksPermission = defaultTasksPermission;
+    if (defaultAppointmentsPermission) updateData.defaultAppointmentsPermission = defaultAppointmentsPermission;
+    if (defaultRoutinesPermission) updateData.defaultRoutinesPermission = defaultRoutinesPermission;
+    if (defaultGroceriesPermission) updateData.defaultGroceriesPermission = defaultGroceriesPermission;
 
     const updated = await prisma.tribe.update({
       where: { id: tribeId },
@@ -398,6 +435,10 @@ router.patch("/:tribeId", async (req, res) => {
         ownerId: updated.ownerId,
         avatarUrl: updated.avatarUrl,
         tribeType: updated.tribeType,
+        defaultTasksPermission: updated.defaultTasksPermission,
+        defaultAppointmentsPermission: updated.defaultAppointmentsPermission,
+        defaultRoutinesPermission: updated.defaultRoutinesPermission,
+        defaultGroceriesPermission: updated.defaultGroceriesPermission,
         isOwner: true, // Only owners can update, so always true here
         pendingProposalsCount: 0,
         joinedAt: membership.acceptedAt,

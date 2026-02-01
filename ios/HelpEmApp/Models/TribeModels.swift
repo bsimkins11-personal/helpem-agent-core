@@ -14,6 +14,14 @@ struct Tribe: Codable, Identifiable {
     let pendingProposals: Int
     let joinedAt: Date
 
+    // Default permissions for members (family tribes)
+    // "propose" = members must propose items for approval
+    // "add" = members can add items directly
+    let defaultTasksPermission: String
+    let defaultAppointmentsPermission: String
+    let defaultRoutinesPermission: String
+    let defaultGroceriesPermission: String
+
     /// Friend tribes: messages, propose appointments, propose todos only
     /// Family tribes: full access to all categories (configurable by admin)
     var isFriend: Bool { tribeType == .friend }
@@ -28,6 +36,10 @@ struct Tribe: Codable, Identifiable {
         case pendingProposals = "pendingProposals"
         case pendingProposalsCount = "pendingProposalsCount"
         case joinedAt = "joinedAt"
+        case defaultTasksPermission
+        case defaultAppointmentsPermission
+        case defaultRoutinesPermission
+        case defaultGroceriesPermission
     }
 
     init(from decoder: Decoder) throws {
@@ -47,6 +59,12 @@ struct Tribe: Codable, Identifiable {
         } else {
             pendingProposals = 0
         }
+
+        // Default permissions (default to "propose" if not present)
+        defaultTasksPermission = (try? container.decode(String.self, forKey: .defaultTasksPermission)) ?? "propose"
+        defaultAppointmentsPermission = (try? container.decode(String.self, forKey: .defaultAppointmentsPermission)) ?? "propose"
+        defaultRoutinesPermission = (try? container.decode(String.self, forKey: .defaultRoutinesPermission)) ?? "propose"
+        defaultGroceriesPermission = (try? container.decode(String.self, forKey: .defaultGroceriesPermission)) ?? "propose"
     }
 
     func encode(to encoder: Encoder) throws {
@@ -58,9 +76,26 @@ struct Tribe: Codable, Identifiable {
         try container.encode(tribeType, forKey: .tribeType)
         try container.encode(pendingProposals, forKey: .pendingProposals)
         try container.encode(joinedAt, forKey: .joinedAt)
+        try container.encode(defaultTasksPermission, forKey: .defaultTasksPermission)
+        try container.encode(defaultAppointmentsPermission, forKey: .defaultAppointmentsPermission)
+        try container.encode(defaultRoutinesPermission, forKey: .defaultRoutinesPermission)
+        try container.encode(defaultGroceriesPermission, forKey: .defaultGroceriesPermission)
     }
 
-    init(id: String, name: String, ownerId: String, isOwner: Bool, avatarUrl: String?, tribeType: TribeType = .family, pendingProposals: Int, joinedAt: Date) {
+    init(
+        id: String,
+        name: String,
+        ownerId: String,
+        isOwner: Bool,
+        avatarUrl: String?,
+        tribeType: TribeType = .family,
+        pendingProposals: Int,
+        joinedAt: Date,
+        defaultTasksPermission: String = "propose",
+        defaultAppointmentsPermission: String = "propose",
+        defaultRoutinesPermission: String = "propose",
+        defaultGroceriesPermission: String = "propose"
+    ) {
         self.id = id
         self.name = name
         self.ownerId = ownerId
@@ -69,6 +104,10 @@ struct Tribe: Codable, Identifiable {
         self.tribeType = tribeType
         self.pendingProposals = pendingProposals
         self.joinedAt = joinedAt
+        self.defaultTasksPermission = defaultTasksPermission
+        self.defaultAppointmentsPermission = defaultAppointmentsPermission
+        self.defaultRoutinesPermission = defaultRoutinesPermission
+        self.defaultGroceriesPermission = defaultGroceriesPermission
     }
 }
 
@@ -359,6 +398,28 @@ struct UpdateTribeRequest: Codable {
     let name: String?
     let tribeType: TribeType?
     let avatarUrl: String?
+    let defaultTasksPermission: String?
+    let defaultAppointmentsPermission: String?
+    let defaultRoutinesPermission: String?
+    let defaultGroceriesPermission: String?
+
+    init(
+        name: String? = nil,
+        tribeType: TribeType? = nil,
+        avatarUrl: String? = nil,
+        defaultTasksPermission: String? = nil,
+        defaultAppointmentsPermission: String? = nil,
+        defaultRoutinesPermission: String? = nil,
+        defaultGroceriesPermission: String? = nil
+    ) {
+        self.name = name
+        self.tribeType = tribeType
+        self.avatarUrl = avatarUrl
+        self.defaultTasksPermission = defaultTasksPermission
+        self.defaultAppointmentsPermission = defaultAppointmentsPermission
+        self.defaultRoutinesPermission = defaultRoutinesPermission
+        self.defaultGroceriesPermission = defaultGroceriesPermission
+    }
 }
 
 struct InviteMemberRequest: Codable {
