@@ -598,6 +598,42 @@ app.get("/debug/users", async (req, res) => {
   }
 });
 
+// Temporary: Add user to tribe directly (for testing)
+app.post("/debug/add-member", async (req, res) => {
+  try {
+    const { tribeId, userId, invitedBy } = req.body;
+
+    // Create tribe member
+    const member = await prisma.tribeMember.create({
+      data: {
+        tribeId,
+        userId,
+        invitedBy,
+        invitedAt: new Date(),
+        // Don't auto-accept - they need to accept
+      }
+    });
+
+    // Send push notification
+    const { sendToUser, isPushEnabled } = await import('./src/services/pushNotificationService.js');
+    const tribe = await prisma.tribe.findUnique({ where: { id: tribeId } });
+
+    if (isPushEnabled()) {
+      await sendToUser(userId, {
+        title: "You've been invited!",
+        body: `Join the "${tribe.name}" tribe`,
+        category: "TRIBE_INVITE",
+        data: { type: "tribe_invite", tribeId, memberId: member.id }
+      });
+    }
+
+    return res.json({ success: true, member, notificationSent: isPushEnabled() });
+  } catch (err) {
+    console.error("Error adding member:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server with migrations
 (async () => {
   // Run migrations before starting server
