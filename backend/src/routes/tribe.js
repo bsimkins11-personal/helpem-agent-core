@@ -312,7 +312,7 @@ router.patch("/:tribeId", async (req, res) => {
 
     const userId = session.session.userId;
     const { tribeId } = req.params;
-    const { name, tribeType } = req.body;
+    const { name, tribeType, avatarUrl } = req.body;
 
     // At least one field must be provided
     if (!name && !tribeType && avatarUrl === undefined) {
