@@ -598,30 +598,49 @@ app.get("/debug/users", async (req, res) => {
   }
 });
 
-// Temporary: List active sessions (to identify users)
-app.get("/debug/sessions", async (req, res) => {
+// Temporary: List active devices (to identify users)
+app.get("/debug/devices", async (req, res) => {
   try {
-    const sessions = await prisma.session.findMany({
-      where: {
-        expiresAt: { gt: new Date() },
-        revokedAt: null,
-      },
-      orderBy: { createdAt: 'desc' },
+    const devices = await prisma.userDevice.findMany({
+      orderBy: { lastActiveAt: 'desc' },
       take: 10,
+    });
+    return res.json({
+      count: devices.length,
+      devices: devices.map(d => ({
+        userId: d.userId,
+        deviceName: d.deviceName,
+        platform: d.platform,
+        lastActiveAt: d.lastActiveAt,
+        notificationsEnabled: d.notificationsEnabled,
+      }))
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Temporary: List recent tribe activities
+app.get("/debug/activities", async (req, res) => {
+  try {
+    const activities = await prisma.tribeActivity.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 20,
       include: {
-        user: {
-          select: { id: true, email: true, phone: true, createdAt: true }
-        }
+        actor: { select: { id: true, email: true, phone: true } },
+        tribe: { select: { id: true, name: true } }
       }
     });
     return res.json({
-      count: sessions.length,
-      sessions: sessions.map(s => ({
-        sessionId: s.id,
-        userId: s.userId,
-        createdAt: s.createdAt,
-        expiresAt: s.expiresAt,
-        user: s.user
+      count: activities.length,
+      activities: activities.map(a => ({
+        type: a.type,
+        tribeId: a.tribeId,
+        tribeName: a.tribe?.name,
+        actorId: a.actorId,
+        targetUserId: a.targetUserId,
+        metadata: a.metadata,
+        createdAt: a.createdAt,
       }))
     });
   } catch (err) {
