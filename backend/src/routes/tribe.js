@@ -1631,8 +1631,9 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
     
     await createTribeActivity({
       tribeId,
-      userId,
-      message: `${inviterName} invited ${invitedName} to join the tribe! 🎉`,
+      type: "MEMBER_INVITED",
+      message: `${inviterName} invited ${invitedName} to join the tribe!`,
+      createdBy: userId,
     });
 
     return res.json({ 
