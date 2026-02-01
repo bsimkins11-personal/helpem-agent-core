@@ -23,6 +23,10 @@ struct TribeSettingsView: View {
     var body: some View {
         List {
             tribeNameSection
+            tribeTypeSection
+            if tribe.isOwner {
+                tribeDefaultPermissionsSection
+            }
             membersSection
             notificationsSection
             managementScopeSection
@@ -166,6 +170,111 @@ struct TribeSettingsView: View {
         } catch {
             viewModel.error = error
             viewModel.showError = true
+        }
+    }
+
+    // MARK: - Tribe Type Section
+
+    private var tribeTypeSection: some View {
+        Section {
+            HStack {
+                Label(tribe.tribeType.displayName, systemImage: tribe.isFamily ? "house.fill" : "person.2.fill")
+                    .foregroundColor(tribe.isFamily ? .purple : .blue)
+                Spacer()
+                Text(tribe.isFamily ? "Full sharing" : "Proposals only")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        } header: {
+            Text("Tribe Type")
+        } footer: {
+            if tribe.isFriend {
+                Text("Friend tribes can message, and propose appointments & tasks. All proposals require approval.")
+            } else {
+                Text("Family tribes can share all categories. Admin controls whether members can add directly or must propose.")
+            }
+        }
+    }
+
+    // MARK: - Default Permissions Section (Family only, Owner only)
+
+    private var tribeDefaultPermissionsSection: some View {
+        Group {
+            if tribe.isFamily {
+                Section {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Set default permissions for all tribe members. You can override these per-member in Members settings.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        // Tasks
+                        HStack {
+                            Label("Tasks", systemImage: "checklist")
+                            Spacer()
+                            Picker("", selection: $viewModel.defaultTasksPermission) {
+                                Text("Propose").tag("propose")
+                                Text("Add Directly").tag("add")
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 180)
+                        }
+
+                        // Appointments
+                        HStack {
+                            Label("Appointments", systemImage: "calendar")
+                            Spacer()
+                            Picker("", selection: $viewModel.defaultAppointmentsPermission) {
+                                Text("Propose").tag("propose")
+                                Text("Add Directly").tag("add")
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 180)
+                        }
+
+                        // Routines
+                        HStack {
+                            Label("Routines", systemImage: "repeat")
+                            Spacer()
+                            Picker("", selection: $viewModel.defaultRoutinesPermission) {
+                                Text("Propose").tag("propose")
+                                Text("Add Directly").tag("add")
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 180)
+                        }
+
+                        // Groceries
+                        HStack {
+                            Label("Groceries", systemImage: "cart")
+                            Spacer()
+                            Picker("", selection: $viewModel.defaultGroceriesPermission) {
+                                Text("Propose").tag("propose")
+                                Text("Add Directly").tag("add")
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 180)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                } header: {
+                    Text("Default Member Permissions")
+                }
+            } else {
+                // Friend tribe - fixed permissions
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Messages", systemImage: "message")
+                        Label("Propose Appointments", systemImage: "calendar.badge.plus")
+                        Label("Propose Tasks", systemImage: "checklist")
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                } header: {
+                    Text("Friend Tribe Features")
+                } footer: {
+                    Text("Friend tribes use proposal-only mode. Routines and groceries are not available.")
+                }
+            }
         }
     }
 
@@ -680,7 +789,13 @@ class TribeSettingsViewModel: ObservableObject {
     @Published var tribeDeleted = false
     @Published var tribeLeft = false
     @Published var isUploadingAvatar = false
-    
+
+    // Tribe-wide default permissions (Family tribes only)
+    @Published var defaultTasksPermission = "propose" // "propose" or "add"
+    @Published var defaultAppointmentsPermission = "propose"
+    @Published var defaultRoutinesPermission = "propose"
+    @Published var defaultGroceriesPermission = "propose"
+
     private var currentMemberId: String?
     private let repository: TribeRepository
     

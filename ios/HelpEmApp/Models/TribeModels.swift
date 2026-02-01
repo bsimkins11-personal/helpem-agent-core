@@ -10,14 +10,21 @@ struct Tribe: Codable, Identifiable {
     let ownerId: String
     let isOwner: Bool
     let avatarUrl: String?
+    let tribeType: TribeType
     let pendingProposals: Int
     let joinedAt: Date
-    
+
+    /// Friend tribes: messages, propose appointments, propose todos only
+    /// Family tribes: full access to all categories (configurable by admin)
+    var isFriend: Bool { tribeType == .friend }
+    var isFamily: Bool { tribeType == .family }
+
     enum CodingKeys: String, CodingKey {
         case id, name
         case ownerId = "ownerId"
         case isOwner = "isOwner"
         case avatarUrl = "avatarUrl"
+        case tribeType = "tribeType"
         case pendingProposals = "pendingProposals"
         case pendingProposalsCount = "pendingProposalsCount"
         case joinedAt = "joinedAt"
@@ -30,8 +37,9 @@ struct Tribe: Codable, Identifiable {
         ownerId = try container.decode(String.self, forKey: .ownerId)
         isOwner = try container.decode(Bool.self, forKey: .isOwner)
         avatarUrl = try? container.decode(String.self, forKey: .avatarUrl)
+        tribeType = (try? container.decode(TribeType.self, forKey: .tribeType)) ?? .family
         joinedAt = try container.decode(Date.self, forKey: .joinedAt)
-        
+
         if let pending = try? container.decode(Int.self, forKey: .pendingProposals) {
             pendingProposals = pending
         } else if let pendingCount = try? container.decode(Int.self, forKey: .pendingProposalsCount) {
@@ -47,16 +55,18 @@ struct Tribe: Codable, Identifiable {
         try container.encode(name, forKey: .name)
         try container.encode(ownerId, forKey: .ownerId)
         try container.encode(isOwner, forKey: .isOwner)
+        try container.encode(tribeType, forKey: .tribeType)
         try container.encode(pendingProposals, forKey: .pendingProposals)
         try container.encode(joinedAt, forKey: .joinedAt)
     }
 
-    init(id: String, name: String, ownerId: String, isOwner: Bool, avatarUrl: String?, pendingProposals: Int, joinedAt: Date) {
+    init(id: String, name: String, ownerId: String, isOwner: Bool, avatarUrl: String?, tribeType: TribeType = .family, pendingProposals: Int, joinedAt: Date) {
         self.id = id
         self.name = name
         self.ownerId = ownerId
         self.isOwner = isOwner
         self.avatarUrl = avatarUrl
+        self.tribeType = tribeType
         self.pendingProposals = pendingProposals
         self.joinedAt = joinedAt
     }
