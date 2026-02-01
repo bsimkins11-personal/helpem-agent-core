@@ -103,6 +103,7 @@ struct TribeMember: Codable, Identifiable {
     let userId: String
     let invitedBy: String
     let displayName: String?
+    let isAdmin: Bool
     let invitedAt: Date
     let acceptedAt: Date?
     let leftAt: Date?
@@ -116,6 +117,7 @@ struct TribeMember: Codable, Identifiable {
         case tribeId = "tribeId"
         case invitedBy = "invitedBy"
         case displayName = "displayName"
+        case isAdmin = "isAdmin"
         case invitedAt = "invitedAt"
         case acceptedAt = "acceptedAt"
         case leftAt = "leftAt"
@@ -124,11 +126,28 @@ struct TribeMember: Codable, Identifiable {
         case digestNotifications = "digestNotifs"
         case permissions
     }
-    
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        tribeId = try container.decode(String.self, forKey: .tribeId)
+        userId = try container.decode(String.self, forKey: .userId)
+        invitedBy = try container.decode(String.self, forKey: .invitedBy)
+        displayName = try? container.decode(String.self, forKey: .displayName)
+        isAdmin = (try? container.decode(Bool.self, forKey: .isAdmin)) ?? false
+        invitedAt = try container.decode(Date.self, forKey: .invitedAt)
+        acceptedAt = try? container.decode(Date.self, forKey: .acceptedAt)
+        leftAt = try? container.decode(Date.self, forKey: .leftAt)
+        managementScope = (try? container.decode(String.self, forKey: .managementScope)) ?? "only_shared"
+        proposalNotifications = (try? container.decode(Bool.self, forKey: .proposalNotifications)) ?? true
+        digestNotifications = (try? container.decode(Bool.self, forKey: .digestNotifications)) ?? false
+        permissions = try? container.decode(TribeMemberPermissions.self, forKey: .permissions)
+    }
+
     var isAccepted: Bool {
         acceptedAt != nil && leftAt == nil
     }
-    
+
     var isPending: Bool {
         acceptedAt == nil && leftAt == nil
     }

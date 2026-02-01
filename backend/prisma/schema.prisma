@@ -170,13 +170,14 @@ model TribeMember {
   userId            String                    @db.Uuid @map("user_id")
   invitedBy         String                    @db.Uuid @map("invited_by")
   displayName       String?                   @map("display_name")
+  isAdmin           Boolean                   @default(false) @map("is_admin")
   invitedAt         DateTime                  @default(now()) @map("invited_at")
   acceptedAt        DateTime?                 @map("accepted_at")
   leftAt            DateTime?                 @map("left_at")
-  
+
   // Management scope: only_shared (default) or shared_and_personal
   managementScope   String                    @default("only_shared") @map("management_scope")
-  
+
   // Notification preferences
   proposalNotifs    Boolean                   @default(true) @map("proposal_notifications")
   digestNotifs      Boolean                   @default(false) @map("digest_notifications")
