@@ -626,10 +626,7 @@ app.get("/debug/activities", async (req, res) => {
     const activities = await prisma.tribeActivity.findMany({
       orderBy: { createdAt: 'desc' },
       take: 20,
-      include: {
-        actor: { select: { id: true, email: true, phone: true } },
-        tribe: { select: { id: true, name: true } }
-      }
+      include: { tribe: { select: { id: true, name: true } } }
     });
     return res.json({
       count: activities.length,
