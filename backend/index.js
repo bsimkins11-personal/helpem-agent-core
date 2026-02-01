@@ -561,6 +561,19 @@ app.get("/debug/clear-invitations", async (req, res) => {
   }
 });
 
+// Temporary: List pending invitations
+app.get("/debug/pending-invitations", async (req, res) => {
+  try {
+    const invitations = await prisma.pendingTribeInvitation.findMany({
+      orderBy: { createdAt: "desc" }
+    });
+    return res.json({ count: invitations.length, invitations });
+  } catch (err) {
+    console.error("Error listing invitations:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server with migrations
 (async () => {
   // Run migrations before starting server
