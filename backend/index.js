@@ -598,6 +598,23 @@ app.get("/debug/users", async (req, res) => {
   }
 });
 
+// Debug: Who am I (get current user ID from auth token)
+app.get("/debug/whoami", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: session.session.userId },
+      select: { id: true, email: true, phone: true, createdAt: true }
+    });
+    return res.json({ userId: session.session.userId, user });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Temporary: List active devices (to identify users)
 app.get("/debug/devices", async (req, res) => {
   try {
