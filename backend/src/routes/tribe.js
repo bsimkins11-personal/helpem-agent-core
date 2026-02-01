@@ -315,8 +315,8 @@ router.patch("/:tribeId", async (req, res) => {
     const { name, tribeType } = req.body;
 
     // At least one field must be provided
-    if (!name && !tribeType) {
-      return res.status(400).json({ error: "Either name or tribeType must be provided" });
+    if (!name && !tribeType && avatarUrl === undefined) {
+      return res.status(400).json({ error: "Either name, tribeType, or avatarUrl must be provided" });
     }
 
     // Validate name if provided
