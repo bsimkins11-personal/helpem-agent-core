@@ -104,6 +104,7 @@ router.get("/", async (req, res) => {
             id: membership.tribe.id,
             name: membership.tribe.name,
             ownerId: membership.tribe.ownerId,
+            avatarUrl: membership.tribe.avatarUrl,
             tribeType: membership.tribe.tribeType,
             isOwner: membership.tribe.ownerId === userId,
             pendingProposalsCount: pendingCount,
@@ -119,6 +120,7 @@ router.get("/", async (req, res) => {
             id: membership.tribe.id,
             name: membership.tribe.name,
             ownerId: membership.tribe.ownerId,
+            avatarUrl: membership.tribe.avatarUrl,
             tribeType: membership.tribe.tribeType || 'friend', // Default if missing
             isOwner: membership.tribe.ownerId === userId,
             pendingProposalsCount: 0,
@@ -191,7 +193,7 @@ router.post("/", async (req, res) => {
     }
 
     const userId = session.session.userId;
-    const { name, tribeType } = req.body;
+    const { name, tribeType, avatarUrl } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return res.status(400).json({ error: "Tribe name is required" });
@@ -328,6 +330,10 @@ router.patch("/:tribeId", async (req, res) => {
         error: "Tribe type must be either 'friend' or 'family'" 
       });
     }
+    
+    if (avatarUrl && (typeof avatarUrl !== "string" || avatarUrl.length > 2_000_000)) {
+      return res.status(400).json({ error: "Invalid avatar image" });
+    }
 
     // Verify tribe exists and user has admin permissions
     const tribe = await prisma.tribe.findUnique({
@@ -367,6 +373,7 @@ router.patch("/:tribeId", async (req, res) => {
     const updateData = {};
     if (name) updateData.name = name.trim();
     if (tribeType) updateData.tribeType = tribeType;
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
 
     const updated = await prisma.tribe.update({
       where: { id: tribeId },

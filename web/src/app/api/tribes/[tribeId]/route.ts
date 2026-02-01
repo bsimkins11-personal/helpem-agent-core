@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = process.env.BACKEND_URL || "https://api-production-2989.up.railway.app";
 
 export async function PATCH(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function PATCH(
     const body = await request.json();
     
     // Forward to backend
-    const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}`;
+    const backendUrl = `${BACKEND_URL}/tribes/${tribeId}`;
     const authHeader = request.headers.get("authorization");
     
     const backendRes = await fetch(backendUrl, {
@@ -43,7 +43,7 @@ export async function DELETE(
     const { tribeId } = await context.params;
     
     // Forward to backend
-    const backendUrl = `${BACKEND_URL}/api/tribes/${tribeId}`;
+    const backendUrl = `${BACKEND_URL}/tribes/${tribeId}`;
     const authHeader = request.headers.get("authorization");
     
     const backendRes = await fetch(backendUrl, {

@@ -2020,6 +2020,10 @@ export default function ChatInput({
       const detail = (e as CustomEvent).detail;
       const text = detail?.text;
       if (text && text.length > 0) {
+        if ((window as any).__tribeVoiceModeActive && typeof (window as any).__sendTribeMessage === "function") {
+          (window as any).__sendTribeMessage(text);
+          return;
+        }
         if (externalInputMode === "talk") {
           queueTranscript(text);
           return;
@@ -2048,6 +2052,10 @@ export default function ChatInput({
     (window as unknown as Record<string, unknown>).onNativeTranscription = (text: string) => {
       console.log("Received from Swift:", text);
       
+      if ((window as any).__tribeVoiceModeActive && typeof (window as any).__sendTribeMessage === "function") {
+        (window as any).__sendTribeMessage(text);
+        return;
+      }
       if (externalInputMode === "talk") {
         queueTranscript(text);
         return;
@@ -2070,6 +2078,10 @@ export default function ChatInput({
     (window as unknown as Record<string, unknown>).handleNativeSpeech = (text: string) => {
       console.log("🎙️ Native speech:", text);
       
+      if ((window as any).__tribeVoiceModeActive && typeof (window as any).__sendTribeMessage === "function") {
+        (window as any).__sendTribeMessage(text);
+        return;
+      }
       if (externalInputMode === "talk") {
         queueTranscript(text);
         return;

@@ -36,6 +36,7 @@ type TribeTodo = {
 type Tribe = {
   id: string;
   name: string;
+  avatarUrl?: string | null;
   pendingProposalsCount?: number;
   isOwner: boolean;
   memberCount?: number;
@@ -73,6 +74,7 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [uploadingTribeId, setUploadingTribeId] = useState<string | null>(null);
 
   // Load tribes when opened
   useEffect(() => {
@@ -131,6 +133,32 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    (window as any).__sendTribeMessage = async (text: string) => {
+      if (!expandedTribeId || !text.trim()) return;
+      try {
+        const token = getClientSessionToken();
+        const res = await fetch(`/api/tribes/${expandedTribeId}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ message: text.trim() }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(prev => [...prev, data.message]);
+        }
+      } finally {
+        (window as any).__tribeVoiceModeActive = false;
+      }
+    };
+    return () => {
+      delete (window as any).__sendTribeMessage;
+    };
+  }, [expandedTribeId]);
 
   const loadTribeContent = async (tribeId: string, tab: TribeTab) => {
     setContentLoading(true);
@@ -197,6 +225,56 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
       setSending(false);
+    }
+  };
+
+  const startTribeTalk = () => {
+    if (!expandedTribeId) return;
+    (window as any).__tribeVoiceModeActive = true;
+    (window as any).__tribeVoiceTargetId = expandedTribeId;
+    if (window.webkit?.messageHandlers?.native) {
+      window.webkit.messageHandlers.native.postMessage({ action: "startRecording" });
+    }
+  };
+
+  const stopTribeTalk = () => {
+    if (window.webkit?.messageHandlers?.native) {
+      window.webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+    }
+    window.setTimeout(() => {
+      if ((window as any).__tribeVoiceModeActive) {
+        (window as any).__tribeVoiceModeActive = false;
+      }
+    }, 5000);
+  };
+
+  const handleAvatarSelect = async (tribeId: string, file: File) => {
+    setUploadingTribeId(tribeId);
+    try {
+      const reader = new FileReader();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const token = getClientSessionToken();
+      const res = await fetch(`/api/tribes/${tribeId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ avatarUrl: dataUrl }),
+      });
+
+      if (res.ok) {
+        setTribes(prev =>
+          prev.map(t => (t.id === tribeId ? { ...t, avatarUrl: dataUrl } : t))
+        );
+      }
+    } finally {
+      setUploadingTribeId(null);
     }
   };
 
@@ -360,15 +438,16 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
             {tribes.map((tribe) => (
               <div key={tribe.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 {/* Tribe header - clickable to expand */}
-                <button
-                  onClick={() => toggleTribe(tribe.id)}
-                  className="w-full p-4 text-left hover:bg-gray-50 transition-colors"
-                >
+                <div className="p-4">
                   <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                      <span className="text-2xl">
-                        {tribe.name.match(/[\p{Emoji}]/u)?.[0] || '👥'}
-                      </span>
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-purple-100 overflow-hidden flex items-center justify-center">
+                      {tribe.avatarUrl ? (
+                        <img src={tribe.avatarUrl} alt={tribe.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl">
+                          {tribe.name.match(/[\p{Emoji}]/u)?.[0] || '👥'}
+                        </span>
+                      )}
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -393,17 +472,69 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
                           {(tribe.unreadMessageCount || 0) + (tribe.pendingProposalsCount || 0)}
                         </span>
                       )}
-                      <svg 
-                        className={`w-5 h-5 text-gray-400 transition-transform ${expandedTribeId === tribe.id ? 'rotate-180' : ''}`} 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
+                      <button
+                        onClick={() => toggleTribe(tribe.id)}
+                        className="p-1 rounded-full hover:bg-gray-100"
+                        aria-label="Toggle tribe"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                        <svg 
+                          className={`w-5 h-5 text-gray-400 transition-transform ${expandedTribeId === tribe.id ? 'rotate-180' : ''}`} 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                </button>
+                  
+                  {expandedTribeId === tribe.id && (
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <div className="text-xs text-brandTextLight">
+                        Tribe chat active
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {tribe.isOwner && (
+                          <>
+                            <input
+                              id={`tribe-avatar-${tribe.id}`}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleAvatarSelect(tribe.id, file);
+                              }}
+                            />
+                            <label
+                              htmlFor={`tribe-avatar-${tribe.id}`}
+                              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                                uploadingTribeId === tribe.id
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer"
+                              }`}
+                              title="Upload tribe photo"
+                              aria-disabled={uploadingTribeId === tribe.id}
+                            >
+                              {uploadingTribeId === tribe.id ? "Uploading..." : "📷 Photo"}
+                            </label>
+                          </>
+                        )}
+                        <button
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700"
+                        title="Hold to talk to this tribe"
+                        onPointerDown={startTribeTalk}
+                        onPointerUp={stopTribeTalk}
+                        onPointerLeave={stopTribeTalk}
+                      >
+                        <span>🎙️</span>
+                        Hold to Talk
+                      </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Expanded content */}
                 {expandedTribeId === tribe.id && (
