@@ -62,9 +62,18 @@ class TribeListViewModel: ObservableObject {
     /// Accept tribe invitation
     func acceptInvitation(_ invitation: TribeInvitation) async throws {
         _ = try await repository.acceptInvitation(tribeId: invitation.tribeId)
-        
+
         // Reload tribes and invitations
         await loadTribes()
+    }
+
+    /// Decline tribe invitation
+    func declineInvitation(_ invitation: TribeInvitation) async throws {
+        // Use leave endpoint to decline (removes pending membership)
+        try await repository.leaveTribe(id: invitation.tribeId)
+
+        // Remove from local list immediately
+        invitations.removeAll { $0.id == invitation.id }
     }
     
     /// Delete tribe (owner only)

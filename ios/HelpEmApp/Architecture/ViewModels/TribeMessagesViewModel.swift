@@ -16,8 +16,7 @@ class TribeMessagesViewModel: ObservableObject {
     
     // Current user ID (for determining which messages are from current user)
     var currentUserId: String {
-        // TODO: Get from auth service
-        return ""
+        AuthManager.shared.currentUserId ?? ""
     }
     
     // MARK: - Dependencies

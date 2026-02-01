@@ -14,6 +14,8 @@ struct TribeDetailView: View {
     
     @State private var selectedSection: TribeSection? = nil
     @State private var showingSettings = false
+    @State private var showingInvite = false
+    @State private var navigateToMessages = false
     @Environment(\.dismiss) private var dismiss
     
     enum TribeSection: String, Identifiable {
@@ -72,17 +74,35 @@ struct TribeDetailView: View {
                         } label: {
                             Label("Tribe Settings", systemImage: "gearshape")
                         }
+
+                        Button {
+                            showingInvite = true
+                        } label: {
+                            Label("Invite Members", systemImage: "person.badge.plus")
+                        }
                     }
-                    
+
                     Button {
-                        // Share tribe
+                        shareTribe()
                     } label: {
-                        Label("Share Tribe", systemImage: "square.and.arrow.up")
+                        Label("Share Tribe Link", systemImage: "square.and.arrow.up")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .sheet(isPresented: $showingInvite) {
+            NavigationStack {
+                InviteMemberView(tribe: tribe) {
+                    Task {
+                        await viewModel.loadTribeData(tribeId: tribe.id)
+                    }
+                }
+            }
+        }
+        .navigationDestination(isPresented: $navigateToMessages) {
+            TribeMessagesView(tribe: tribe)
         }
         .sheet(isPresented: $showingSettings, onDismiss: {
             // When settings sheet dismisses, check if tribe still exists
@@ -193,7 +213,7 @@ struct TribeDetailView: View {
     }
     
     // MARK: - Quick Actions
-    
+
     private var quickActionsSection: some View {
         Section("Quick Actions") {
             HStack(spacing: 12) {
@@ -202,15 +222,17 @@ struct TribeDetailView: View {
                     label: "Message",
                     color: .blue
                 ) {
-                    selectedSection = .messages
+                    navigateToMessages = true
                 }
-                
-                QuickActionButton(
-                    icon: "person.badge.plus",
-                    label: "Invite",
-                    color: .green
-                ) {
-                    // Handle invite
+
+                if tribe.isOwner {
+                    QuickActionButton(
+                        icon: "person.badge.plus",
+                        label: "Invite",
+                        color: .green
+                    ) {
+                        showingInvite = true
+                    }
                 }
             }
         }
@@ -255,7 +277,18 @@ struct TribeDetailView: View {
                     badge: viewModel.sharedCount > 0 ? viewModel.sharedCount : nil
                 )
             }
-            
+
+            NavigationLink {
+                TribeSentItemsView(tribe: tribe)
+            } label: {
+                SectionRow(
+                    icon: "paperplane.fill",
+                    title: "Sent Items",
+                    subtitle: "Items you shared",
+                    color: .indigo
+                )
+            }
+
             NavigationLink {
                 TribeMembersListView(tribe: tribe)
             } label: {
@@ -303,7 +336,7 @@ struct TribeDetailView: View {
     }
     
     // MARK: - Helper Methods
-    
+
     private func checkTribeExists() async {
         // Try to fetch the tribe from the repository
         // If it fails (tribe was deleted), dismiss this view
@@ -313,6 +346,27 @@ struct TribeDetailView: View {
             // Tribe no longer exists, dismiss this view
             AppLogger.info("Tribe \(tribe.id) no longer exists, dismissing detail view", logger: AppLogger.general)
             dismiss()
+        }
+    }
+
+    private func shareTribe() {
+        // Create shareable link/message for the tribe
+        let shareText = "Join my Tribe '\(tribe.name)' on HelpEm!"
+        let activityVC = UIActivityViewController(
+            activityItems: [shareText],
+            applicationActivities: nil
+        )
+
+        // Present the share sheet
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootVC = window.rootViewController {
+            // Find the topmost presented view controller
+            var topVC = rootVC
+            while let presented = topVC.presentedViewController {
+                topVC = presented
+            }
+            topVC.present(activityVC, animated: true)
         }
     }
 }

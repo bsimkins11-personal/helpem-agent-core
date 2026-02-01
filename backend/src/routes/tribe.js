@@ -708,11 +708,13 @@ router.patch("/:tribeId/members/:memberId", async (req, res) => {
 
     const userId = session.session.userId;
     const { tribeId, memberId } = req.params;
-    const { 
-      managementScope, 
-      proposalNotifications, 
+    const {
+      managementScope,
+      proposalNotifications,
       digestNotifications,
-      permissions 
+      permissions,
+      isAdmin,
+      useTribeDefaults
     } = req.body;
 
     // Get the member being updated
@@ -768,18 +770,40 @@ router.patch("/:tribeId/members/:memberId", async (req, res) => {
       },
     });
 
-    // Owner can update permissions for other members (not themselves)
-    if (isOwner && permissions && targetMember.userId !== userId) {
-      // Use upsert to create permissions if they don't exist, or update if they do
-      await prisma.tribeMemberPermissions.upsert({
-        where: { memberId },
-        create: {
-          memberId,
-          ...permissions,
-        },
-        update: permissions,
-      });
-      
+    // Owner can update isAdmin, useTribeDefaults, and permissions for other members (not themselves)
+    if (isOwner && targetMember.userId !== userId) {
+      const ownerUpdateData = {};
+
+      // Update isAdmin flag
+      if (isAdmin !== undefined) {
+        ownerUpdateData.isAdmin = isAdmin;
+      }
+
+      // Update useTribeDefaults flag
+      if (useTribeDefaults !== undefined) {
+        ownerUpdateData.useTribeDefaults = useTribeDefaults;
+      }
+
+      // Apply member-level updates if any
+      if (Object.keys(ownerUpdateData).length > 0) {
+        await prisma.tribeMember.update({
+          where: { id: memberId },
+          data: ownerUpdateData,
+        });
+      }
+
+      // Update permissions if provided and not using tribe defaults
+      if (permissions && useTribeDefaults !== true) {
+        await prisma.tribeMemberPermissions.upsert({
+          where: { memberId },
+          create: {
+            memberId,
+            ...permissions,
+          },
+          update: permissions,
+        });
+      }
+
       // Fetch updated member with permissions
       const finalMember = await prisma.tribeMember.findUnique({
         where: { id: memberId },
@@ -787,7 +811,7 @@ router.patch("/:tribeId/members/:memberId", async (req, res) => {
           permissions: true,
         },
       });
-      
+
       return res.json({ member: finalMember });
     }
 
@@ -1306,6 +1330,35 @@ router.post("/:tribeId/proposals/:proposalId/not-now", async (req, res) => {
 });
 
 /**
+ * POST /tribes/:tribeId/proposals/:proposalId/maybe
+ * Mark proposal as "maybe" (for appointments only)
+ * This indicates tentative interest without committing
+ */
+router.post("/:tribeId/proposals/:proposalId/maybe", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { proposalId } = req.params;
+    const { idempotencyKey } = req.body;
+
+    const result = await transitionProposalState(proposalId, userId, "maybe", idempotencyKey);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.json({ proposal: result.proposal });
+  } catch (err) {
+    console.error("ERROR POST /proposals/:proposalId/maybe:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * DELETE /tribes/:tribeId/proposals/:proposalId
  * Dismiss/remove a proposal
  */
@@ -1687,6 +1740,101 @@ router.get("/:tribeId/shared", async (req, res) => {
     return res.json({ items: acceptedProposals.map(p => p.item) });
   } catch (err) {
     console.error("ERROR GET /tribes/:tribeId/shared:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /tribes/:tribeId/sent-items
+ * Get items created by the current user with proposal responses
+ *
+ * For appointments: Shows all responses (yes/no/maybe) so proposer can see who's coming
+ * For other items (tasks, routines, groceries): No response visibility needed (privacy)
+ */
+router.get("/:tribeId/sent-items", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { tribeId } = req.params;
+
+    // Verify membership
+    const member = await prisma.tribeMember.findFirst({
+      where: {
+        tribeId,
+        userId,
+        acceptedAt: { not: null },
+        leftAt: null,
+      },
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: "Not a member of this Tribe" });
+    }
+
+    // Get items created by the current user
+    const items = await prisma.tribeItem.findMany({
+      where: {
+        tribeId,
+        createdBy: userId,
+        deletedAt: null,
+      },
+      include: {
+        proposals: {
+          include: {
+            recipient: {
+              select: {
+                id: true,
+                userId: true,
+                displayName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    // Format response - only include responses for appointments
+    const formattedItems = items.map(item => {
+      const baseItem = {
+        id: item.id,
+        tribeId: item.tribeId,
+        createdBy: item.createdBy,
+        itemType: item.itemType,
+        data: item.data,
+        createdAt: item.createdAt,
+      };
+
+      // For appointments, include responses so proposer can see who's coming
+      if (item.itemType === "appointment") {
+        return {
+          ...baseItem,
+          responses: item.proposals.map(p => ({
+            recipientId: p.recipient.id,
+            recipientUserId: p.recipient.userId,
+            recipientName: p.recipient.displayName || "Member",
+            state: p.state,
+            stateChangedAt: p.stateChangedAt,
+          })),
+        };
+      }
+
+      // For other item types, no response visibility (privacy)
+      return {
+        ...baseItem,
+        recipientCount: item.proposals.length,
+      };
+    });
+
+    return res.json({ items: formattedItems });
+  } catch (err) {
+    console.error("ERROR GET /tribes/:tribeId/sent-items:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

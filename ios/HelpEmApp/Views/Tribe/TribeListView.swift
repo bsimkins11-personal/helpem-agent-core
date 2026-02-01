@@ -10,7 +10,21 @@ struct TribeListView: View {
     @State private var showingSignInRequired = false
     @State private var newTribeName = ""
     @State private var newTribeType: TribeType? = nil
+    @State private var feedbackMessage: String?
+    @State private var showFeedback = false
+    @State private var feedbackIsError = false
+    @State private var searchText = ""
     @ObservedObject private var authManager = AuthManager.shared
+
+    /// Filtered tribes based on search text
+    private var filteredTribes: [Tribe] {
+        if searchText.isEmpty {
+            return viewModel.tribes
+        }
+        return viewModel.tribes.filter { tribe in
+            tribe.name.localizedCaseInsensitiveContains(searchText)
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -24,6 +38,7 @@ struct TribeListView: View {
                 }
             }
             .navigationTitle("My Tribes")
+            .searchable(text: $searchText, prompt: "Search tribes")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -88,32 +103,84 @@ struct TribeListView: View {
             .refreshable {
                 await viewModel.loadTribes()
             }
+            .overlay(alignment: .bottom) {
+                if showFeedback, let message = feedbackMessage {
+                    feedbackBanner(message: message, isError: feedbackIsError)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut, value: showFeedback)
+                }
+            }
+        }
+    }
+
+    private func feedbackBanner(message: String, isError: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+            Text(message)
+                .font(.subheadline)
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(isError ? Color.red : Color.green)
+        .cornerRadius(8)
+        .shadow(radius: 4)
+        .padding(.bottom, 20)
+    }
+
+    private func showFeedbackMessage(_ message: String, isError: Bool) {
+        feedbackMessage = message
+        feedbackIsError = isError
+        withAnimation {
+            showFeedback = true
+        }
+        // Auto-hide after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            withAnimation {
+                showFeedback = false
+            }
         }
     }
     
     private var tribeList: some View {
         List {
-            if !viewModel.invitations.isEmpty {
+            // Only show invitations when not searching
+            if !viewModel.invitations.isEmpty && searchText.isEmpty {
                 Section("Invitations") {
                     ForEach(viewModel.invitations) { invitation in
                         InvitationRow(
                             invitation: invitation,
                             onAccept: {
-                                try? await viewModel.acceptInvitation(invitation)
+                                do {
+                                    try await viewModel.acceptInvitation(invitation)
+                                    showFeedbackMessage("Joined '\(invitation.tribeName)'", isError: false)
+                                } catch {
+                                    showFeedbackMessage("Failed to join tribe", isError: true)
+                                }
                             },
                             onDecline: {
-                                // TODO: Implement decline invitation
+                                do {
+                                    try await viewModel.declineInvitation(invitation)
+                                    showFeedbackMessage("Declined invitation", isError: false)
+                                } catch {
+                                    showFeedbackMessage("Failed to decline invitation", isError: true)
+                                }
                             }
                         )
                     }
                 }
             }
 
-            ForEach(viewModel.tribes) { tribe in
-                NavigationLink {
-                    TribeDetailView(tribe: tribe)
-                } label: {
-                    TribeRow(tribe: tribe)
+            // Show filtered tribes or no results message
+            if filteredTribes.isEmpty && !searchText.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+            } else {
+                ForEach(filteredTribes) { tribe in
+                    NavigationLink {
+                        TribeDetailView(tribe: tribe)
+                    } label: {
+                        TribeRow(tribe: tribe)
+                    }
                 }
             }
         }

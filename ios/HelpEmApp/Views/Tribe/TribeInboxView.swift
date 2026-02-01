@@ -64,6 +64,9 @@ struct TribeInboxView: View {
                             onNotNow: {
                                 try? await viewModel.notNowProposal(proposal, tribeId: tribe.id)
                             },
+                            onMaybe: {
+                                try? await viewModel.maybeProposal(proposal, tribeId: tribe.id)
+                            },
                             onDismiss: {
                                 try? await viewModel.dismissProposal(proposal, tribeId: tribe.id)
                             }
@@ -89,6 +92,9 @@ struct TribeInboxView: View {
                             },
                             onNotNow: {
                                 try? await viewModel.notNowProposal(proposal, tribeId: tribe.id)
+                            },
+                            onMaybe: {
+                                try? await viewModel.maybeProposal(proposal, tribeId: tribe.id)
                             },
                             onDismiss: {
                                 try? await viewModel.dismissProposal(proposal, tribeId: tribe.id)
@@ -134,10 +140,16 @@ struct ProposalCard: View {
     let proposal: TribeProposal
     let onAccept: () async -> Void
     let onNotNow: () async -> Void
+    let onMaybe: (() async -> Void)?
     let onDismiss: () async -> Void
-    
+
     @State private var isProcessing = false
     @State private var showingMenu = false
+
+    /// Whether this is an appointment proposal (shows Yes/No/Maybe)
+    private var isAppointment: Bool {
+        proposal.item?.itemType == "appointment"
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -177,53 +189,24 @@ struct ProposalCard: View {
                 .padding(.vertical, 4)
                 .background(Color.orange.opacity(0.1))
                 .cornerRadius(8)
+            } else if proposal.state == .maybe {
+                HStack {
+                    Image(systemName: "questionmark.circle")
+                    Text("Maybe")
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
             }
-            
-            // Actions
-            HStack(spacing: 12) {
-                // Accept button (primary action)
-                Button {
-                    Task {
-                        await handleAccept()
-                    }
-                } label: {
-                    Label("Accept", systemImage: "checkmark")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                .disabled(isProcessing)
-                
-                // Not Now button
-                Button {
-                    Task {
-                        await handleNotNow()
-                    }
-                } label: {
-                    Text("Not Now")
-                        .font(.subheadline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.gray.opacity(0.2))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
-                }
-                .disabled(isProcessing)
-                
-                // More menu (dismiss option)
-                Button {
-                    showingMenu = true
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .frame(width: 44, height: 44)
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(10)
-                }
-                .disabled(isProcessing)
+
+            // Actions - different for appointments vs other types
+            if isAppointment {
+                appointmentActions
+            } else {
+                standardActions
             }
         }
         .padding()
@@ -285,6 +268,117 @@ struct ProposalCard: View {
         isProcessing = true
         defer { isProcessing = false }
         await onDismiss()
+    }
+
+    private func handleMaybe() async {
+        isProcessing = true
+        defer { isProcessing = false }
+        await onMaybe?()
+    }
+
+    // MARK: - Action Views
+
+    /// Appointment actions: Yes / No / Maybe
+    private var appointmentActions: some View {
+        HStack(spacing: 12) {
+            // Yes button (Accept)
+            Button {
+                Task {
+                    await handleAccept()
+                }
+            } label: {
+                Label("Yes", systemImage: "checkmark")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            .disabled(isProcessing)
+
+            // Maybe button
+            Button {
+                Task {
+                    await handleMaybe()
+                }
+            } label: {
+                Text("Maybe")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.blue.opacity(0.2))
+                    .foregroundColor(.blue)
+                    .cornerRadius(10)
+            }
+            .disabled(isProcessing)
+
+            // No button (Decline/Dismiss)
+            Button {
+                Task {
+                    await handleDismiss()
+                }
+            } label: {
+                Text("No")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.red.opacity(0.15))
+                    .foregroundColor(.red)
+                    .cornerRadius(10)
+            }
+            .disabled(isProcessing)
+        }
+    }
+
+    /// Standard actions: Accept / Not Now (with dismiss in menu)
+    private var standardActions: some View {
+        HStack(spacing: 12) {
+            // Accept button (primary action)
+            Button {
+                Task {
+                    await handleAccept()
+                }
+            } label: {
+                Label("Accept", systemImage: "checkmark")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            .disabled(isProcessing)
+
+            // Not Now button
+            Button {
+                Task {
+                    await handleNotNow()
+                }
+            } label: {
+                Text("Not Now")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.gray.opacity(0.2))
+                    .foregroundColor(.primary)
+                    .cornerRadius(10)
+            }
+            .disabled(isProcessing)
+
+            // More menu (dismiss option)
+            Button {
+                showingMenu = true
+            } label: {
+                Image(systemName: "ellipsis")
+                    .frame(width: 44, height: 44)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(10)
+            }
+            .disabled(isProcessing)
+        }
     }
 }
 

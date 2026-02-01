@@ -210,18 +210,22 @@ class TribeAPIClient {
         managementScope: String? = nil,
         proposalNotifications: Bool? = nil,
         digestNotifications: Bool? = nil,
-        permissions: PermissionsUpdate? = nil
+        permissions: PermissionsUpdate? = nil,
+        isAdmin: Bool? = nil,
+        useTribeDefaults: Bool? = nil
     ) async throws -> TribeMember {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/members/\(memberId)")!
         let request = UpdateMemberRequest(
             managementScope: managementScope,
             proposalNotifications: proposalNotifications,
             digestNotifications: digestNotifications,
-            permissions: permissions
+            permissions: permissions,
+            isAdmin: isAdmin,
+            useTribeDefaults: useTribeDefaults
         )
         let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
         let response = try decoder.decode([String: TribeMember].self, from: data)
-        
+
         guard let member = response["member"] else {
             throw TribeAPIError.invalidResponse
         }
@@ -262,13 +266,28 @@ class TribeAPIClient {
         let request = ProposalActionRequest(idempotencyKey: key)
         let data = try await authenticatedRequest(url: url, method: "POST", body: request)
         let response = try decoder.decode([String: TribeProposal].self, from: data)
-        
+
         guard let proposal = response["proposal"] else {
             throw TribeAPIError.invalidResponse
         }
         return proposal
     }
-    
+
+    /// Mark proposal as "maybe" (for appointment invites)
+    /// Generates idempotency key to prevent duplicates on retry.
+    func maybeProposal(tribeId: String, proposalId: String, idempotencyKey: String? = nil) async throws -> TribeProposal {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/proposals/\(proposalId)/maybe")!
+        let key = idempotencyKey ?? PendingOperationManager.generateIdempotencyKey()
+        let request = ProposalActionRequest(idempotencyKey: key)
+        let data = try await authenticatedRequest(url: url, method: "POST", body: request)
+        let response = try decoder.decode([String: TribeProposal].self, from: data)
+
+        guard let proposal = response["proposal"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return proposal
+    }
+
     /// Dismiss/remove a proposal
     /// Generates idempotency key to prevent duplicates on retry.
     func dismissProposal(tribeId: String, proposalId: String, idempotencyKey: String? = nil) async throws {
@@ -317,7 +336,15 @@ class TribeAPIClient {
         let response = try decoder.decode(TribeItemsResponse.self, from: data)
         return response.items
     }
-    
+
+    /// Get items sent by current user with proposal responses (for appointments)
+    func getSentItems(tribeId: String) async throws -> [SentTribeItem] {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/sent-items")!
+        let data = try await authenticatedRequest(url: url, method: "GET")
+        let response = try decoder.decode(SentItemsResponse.self, from: data)
+        return response.items
+    }
+
     // MARK: - Tribe Messages
     
     /// Get messages for a tribe

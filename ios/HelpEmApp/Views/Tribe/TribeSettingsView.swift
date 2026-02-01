@@ -414,38 +414,55 @@ struct TribeMembersView: View {
 struct MemberRow: View {
     let member: TribeMember
     let currentUserId: String?
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Member")
+                HStack(spacing: 6) {
+                    Text(memberDisplayName)
                         .font(.body)
-                    
+
+                    if member.isAdmin {
+                        Label("Admin", systemImage: "star.fill")
+                            .font(.caption2)
+                            .foregroundColor(.purple)
+                    }
+
                     if member.userId == currentUserId {
                         Text("(You)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 if member.isPending {
                     Text("Pending invitation")
                         .font(.caption)
                         .foregroundColor(.orange)
+                } else if member.useTribeDefaults {
+                    Text("Using tribe defaults")
+                        .font(.caption)
+                        .foregroundColor(.blue)
                 } else if let summary = permissionSummary {
                     Text(summary)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
+    }
+
+    private var memberDisplayName: String {
+        if let name = member.displayName, !name.isEmpty {
+            return name
+        }
+        return "Member"
     }
     
     private var permissionSummary: String? {
@@ -485,45 +502,19 @@ struct MemberDetailView: View {
     let member: TribeMember
     @StateObject private var viewModel = MemberDetailViewModel()
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         List {
-            // Member info
-            Section {
-                HStack {
-                    Text("Status")
-                    Spacer()
-                    Text(member.isAccepted ? "Active" : "Pending")
-                        .foregroundColor(member.isAccepted ? .green : .orange)
-                }
-            }
-            
-            // Permissions (owner only, not for themselves)
+            // Member info section
+            memberInfoSection
+
+            // Admin role section (owner only, not for themselves)
             if tribe.isOwner && member.userId != tribe.ownerId {
-                Section {
-                    permissionsContent
-                } header: {
-                    Text("Member Permissions")
-                } footer: {
-                    Text("Control what this member can add or remove in the Tribe. Changes apply immediately after saving.")
-                }
-            } else if member.userId == tribe.ownerId {
-                Section {
-                    Text("Owners have full permissions for all categories")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                } header: {
-                    Text("Member Permissions")
-                }
-            } else {
-                Section {
-                    Text("Only the Tribe owner can manage member permissions")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                } header: {
-                    Text("Member Permissions")
-                }
+                adminRoleSection
             }
+
+            // Permissions section
+            permissionsSection
         }
         .navigationTitle("Member Details")
         .navigationBarTitleDisplayMode(.inline)
@@ -532,7 +523,7 @@ struct MemberDetailView: View {
                 dismiss()
             }
         } message: {
-            Text("Permissions updated successfully")
+            Text("Settings updated successfully")
         }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK", role: .cancel) {}
@@ -542,80 +533,289 @@ struct MemberDetailView: View {
             }
         }
         .task {
-            viewModel.loadMemberPermissions(member: member)
+            viewModel.loadMemberSettings(member: member, tribe: tribe)
         }
     }
-    
+
+    // MARK: - Member Info Section
+
+    private var memberInfoSection: some View {
+        Section {
+            HStack {
+                Text("Status")
+                Spacer()
+                Text(member.isAccepted ? "Active" : "Pending")
+                    .foregroundColor(member.isAccepted ? .green : .orange)
+            }
+
+            if let displayName = member.displayName, !displayName.isEmpty {
+                HStack {
+                    Text("Display Name")
+                    Spacer()
+                    Text(displayName)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            if member.isAdmin || member.userId == tribe.ownerId {
+                HStack {
+                    Text("Role")
+                    Spacer()
+                    Label(
+                        member.userId == tribe.ownerId ? "Owner" : "Admin",
+                        systemImage: member.userId == tribe.ownerId ? "crown.fill" : "star.fill"
+                    )
+                    .foregroundColor(.purple)
+                    .font(.subheadline)
+                }
+            }
+        }
+    }
+
+    // MARK: - Admin Role Section
+
+    private var adminRoleSection: some View {
+        Section {
+            Toggle(isOn: $viewModel.isAdmin) {
+                Label("Member Admin", systemImage: "star.fill")
+            }
+            .onChange(of: viewModel.isAdmin) { _, _ in
+                viewModel.hasUnsavedChanges = true
+            }
+        } header: {
+            Text("Admin Role")
+        } footer: {
+            Text("Admins can manage tribe settings and members, similar to the owner.")
+        }
+    }
+
+    // MARK: - Permissions Section
+
     @ViewBuilder
-    private var permissionsContent: some View {
-        // Tasks
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Tasks")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            Toggle("Can Add Tasks", isOn: $viewModel.canAddTasks)
-            Toggle("Can Remove Tasks", isOn: $viewModel.canRemoveTasks)
-        }
-        .padding(.vertical, 4)
-        
-        Divider()
-        
-        // Routines
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Routines")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            Toggle("Can Add Routines", isOn: $viewModel.canAddRoutines)
-            Toggle("Can Remove Routines", isOn: $viewModel.canRemoveRoutines)
-        }
-        .padding(.vertical, 4)
-        
-        Divider()
-        
-        // Appointments
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Appointments")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            Toggle("Can Add Appointments", isOn: $viewModel.canAddAppointments)
-            Toggle("Can Remove Appointments", isOn: $viewModel.canRemoveAppointments)
-        }
-        .padding(.vertical, 4)
-        
-        Divider()
-        
-        // Groceries
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Groceries")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            
-            Toggle("Can Add Groceries", isOn: $viewModel.canAddGroceries)
-            Toggle("Can Remove Groceries", isOn: $viewModel.canRemoveGroceries)
-        }
-        .padding(.vertical, 4)
-        
-        // Save button
-        Button {
-            Task {
-                await viewModel.savePermissions(tribeId: tribe.id, memberId: member.id)
+    private var permissionsSection: some View {
+        if member.userId == tribe.ownerId {
+            Section {
+                Text("Owners have full permissions for all categories")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            } header: {
+                Text("Member Permissions")
             }
-        } label: {
-            if viewModel.isSaving {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
+        } else if tribe.isOwner || (tribe.isOwner == false && member.isAdmin) {
+            // Show permissions management for owner, or read-only for non-owners
+            if tribe.isOwner {
+                ownerPermissionsSection
             } else {
-                Text("Save Permissions")
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity)
+                Section {
+                    Text("Only the Tribe owner can manage member permissions")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                } header: {
+                    Text("Member Permissions")
+                }
+            }
+        } else {
+            Section {
+                Text("Only the Tribe owner can manage member permissions")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            } header: {
+                Text("Member Permissions")
             }
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(viewModel.isSaving)
-        .padding(.top, 8)
+    }
+
+    // MARK: - Owner Permissions Section (Inherit/Override Pattern)
+
+    private var ownerPermissionsSection: some View {
+        Group {
+            // Use Tribe Defaults toggle
+            Section {
+                Toggle(isOn: $viewModel.useTribeDefaults) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Use Tribe Defaults")
+                        Text("Inherit permissions from tribe settings")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: viewModel.useTribeDefaults) { _, _ in
+                    viewModel.hasUnsavedChanges = true
+                }
+            } header: {
+                Text("Permission Mode")
+            } footer: {
+                if viewModel.useTribeDefaults {
+                    Text("This member uses the tribe's default permissions. Turn off to customize.")
+                } else {
+                    Text("Custom permissions override the tribe defaults for this member.")
+                }
+            }
+
+            // Permissions content - read-only if using defaults, editable if custom
+            Section {
+                if viewModel.useTribeDefaults {
+                    inheritedPermissionsView
+                } else {
+                    customPermissionsView
+                }
+            } header: {
+                HStack {
+                    Text("Permissions")
+                    Spacer()
+                    if viewModel.useTribeDefaults {
+                        Label("Inherited", systemImage: "arrow.down.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    } else {
+                        Label("Custom", systemImage: "pencil.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+
+            // Save button
+            if viewModel.hasUnsavedChanges {
+                Section {
+                    Button {
+                        Task {
+                            await viewModel.saveSettings(tribeId: tribe.id, memberId: member.id)
+                        }
+                    } label: {
+                        if viewModel.isSaving {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                Spacer()
+                            }
+                        } else {
+                            Text("Save Changes")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isSaving)
+                }
+            }
+        }
+    }
+
+    // MARK: - Inherited Permissions View (Read-only)
+
+    private var inheritedPermissionsView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            inheritedPermissionRow(
+                category: "Tasks",
+                icon: "checklist",
+                permission: viewModel.defaultTasksPermission
+            )
+
+            Divider()
+
+            inheritedPermissionRow(
+                category: "Appointments",
+                icon: "calendar",
+                permission: viewModel.defaultAppointmentsPermission
+            )
+
+            if tribe.isFamily {
+                Divider()
+
+                inheritedPermissionRow(
+                    category: "Routines",
+                    icon: "repeat",
+                    permission: viewModel.defaultRoutinesPermission
+                )
+
+                Divider()
+
+                inheritedPermissionRow(
+                    category: "Groceries",
+                    icon: "cart",
+                    permission: viewModel.defaultGroceriesPermission
+                )
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func inheritedPermissionRow(category: String, icon: String, permission: String) -> some View {
+        HStack {
+            Label(category, systemImage: icon)
+            Spacer()
+            Text(permission == "add" ? "Add Directly" : "Propose Only")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(6)
+        }
+    }
+
+    // MARK: - Custom Permissions View (Editable)
+
+    private var customPermissionsView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Tasks
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Tasks", systemImage: "checklist")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Toggle("Can Add Tasks", isOn: $viewModel.canAddTasks)
+                    .onChange(of: viewModel.canAddTasks) { _, _ in viewModel.hasUnsavedChanges = true }
+                Toggle("Can Remove Tasks", isOn: $viewModel.canRemoveTasks)
+                    .onChange(of: viewModel.canRemoveTasks) { _, _ in viewModel.hasUnsavedChanges = true }
+            }
+
+            Divider()
+
+            // Appointments
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Appointments", systemImage: "calendar")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Toggle("Can Add Appointments", isOn: $viewModel.canAddAppointments)
+                    .onChange(of: viewModel.canAddAppointments) { _, _ in viewModel.hasUnsavedChanges = true }
+                Toggle("Can Remove Appointments", isOn: $viewModel.canRemoveAppointments)
+                    .onChange(of: viewModel.canRemoveAppointments) { _, _ in viewModel.hasUnsavedChanges = true }
+            }
+
+            if tribe.isFamily {
+                Divider()
+
+                // Routines
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Routines", systemImage: "repeat")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+
+                    Toggle("Can Add Routines", isOn: $viewModel.canAddRoutines)
+                        .onChange(of: viewModel.canAddRoutines) { _, _ in viewModel.hasUnsavedChanges = true }
+                    Toggle("Can Remove Routines", isOn: $viewModel.canRemoveRoutines)
+                        .onChange(of: viewModel.canRemoveRoutines) { _, _ in viewModel.hasUnsavedChanges = true }
+                }
+
+                Divider()
+
+                // Groceries
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Groceries", systemImage: "cart")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+
+                    Toggle("Can Add Groceries", isOn: $viewModel.canAddGroceries)
+                        .onChange(of: viewModel.canAddGroceries) { _, _ in viewModel.hasUnsavedChanges = true }
+                    Toggle("Can Remove Groceries", isOn: $viewModel.canRemoveGroceries)
+                        .onChange(of: viewModel.canRemoveGroceries) { _, _ in viewModel.hasUnsavedChanges = true }
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -833,7 +1033,9 @@ class TribeSettingsViewModel: ObservableObject {
                 managementScope: nil,
                 proposalNotifications: proposalNotifs,
                 digestNotifications: digestNotifs,
-                permissions: nil
+                permissions: nil,
+                isAdmin: nil,
+                useTribeDefaults: nil
             )
             AppLogger.info("Updated notification preferences", logger: AppLogger.general)
         } catch {
@@ -856,7 +1058,9 @@ class TribeSettingsViewModel: ObservableObject {
                 managementScope: scope,
                 proposalNotifications: nil,
                 digestNotifications: nil,
-                permissions: nil
+                permissions: nil,
+                isAdmin: nil,
+                useTribeDefaults: nil
             )
             AppLogger.info("Updated management scope to: \(scope)", logger: AppLogger.general)
         } catch {
@@ -916,6 +1120,12 @@ class TribeSettingsViewModel: ObservableObject {
 
 @MainActor
 class MemberDetailViewModel: ObservableObject {
+    // Member settings
+    @Published var isAdmin = false
+    @Published var useTribeDefaults = true
+    @Published var hasUnsavedChanges = false
+
+    // Custom permissions (used when useTribeDefaults is false)
     @Published var canAddTasks = true
     @Published var canRemoveTasks = false
     @Published var canAddRoutines = true
@@ -924,26 +1134,35 @@ class MemberDetailViewModel: ObservableObject {
     @Published var canRemoveAppointments = false
     @Published var canAddGroceries = true
     @Published var canRemoveGroceries = false
-    
+
+    // Tribe default permissions (read-only, inherited from tribe)
+    @Published var defaultTasksPermission = "propose"
+    @Published var defaultAppointmentsPermission = "propose"
+    @Published var defaultRoutinesPermission = "propose"
+    @Published var defaultGroceriesPermission = "propose"
+
     @Published var isSaving = false
     @Published var showSuccess = false
     @Published var showError = false
     @Published var error: Error?
-    
+
     private var memberId: String?
     private let repository: TribeRepository
-    
+
     init(repository: TribeRepository) {
         self.repository = repository
     }
-    
+
     convenience init() {
         self.init(repository: AppContainer.shared.tribeRepository)
     }
-    
-    func loadMemberPermissions(member: TribeMember) {
+
+    func loadMemberSettings(member: TribeMember, tribe: Tribe) {
         self.memberId = member.id
-        
+        self.isAdmin = member.isAdmin
+        self.useTribeDefaults = member.useTribeDefaults
+
+        // Load member's custom permissions
         if let permissions = member.permissions {
             canAddTasks = permissions.canAddTasks
             canRemoveTasks = permissions.canRemoveTasks
@@ -954,13 +1173,32 @@ class MemberDetailViewModel: ObservableObject {
             canAddGroceries = permissions.canAddGroceries
             canRemoveGroceries = permissions.canRemoveGroceries
         }
+
+        // Set tribe defaults based on tribe type
+        if tribe.isFriend {
+            // Friend tribes: propose only for tasks and appointments, no routines/groceries
+            defaultTasksPermission = "propose"
+            defaultAppointmentsPermission = "propose"
+            defaultRoutinesPermission = "none"
+            defaultGroceriesPermission = "none"
+        } else {
+            // Family tribes: defaults can be configured (for now, default to propose)
+            // TODO: Load actual tribe defaults from backend
+            defaultTasksPermission = "propose"
+            defaultAppointmentsPermission = "propose"
+            defaultRoutinesPermission = "propose"
+            defaultGroceriesPermission = "propose"
+        }
+
+        hasUnsavedChanges = false
     }
-    
-    func savePermissions(tribeId: String, memberId: String) async {
+
+    func saveSettings(tribeId: String, memberId: String) async {
         isSaving = true
         defer { isSaving = false }
-        
-        let update = PermissionsUpdate(
+
+        // Build permissions update only if using custom permissions
+        let permissionsUpdate: PermissionsUpdate? = useTribeDefaults ? nil : PermissionsUpdate(
             canAddTasks: canAddTasks,
             canRemoveTasks: canRemoveTasks,
             canAddRoutines: canAddRoutines,
@@ -970,18 +1208,24 @@ class MemberDetailViewModel: ObservableObject {
             canAddGroceries: canAddGroceries,
             canRemoveGroceries: canRemoveGroceries
         )
-        
+
         do {
+            // Update member settings including isAdmin and useTribeDefaults
             let updatedMember = try await repository.updateMemberSettings(
                 tribeId: tribeId,
                 memberId: memberId,
                 managementScope: nil,
                 proposalNotifications: nil,
                 digestNotifications: nil,
-                permissions: update
+                permissions: permissionsUpdate,
+                isAdmin: isAdmin,
+                useTribeDefaults: useTribeDefaults
             )
-            
+
             // Update local state with server response
+            self.isAdmin = updatedMember.isAdmin
+            self.useTribeDefaults = updatedMember.useTribeDefaults
+
             if let permissions = updatedMember.permissions {
                 canAddTasks = permissions.canAddTasks
                 canRemoveTasks = permissions.canRemoveTasks
@@ -992,13 +1236,14 @@ class MemberDetailViewModel: ObservableObject {
                 canAddGroceries = permissions.canAddGroceries
                 canRemoveGroceries = permissions.canRemoveGroceries
             }
-            
+
+            hasUnsavedChanges = false
             showSuccess = true
-            AppLogger.info("Saved member permissions", logger: AppLogger.general)
+            AppLogger.info("Saved member settings (admin: \(isAdmin), useTribeDefaults: \(useTribeDefaults))", logger: AppLogger.general)
         } catch {
             self.error = error
             self.showError = true
-            AppLogger.error("Failed to save permissions: \(error)", logger: AppLogger.general)
+            AppLogger.error("Failed to save member settings: \(error)", logger: AppLogger.general)
         }
     }
 }

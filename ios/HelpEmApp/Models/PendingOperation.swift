@@ -16,6 +16,7 @@ struct PendingOperation: Codable, Identifiable {
         case createProposal
         case acceptProposal
         case notNowProposal
+        case maybeProposal
         case dismissProposal
     }
     

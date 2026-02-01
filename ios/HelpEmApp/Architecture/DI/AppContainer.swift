@@ -79,6 +79,13 @@ class AppContainer {
             pendingOperationManager: pendingOperationManager
         )
     }
+
+    func makeMaybeProposalUseCase() -> MaybeProposalUseCase {
+        MaybeProposalUseCase(
+            repository: tribeRepository,
+            pendingOperationManager: pendingOperationManager
+        )
+    }
     
     func makeCreateTribeItemUseCase() -> CreateTribeItemUseCase {
         CreateTribeItemUseCase(
@@ -104,6 +111,7 @@ class AppContainer {
             getProposalsUseCase: makeGetProposalsUseCase(),
             acceptProposalUseCase: makeAcceptProposalUseCase(),
             notNowProposalUseCase: makeNotNowProposalUseCase(),
+            maybeProposalUseCase: makeMaybeProposalUseCase(),
             dismissProposalUseCase: makeDismissProposalUseCase()
         )
     }

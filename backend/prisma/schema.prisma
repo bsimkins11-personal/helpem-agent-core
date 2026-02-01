@@ -171,6 +171,7 @@ model TribeMember {
   invitedBy         String                    @db.Uuid @map("invited_by")
   displayName       String?                   @map("display_name")
   isAdmin           Boolean                   @default(false) @map("is_admin")
+  useTribeDefaults  Boolean                   @default(true) @map("use_tribe_defaults")
   invitedAt         DateTime                  @default(now()) @map("invited_at")
   acceptedAt        DateTime?                 @map("accepted_at")
   leftAt            DateTime?                 @map("left_at")

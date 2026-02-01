@@ -15,8 +15,7 @@ class TribeMembersViewModel: ObservableObject {
     
     // Current user ID (for highlighting current user in member list)
     var currentUserId: String {
-        // TODO: Get from auth service
-        return ""
+        AuthManager.shared.currentUserId ?? ""
     }
     
     // MARK: - Dependencies
@@ -87,7 +86,9 @@ class TribeMembersViewModel: ObservableObject {
         managementScope: String? = nil,
         proposalNotifications: Bool? = nil,
         digestNotifications: Bool? = nil,
-        permissions: PermissionsUpdate? = nil
+        permissions: PermissionsUpdate? = nil,
+        isAdmin: Bool? = nil,
+        useTribeDefaults: Bool? = nil
     ) async throws {
         let updatedMember = try await repository.updateMemberSettings(
             tribeId: tribeId,
@@ -95,7 +96,9 @@ class TribeMembersViewModel: ObservableObject {
             managementScope: managementScope,
             proposalNotifications: proposalNotifications,
             digestNotifications: digestNotifications,
-            permissions: permissions
+            permissions: permissions,
+            isAdmin: isAdmin,
+            useTribeDefaults: useTribeDefaults
         )
         
         // Update local state

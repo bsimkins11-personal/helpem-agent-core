@@ -15,23 +15,26 @@ class TribeInboxViewModel: ObservableObject {
     @Published var processingProposalIds: Set<String> = []
     
     // MARK: - Dependencies
-    
+
     private let getProposalsUseCase: GetProposalsUseCase
     private let acceptProposalUseCase: AcceptProposalUseCase
     private let notNowProposalUseCase: NotNowProposalUseCase
+    private let maybeProposalUseCase: MaybeProposalUseCase
     private let dismissProposalUseCase: DismissProposalUseCase
-    
+
     // MARK: - Initialization
-    
+
     init(
         getProposalsUseCase: GetProposalsUseCase,
         acceptProposalUseCase: AcceptProposalUseCase,
         notNowProposalUseCase: NotNowProposalUseCase,
+        maybeProposalUseCase: MaybeProposalUseCase,
         dismissProposalUseCase: DismissProposalUseCase
     ) {
         self.getProposalsUseCase = getProposalsUseCase
         self.acceptProposalUseCase = acceptProposalUseCase
         self.notNowProposalUseCase = notNowProposalUseCase
+        self.maybeProposalUseCase = maybeProposalUseCase
         self.dismissProposalUseCase = dismissProposalUseCase
     }
     
@@ -94,28 +97,55 @@ class TribeInboxViewModel: ObservableObject {
         // Mark as processing
         processingProposalIds.insert(proposal.id)
         defer { processingProposalIds.remove(proposal.id) }
-        
+
         do {
             let updatedProposal = try await notNowProposalUseCase.execute(
                 tribeId: tribeId,
                 proposalId: proposal.id
             )
-            
+
             // Move from new to later
             newProposals.removeAll { $0.id == proposal.id }
             laterProposals.append(updatedProposal)
-            
+
             // Provide haptic feedback
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
-            
+
             AppLogger.info("Proposal marked as not now: \(proposal.id)", logger: AppLogger.general)
-            
+
         } catch {
             throw error
         }
     }
-    
+
+    /// Mark proposal as "maybe" (for appointments)
+    func maybeProposal(_ proposal: TribeProposal, tribeId: String) async throws {
+        // Mark as processing
+        processingProposalIds.insert(proposal.id)
+        defer { processingProposalIds.remove(proposal.id) }
+
+        do {
+            let updatedProposal = try await maybeProposalUseCase.execute(
+                tribeId: tribeId,
+                proposalId: proposal.id
+            )
+
+            // Move from new to later (similar to not now, but with "maybe" state)
+            newProposals.removeAll { $0.id == proposal.id }
+            laterProposals.append(updatedProposal)
+
+            // Provide haptic feedback
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+
+            AppLogger.info("Proposal marked as maybe: \(proposal.id)", logger: AppLogger.general)
+
+        } catch {
+            throw error
+        }
+    }
+
     /// Dismiss proposal permanently
     func dismissProposal(_ proposal: TribeProposal, tribeId: String) async throws {
         // Mark as processing

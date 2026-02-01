@@ -20,6 +20,11 @@ final class AuthManager: NSObject, ObservableObject {
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var error: String?
+
+    /// Current user's ID (from keychain)
+    var currentUserId: String? {
+        KeychainHelper.shared.userId
+    }
     
     // MARK: - Private Properties
     

@@ -56,16 +56,8 @@ struct ShareWithTribeView: View {
                                         }
                                     }
                                 )) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Member")
-                                            .font(.body)
-                                        
-                                        if member.userId == viewModel.currentUserId {
-                                            Text("(You)")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    }
+                                    Text(viewModel.displayName(for: member))
+                                        .font(.body)
                                 }
                             }
                         }
@@ -236,9 +228,17 @@ class ShareWithTribeViewModel: ObservableObject {
     @Published var tribes: [Tribe] = []
     @Published var members: [TribeMember] = []
     @Published var isLoadingMembers = false
-    @Published var currentUserId: String?
-    
+    @Published private(set) var currentUserId: String?
+
+    init() {
+        // Get current user ID from auth
+        currentUserId = AuthManager.shared.currentUserId
+    }
+
     func loadTribes() async {
+        // Refresh current user ID
+        currentUserId = AuthManager.shared.currentUserId
+
         do {
             tribes = try await TribeAPIClient.shared.getTribes()
             AppLogger.info("Loaded \(tribes.count) tribes for sharing", logger: AppLogger.general)
@@ -246,23 +246,32 @@ class ShareWithTribeViewModel: ObservableObject {
             AppLogger.error("Failed to load tribes: \(error)", logger: AppLogger.general)
         }
     }
-    
+
     func loadMembers(tribeId: String) async {
         isLoadingMembers = true
         defer { isLoadingMembers = false }
-        
+
         do {
             let allMembers = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
-            
-            // Filter out current user (can't share with yourself)
+
+            // Filter out current user (can't share with yourself) and only accepted members
             members = allMembers.filter { member in
                 member.userId != currentUserId && member.isAccepted
             }
-            
-            AppLogger.info("Loaded \(members.count) members for sharing", logger: AppLogger.general)
+
+            AppLogger.info("Loaded \(members.count) members for sharing (filtered self)", logger: AppLogger.general)
         } catch {
             AppLogger.error("Failed to load members: \(error)", logger: AppLogger.general)
         }
+    }
+
+    func displayName(for member: TribeMember) -> String {
+        if let name = member.displayName, !name.isEmpty {
+            return name
+        }
+        // Fallback: use a truncated userId or generic label
+        let shortId = String(member.userId.prefix(8))
+        return "Member (\(shortId))"
     }
 }
 

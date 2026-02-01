@@ -28,13 +28,16 @@ protocol TribeRepository {
         managementScope: String?,
         proposalNotifications: Bool?,
         digestNotifications: Bool?,
-        permissions: PermissionsUpdate?
+        permissions: PermissionsUpdate?,
+        isAdmin: Bool?,
+        useTribeDefaults: Bool?
     ) async throws -> TribeMember
-    
+
     // MARK: - Proposal Operations
     func getProposals(tribeId: String) async throws -> [TribeProposal]
     func acceptProposal(tribeId: String, proposalId: String, idempotencyKey: String) async throws -> TribeProposal
     func notNowProposal(tribeId: String, proposalId: String, idempotencyKey: String) async throws -> TribeProposal
+    func maybeProposal(tribeId: String, proposalId: String, idempotencyKey: String) async throws -> TribeProposal
     func dismissProposal(tribeId: String, proposalId: String, idempotencyKey: String) async throws
     
     // MARK: - Item Operations
@@ -203,7 +206,9 @@ class TribeAPIRepository: TribeRepository {
         managementScope: String?,
         proposalNotifications: Bool?,
         digestNotifications: Bool?,
-        permissions: PermissionsUpdate?
+        permissions: PermissionsUpdate?,
+        isAdmin: Bool? = nil,
+        useTribeDefaults: Bool? = nil
     ) async throws -> TribeMember {
         let member = try await apiClient.updateMemberSettings(
             tribeId: tribeId,
@@ -211,7 +216,9 @@ class TribeAPIRepository: TribeRepository {
             managementScope: managementScope,
             proposalNotifications: proposalNotifications,
             digestNotifications: digestNotifications,
-            permissions: permissions
+            permissions: permissions,
+            isAdmin: isAdmin,
+            useTribeDefaults: useTribeDefaults
         )
         await cacheService.invalidate("members_\(tribeId)")
         return member
@@ -251,7 +258,17 @@ class TribeAPIRepository: TribeRepository {
         await cacheService.invalidate("proposals_\(tribeId)")
         return proposal
     }
-    
+
+    func maybeProposal(tribeId: String, proposalId: String, idempotencyKey: String) async throws -> TribeProposal {
+        let proposal = try await apiClient.maybeProposal(
+            tribeId: tribeId,
+            proposalId: proposalId,
+            idempotencyKey: idempotencyKey
+        )
+        await cacheService.invalidate("proposals_\(tribeId)")
+        return proposal
+    }
+
     func dismissProposal(tribeId: String, proposalId: String, idempotencyKey: String) async throws {
         try await apiClient.dismissProposal(
             tribeId: tribeId,

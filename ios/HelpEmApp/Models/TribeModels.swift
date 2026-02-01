@@ -104,6 +104,7 @@ struct TribeMember: Codable, Identifiable {
     let invitedBy: String
     let displayName: String?
     let isAdmin: Bool
+    let useTribeDefaults: Bool
     let invitedAt: Date
     let acceptedAt: Date?
     let leftAt: Date?
@@ -118,6 +119,7 @@ struct TribeMember: Codable, Identifiable {
         case invitedBy = "invitedBy"
         case displayName = "displayName"
         case isAdmin = "isAdmin"
+        case useTribeDefaults = "useTribeDefaults"
         case invitedAt = "invitedAt"
         case acceptedAt = "acceptedAt"
         case leftAt = "leftAt"
@@ -135,6 +137,7 @@ struct TribeMember: Codable, Identifiable {
         invitedBy = try container.decode(String.self, forKey: .invitedBy)
         displayName = try? container.decode(String.self, forKey: .displayName)
         isAdmin = (try? container.decode(Bool.self, forKey: .isAdmin)) ?? false
+        useTribeDefaults = (try? container.decode(Bool.self, forKey: .useTribeDefaults)) ?? true
         invitedAt = try container.decode(Date.self, forKey: .invitedAt)
         acceptedAt = try? container.decode(Date.self, forKey: .acceptedAt)
         leftAt = try? container.decode(Date.self, forKey: .leftAt)
@@ -236,15 +239,18 @@ struct TribeProposal: Codable, Identifiable {
 enum ProposalState: String, Codable {
     case proposed = "proposed"
     case notNow = "not_now"
+    case maybe = "maybe"
     case accepted = "accepted"
     case dismissed = "dismissed"
-    
+
     var displayName: String {
         switch self {
         case .proposed:
             return "New"
         case .notNow:
             return "Not Now"
+        case .maybe:
+            return "Maybe"
         case .accepted:
             return "Accepted"
         case .dismissed:
@@ -372,6 +378,8 @@ struct UpdateMemberRequest: Codable {
     let proposalNotifications: Bool?
     let digestNotifications: Bool?
     let permissions: PermissionsUpdate?
+    let isAdmin: Bool?
+    let useTribeDefaults: Bool?
 }
 
 struct PermissionsUpdate: Codable {
@@ -518,4 +526,73 @@ struct InviteContactResponse: Codable {
     let invitation: PendingTribeInvitation
     let inviterName: String
     let message: String
+}
+
+// MARK: - Sent Items (for proposer to see responses)
+
+/// A sent item with proposal responses (for appointments only)
+struct SentTribeItem: Codable, Identifiable {
+    let id: String
+    let tribeId: String
+    let createdBy: String
+    let itemType: String
+    let data: [String: AnyCodable]
+    let createdAt: Date
+
+    // For appointments: detailed responses
+    let responses: [ProposalResponse]?
+
+    // For non-appointments: just the count (privacy)
+    let recipientCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tribeId = "tribeId"
+        case createdBy = "createdBy"
+        case itemType = "itemType"
+        case data
+        case createdAt = "createdAt"
+        case responses
+        case recipientCount = "recipientCount"
+    }
+
+    /// Whether this is an appointment (has detailed responses)
+    var isAppointment: Bool {
+        itemType == "appointment"
+    }
+
+    /// Get the title from item data
+    var title: String {
+        if let titleCodable = data["title"],
+           case let title as String = titleCodable.value {
+            return title
+        }
+        if let nameCodable = data["name"],
+           case let name as String = nameCodable.value {
+            return name
+        }
+        let capitalized = itemType.prefix(1).uppercased() + itemType.dropFirst()
+        return "Untitled \(capitalized)"
+    }
+}
+
+/// A single recipient's response to a proposal
+struct ProposalResponse: Codable {
+    let recipientId: String
+    let recipientUserId: String
+    let recipientName: String
+    let state: ProposalState
+    let stateChangedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case recipientId = "recipientId"
+        case recipientUserId = "recipientUserId"
+        case recipientName = "recipientName"
+        case state
+        case stateChangedAt = "stateChangedAt"
+    }
+}
+
+struct SentItemsResponse: Codable {
+    let items: [SentTribeItem]
 }
