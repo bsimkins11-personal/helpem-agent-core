@@ -590,7 +590,8 @@ app.get("/debug/user-by-phone/:phone", async (req, res) => {
 app.get("/debug/users", async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, phone: true, createdAt: true }
+      select: { id: true, email: true, phone: true, createdAt: true, lastActiveAt: true },
+      orderBy: { lastActiveAt: 'desc' }
     });
     return res.json({ count: users.length, users });
   } catch (err) {
