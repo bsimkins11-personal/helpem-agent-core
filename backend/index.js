@@ -547,6 +547,20 @@ import debugUserStateHandler from './routes/debug-user-state.js';
 app.get("/debug/tribes", debugTribesHandler);
 app.get("/debug/user-state", debugUserStateHandler);
 
+// Temporary: Clear pending invitations for testing
+app.get("/debug/clear-invitations", async (req, res) => {
+  try {
+    const deleted = await prisma.pendingTribeInvitation.deleteMany({
+      where: { state: "pending" }
+    });
+    console.log(`Deleted ${deleted.count} pending invitations`);
+    return res.json({ success: true, deleted: deleted.count });
+  } catch (err) {
+    console.error("Error clearing invitations:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server with migrations
 (async () => {
   // Run migrations before starting server
