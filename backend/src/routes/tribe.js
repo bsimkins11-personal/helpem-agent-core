@@ -390,7 +390,19 @@ router.patch("/:tribeId", async (req, res) => {
       });
     }
 
-    return res.json({ tribe: updated });
+    // Return formatted tribe matching iOS Tribe model
+    return res.json({
+      tribe: {
+        id: updated.id,
+        name: updated.name,
+        ownerId: updated.ownerId,
+        avatarUrl: updated.avatarUrl,
+        tribeType: updated.tribeType,
+        isOwner: true, // Only owners can update, so always true here
+        pendingProposalsCount: 0,
+        joinedAt: membership.acceptedAt,
+      },
+    });
   } catch (err) {
     console.error("ERROR PATCH /tribes/:tribeId:", err);
     return res.status(500).json({ error: "Internal server error" });
