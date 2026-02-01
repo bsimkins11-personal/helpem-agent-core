@@ -247,6 +247,21 @@ app.post("/test-db", apiLimiter, async (req, res) => {
       return res.status(400).json({ error: "Missing message" });
     }
 
+    const insertUserInputRaw = async () => {
+      try {
+        await prisma.$executeRaw`
+          INSERT INTO user_inputs (user_id, content, type, created_at)
+          VALUES (${userId}::uuid, ${message}, ${type || "text"}, NOW())
+        `;
+      } catch (rawErr) {
+        console.warn("type column not found, creating without it (migration may be needed)");
+        await prisma.$executeRaw`
+          INSERT INTO user_inputs (user_id, content, created_at)
+          VALUES (${userId}::uuid, ${message}, NOW())
+        `;
+      }
+    };
+
     try {
       // Try to create with type field
       try {
@@ -258,13 +273,14 @@ app.post("/test-db", apiLimiter, async (req, res) => {
           },
         });
       } catch (typeError) {
-        // If type column doesn't exist, try without it (temporary fallback)
-        if (typeError.code === 'P2022' || typeError.message?.includes('type')) {
-          console.warn("type column not found, creating without it (migration may be needed)");
-          await prisma.$executeRaw`
-            INSERT INTO user_inputs (user_id, content, created_at)
-            VALUES (${userId}::uuid, ${message}, NOW())
-          `;
+        const msg = typeError?.message || "";
+        // If type column doesn't exist or id type mismatch, fallback to raw insert
+        if (
+          typeError.code === 'P2022' ||
+          msg.includes("type") ||
+          msg.includes("Expected a string in column 'id'")
+        ) {
+          await insertUserInputRaw();
         } else {
           throw typeError;
         }
@@ -283,13 +299,13 @@ app.post("/test-db", apiLimiter, async (req, res) => {
               },
             });
           } catch (typeError2) {
-            // If type column doesn't exist, try without it (temporary fallback)
-            if (typeError2.code === 'P2022' || typeError2.message?.includes('type')) {
-              console.warn("type column not found, creating without it (migration may be needed)");
-              await prisma.$executeRaw`
-                INSERT INTO user_inputs (user_id, content, created_at)
-                VALUES (${userId}::uuid, ${message}, NOW())
-              `;
+            const msg = typeError2?.message || "";
+            if (
+              typeError2.code === 'P2022' ||
+              msg.includes("type") ||
+              msg.includes("Expected a string in column 'id'")
+            ) {
+              await insertUserInputRaw();
             } else {
               throw typeError2;
             }
