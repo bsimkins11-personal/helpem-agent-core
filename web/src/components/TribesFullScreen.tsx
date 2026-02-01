@@ -248,15 +248,40 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
     }, 5000);
   };
 
+  const resizeAvatar = (file: File, size = 256, quality = 0.85): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          reject(new Error("Canvas unavailable"));
+          return;
+        }
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        URL.revokeObjectURL(url);
+        resolve(dataUrl);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Image load failed"));
+      };
+      img.src = url;
+    });
+  };
+
   const handleAvatarSelect = async (tribeId: string, file: File) => {
     setUploadingTribeId(tribeId);
     try {
-      const reader = new FileReader();
-      const dataUrl: string = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      const dataUrl = await resizeAvatar(file);
 
       const token = getClientSessionToken();
       const res = await fetch(`/api/tribes/${tribeId}`, {
