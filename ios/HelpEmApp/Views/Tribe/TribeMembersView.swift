@@ -78,9 +78,10 @@ struct TribeMemberRow: View {
     }
     
     private var memberDisplayName: String {
-        // For now, use truncated user ID
-        // TODO: Add user display name to backend API response
-        return "User \(member.userId.prefix(8))"
+        if let name = member.displayName, !name.isEmpty {
+            return name
+        }
+        return "Member"
     }
     
     private var memberStatus: String {

@@ -92,6 +92,7 @@ struct TribeMember: Codable, Identifiable {
     let tribeId: String
     let userId: String
     let invitedBy: String
+    let displayName: String?
     let invitedAt: Date
     let acceptedAt: Date?
     let leftAt: Date?
@@ -99,11 +100,12 @@ struct TribeMember: Codable, Identifiable {
     let proposalNotifications: Bool
     let digestNotifications: Bool
     let permissions: TribeMemberPermissions?
-    
+
     enum CodingKeys: String, CodingKey {
         case id, userId
         case tribeId = "tribeId"
         case invitedBy = "invitedBy"
+        case displayName = "displayName"
         case invitedAt = "invitedAt"
         case acceptedAt = "acceptedAt"
         case leftAt = "leftAt"

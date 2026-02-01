@@ -169,6 +169,7 @@ model TribeMember {
   tribeId           String                    @db.Uuid @map("tribe_id")
   userId            String                    @db.Uuid @map("user_id")
   invitedBy         String                    @db.Uuid @map("invited_by")
+  displayName       String?                   @map("display_name")
   invitedAt         DateTime                  @default(now()) @map("invited_at")
   acceptedAt        DateTime?                 @map("accepted_at")
   leftAt            DateTime?                 @map("left_at")
