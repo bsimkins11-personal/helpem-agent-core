@@ -24,6 +24,8 @@ import {
   transitionProposalState,
 } from "../lib/tribePermissions.js";
 import { createTribeActivity, getUserDisplayName } from "../lib/tribeActivity.js";
+import { sendToUser, isPushEnabled } from "../services/pushNotificationService.js";
+import { sendSMS, isSMSEnabled } from "../services/smsService.js";
 
 const router = express.Router();
 
@@ -1615,9 +1617,20 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
       });
     }
 
-    // Since we don't have email/phone in User model yet, we'll always create a pending invitation
-    // This will be auto-accepted when they sign up
-    
+    // Check if contact is an existing HelpEm user
+    let existingUser = null;
+    if (contactType === "email") {
+      existingUser = await prisma.user.findUnique({
+        where: { email: normalizedIdentifier },
+        select: { id: true },
+      });
+    } else if (contactType === "phone") {
+      existingUser = await prisma.user.findUnique({
+        where: { phone: normalizedIdentifier },
+        select: { id: true },
+      });
+    }
+
     // Get inviter name for personalized messaging
     const inviterName = await getUserDisplayName(userId);
     const invitedName = contactName || normalizedIdentifier;
@@ -1652,11 +1665,61 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
       console.error("Failed to create activity (non-critical):", activityError);
     }
 
-    return res.json({ 
+    // Send notification based on whether they're an existing user
+    let notificationSent = false;
+    let notificationType = null;
+
+    try {
+      if (existingUser) {
+        // Existing HelpEm user - send push notification
+        if (isPushEnabled()) {
+          await sendToUser(existingUser.id, {
+            title: `${inviterName} invited you!`,
+            body: `Join the "${tribe.name}" tribe`,
+            category: "TRIBE_INVITE",
+            data: {
+              type: "tribe_invite",
+              tribeId,
+              invitationId: invitation.id,
+            },
+          });
+          notificationSent = true;
+          notificationType = "push";
+          console.log(`📱 Push notification sent to existing user ${existingUser.id} for tribe invite`);
+        }
+      } else {
+        // Not an existing user - send SMS if phone contact
+        if (contactType === "phone" && isSMSEnabled()) {
+          const appStoreUrl = process.env.APP_STORE_URL || "https://apps.apple.com/app/helpem";
+          const message = `${inviterName} invited you to join "${tribe.name}" on HelpEm! Download the app to accept: ${appStoreUrl}`;
+          await sendSMS(normalizedIdentifier, message);
+          notificationSent = true;
+          notificationType = "sms";
+          console.log(`📱 SMS sent to ${normalizedIdentifier} for tribe invite`);
+        }
+      }
+    } catch (notifyError) {
+      console.error("Failed to send notification (non-critical):", notifyError);
+    }
+
+    // Craft appropriate response message
+    let responseMessage;
+    if (existingUser) {
+      responseMessage = `${invitedName} has been notified about your invitation to join ${tribe.name}!`;
+    } else {
+      responseMessage = notificationSent
+        ? `${invitedName} will receive an SMS invitation to join HelpEm and your tribe!`
+        : `${invitedName} will see your invitation when they sign up for HelpEm!`;
+    }
+
+    return res.json({
       success: true,
       invitation,
       inviterName,
-      message: `${invitedName} will receive a personal invitation from you to join the ${tribe.name} tribe when they sign up for HelpEm!` 
+      existingUser: !!existingUser,
+      notificationSent,
+      notificationType,
+      message: responseMessage,
     });
   } catch (err) {
     console.error("ERROR POST /tribes/:tribeId/invite-contact:", err);

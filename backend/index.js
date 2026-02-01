@@ -162,11 +162,22 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
       return res.status(401).json({ error: "Apple user ID mismatch" });
     }
 
+    // Extract email from Apple token (if user shared it)
+    const appleEmail = appleAuth.user.email;
+
     const user = await prisma.user.upsert({
       where: { appleUserId: apple_user_id },
-      update: { lastActiveAt: new Date() },
-      create: { appleUserId: apple_user_id, lastActiveAt: new Date() },
-      select: { id: true, createdAt: true },
+      update: {
+        lastActiveAt: new Date(),
+        // Update email if provided and not already set
+        ...(appleEmail ? { email: appleEmail.toLowerCase() } : {}),
+      },
+      create: {
+        appleUserId: apple_user_id,
+        lastActiveAt: new Date(),
+        email: appleEmail ? appleEmail.toLowerCase() : null,
+      },
+      select: { id: true, createdAt: true, email: true },
     });
 
     const userId = user.id;
@@ -176,20 +187,24 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
     const now = new Date();
     const isNewUser = now.getTime() - createdAt.getTime() < 5000;
 
-    // For new users, check for pending tribe invitations
-    // TODO: When we add email/phone to User model, match against those
-    // For now, this is a placeholder for the future implementation
-    if (isNewUser) {
+    // For new users, check for pending tribe invitations matching their email
+    if (isNewUser && user.email) {
       try {
-        // This will be implemented when we have email/phone on the User model
-        // For now, we'll log that we checked
-        console.log(`New user ${userId} signed up - checking for pending tribe invitations...`);
-        
-        // Future implementation:
-        // 1. Get user's email/phone from Sign in with Apple (if available)
-        // 2. Check for pending invitations matching that email/phone
-        // 3. Auto-accept those invitations by creating TribeMember records
-        
+        console.log(`New user ${userId} signed up with email ${user.email} - checking for pending tribe invitations...`);
+
+        // Find pending invitations matching this email
+        const pendingInvitations = await prisma.pendingTribeInvitation.findMany({
+          where: {
+            contactIdentifier: user.email.toLowerCase(),
+            state: "pending",
+          },
+        });
+
+        if (pendingInvitations.length > 0) {
+          console.log(`Found ${pendingInvitations.length} pending invitations for ${user.email}`);
+          // Note: We don't auto-accept - user will see these invitations in-app
+          // and can choose to accept or decline
+        }
       } catch (err) {
         console.error("Error processing pending tribe invitations:", err);
         // Don't fail auth if tribe invitation processing fails

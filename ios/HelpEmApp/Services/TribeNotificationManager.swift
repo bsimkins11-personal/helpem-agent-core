@@ -17,6 +17,7 @@ class TribeNotificationManager {
     // Category identifiers
     private let proposalCategoryId = "TRIBE_PROPOSAL"
     private let digestCategoryId = "TRIBE_DIGEST"
+    private let inviteCategoryId = "TRIBE_INVITE"
     
     private init() {
         setupNotificationCategories()
@@ -55,8 +56,22 @@ class TribeNotificationManager {
             intentIdentifiers: [],
             options: []
         )
-        
-        notificationCenter.setNotificationCategories([proposalCategory, digestCategory])
+
+        // Tribe invite category (view invite action)
+        let viewInviteAction = UNNotificationAction(
+            identifier: "VIEW_INVITE",
+            title: "View",
+            options: [.foreground]
+        )
+
+        let inviteCategory = UNNotificationCategory(
+            identifier: inviteCategoryId,
+            actions: [viewInviteAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        notificationCenter.setNotificationCategories([proposalCategory, digestCategory, inviteCategory])
         
         AppLogger.info("Tribe notification categories configured", logger: AppLogger.general)
     }
@@ -147,6 +162,8 @@ class TribeNotificationManager {
             await handleProposalAction(response: response)
         case "tribe_digest":
             await handleDigestAction(response: response)
+        case "tribe_invite":
+            await handleInviteAction(response: response)
         default:
             break
         }
@@ -178,9 +195,21 @@ class TribeNotificationManager {
         guard let tribeId = response.notification.request.content.userInfo["tribeId"] as? String else {
             return
         }
-        
+
         // Open Tribe Inbox
         await openTribeInbox(tribeId: tribeId)
+    }
+
+    private func handleInviteAction(response: UNNotificationResponse) async {
+        // Navigate to tribe invitations list
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("OpenTribeInvitations"),
+                object: nil,
+                userInfo: response.notification.request.content.userInfo
+            )
+        }
+        AppLogger.info("Opening tribe invitations from notification", logger: AppLogger.general)
     }
     
     // MARK: - Actions

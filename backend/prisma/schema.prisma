@@ -9,11 +9,15 @@ datasource db {
 model User {
   id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   appleUserId  String      @unique @map("apple_user_id")
+  email        String?     @unique  // From Apple Sign-In (if shared)
+  phone        String?     @unique  // Normalized E.164 format
   createdAt    DateTime    @default(now()) @map("created_at")
   lastActiveAt DateTime    @default(now()) @map("last_active_at")
   inputs       UserInput[]
   instruction  UserInstruction?
 
+  @@index([email])
+  @@index([phone])
   @@map("users")
 }
 

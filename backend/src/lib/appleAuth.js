@@ -24,8 +24,8 @@ function getKey(header, callback) {
 /**
  * Verifies an Apple identity token (JWT string).
  * Used by /auth/apple endpoint.
- * 
- * Per policy: we do NOT store or expose Apple email or name.
+ *
+ * Returns user ID and email (if shared) for tribe invite matching.
  */
 export async function verifyAppleIdentityToken(identityToken) {
   if (!identityToken) {
@@ -75,11 +75,12 @@ export async function verifyAppleIdentityToken(identityToken) {
           return;
         }
 
-        // ✅ Only return the stable Apple user ID - no email/name per policy
+        // Return stable Apple user ID and email (if shared by user)
         resolve({
           success: true,
           user: {
             id: decoded.sub,
+            email: decoded.email || null,  // Email if user shared it
           },
         });
       }
