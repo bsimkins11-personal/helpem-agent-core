@@ -8,7 +8,7 @@ protocol TribeRepository {
     // MARK: - Tribe Operations
     func getTribes() async throws -> [Tribe]
     func getTribe(id: String) async throws -> Tribe
-    func createTribe(name: String) async throws -> Tribe
+    func createTribe(name: String, tribeType: TribeType) async throws -> Tribe
     func renameTribe(id: String, newName: String) async throws -> Tribe
     func deleteTribe(id: String) async throws
     func acceptInvitation(tribeId: String) async throws -> TribeMember
@@ -100,8 +100,8 @@ class TribeAPIRepository: TribeRepository {
         return tribe
     }
     
-    func createTribe(name: String) async throws -> Tribe {
-        let tribe = try await apiClient.createTribe(name: name)
+    func createTribe(name: String, tribeType: TribeType) async throws -> Tribe {
+        let tribe = try await apiClient.createTribe(name: name, tribeType: tribeType)
         await cacheService.invalidate("tribes") // Invalidate cache
         return tribe
     }

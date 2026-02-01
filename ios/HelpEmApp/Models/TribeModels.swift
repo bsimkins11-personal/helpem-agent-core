@@ -21,6 +21,29 @@ struct Tribe: Codable, Identifiable {
     }
 }
 
+// MARK: - Tribe Type
+
+enum TribeType: String, Codable, CaseIterable, Identifiable {
+    case friend
+    case family
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .friend: return "Friend"
+        case .family: return "Family"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .friend: return "Share tasks, appointments, and chat only."
+        case .family: return "Share everything: tasks, routines, groceries, chat."
+        }
+    }
+}
+
 // MARK: - Tribe Member
 
 struct TribeMember: Codable, Identifiable {
@@ -251,6 +274,7 @@ struct TribeInvitation: Codable, Identifiable {
 
 struct CreateTribeRequest: Codable {
     let name: String
+    let tribeType: TribeType?
 }
 
 struct InviteMemberRequest: Codable {

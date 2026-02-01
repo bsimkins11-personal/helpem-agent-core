@@ -42,9 +42,9 @@ class TribeAPIClient {
     }
     
     /// Create a new Tribe
-    func createTribe(name: String) async throws -> Tribe {
+    func createTribe(name: String, tribeType: TribeType) async throws -> Tribe {
         let url = URL(string: "\(baseURL)/tribes")!
-        let request = CreateTribeRequest(name: name)
+        let request = CreateTribeRequest(name: name, tribeType: tribeType)
         let data = try await authenticatedRequest(url: url, method: "POST", body: request)
         let response = try decoder.decode([String: Tribe].self, from: data)
         
@@ -57,7 +57,7 @@ class TribeAPIClient {
     /// Rename a Tribe (owner only)
     func renameTribe(tribeId: String, newName: String) async throws -> Tribe {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!
-        let request = CreateTribeRequest(name: newName)
+        let request = CreateTribeRequest(name: newName, tribeType: nil)
         let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
         let response = try decoder.decode([String: Tribe].self, from: data)
         

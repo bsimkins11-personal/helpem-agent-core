@@ -9,6 +9,7 @@ struct TribeListView: View {
     @State private var showError = false
     @State private var showingSignInRequired = false
     @State private var newTribeName = ""
+    @State private var newTribeType: TribeType? = nil
     @ObservedObject private var authManager = AuthManager.shared
     
     var body: some View {
@@ -158,6 +159,38 @@ struct TribeListView: View {
                     Text("Choose a name that helps you remember who this Tribe is for.")
                         .font(.caption)
                 }
+                
+                Section("Tribe Type") {
+                    VStack(spacing: 10) {
+                        ForEach(TribeType.allCases) { type in
+                            Button {
+                                newTribeType = type
+                            } label: {
+                                HStack {
+                                    Text(type.displayName)
+                                        .font(.body)
+                                    Spacer()
+                                    if newTribeType == type {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.accentColor)
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    
+                    if let selected = newTribeType {
+                        Text(selected.description)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Select a type to continue.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .navigationTitle("Create Tribe")
             .navigationBarTitleDisplayMode(.inline)
@@ -175,7 +208,7 @@ struct TribeListView: View {
                             await createTribe()
                         }
                     }
-                    .disabled(newTribeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(newTribeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || newTribeType == nil)
                 }
             }
         }
@@ -183,18 +216,20 @@ struct TribeListView: View {
     
     private func createTribe() async {
         let name = newTribeName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return }
+        guard !name.isEmpty, let tribeType = newTribeType else { return }
         
         do {
-            _ = try await viewModel.createTribe(name: name)
+            _ = try await viewModel.createTribe(name: name, tribeType: tribeType)
             showingCreateTribe = false
             newTribeName = ""
+            newTribeType = nil
         } catch {
             // Check if it's an auth error
             if let tribeError = error as? TribeAPIError, 
                case .notAuthenticated = tribeError {
                 showingCreateTribe = false
                 newTribeName = ""
+                newTribeType = nil
                 showingSignInRequired = true
             }
             // Other errors are captured in viewModel.error and shown via alert

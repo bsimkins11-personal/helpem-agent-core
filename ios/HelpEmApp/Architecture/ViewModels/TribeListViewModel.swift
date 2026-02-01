@@ -46,12 +46,12 @@ class TribeListViewModel: ObservableObject {
     }
     
     /// Create a new tribe
-    func createTribe(name: String) async throws -> Tribe {
+    func createTribe(name: String, tribeType: TribeType) async throws -> Tribe {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw ValidationError.emptyTribeName
         }
         
-        let tribe = try await repository.createTribe(name: name)
+        let tribe = try await repository.createTribe(name: name, tribeType: tribeType)
         
         // Reload tribes
         await loadTribes()
