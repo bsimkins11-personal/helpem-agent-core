@@ -2,17 +2,37 @@ import SwiftUI
 import Combine
 import Contacts
 
+/// Selected contact info for multi-select
+struct SelectedContact: Identifiable, Equatable {
+    let id: String // contactId (email or phone)
+    let name: String
+
+    static func == (lhs: SelectedContact, rhs: SelectedContact) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 /// Contacts Picker for inviting Tribe members
-/// 
+///
 /// CRITICAL: Request Contacts permission only when user taps "Add someone to Tribe"
 /// No background sync, no uploading contact lists
 struct ContactsPickerView: View {
     let tribe: Tribe
-    let onSelect: (String, String) -> Void // (contactId, contactName)
-    
+    let multiSelect: Bool
+    let onSelect: (String, String) -> Void // (contactId, contactName) - single select
+    let onMultiSelect: ([SelectedContact]) -> Void // multi-select
+
     @StateObject private var viewModel = ContactsPickerViewModel()
     @Environment(\.dismiss) private var dismiss
-    
+    @State private var selectedContacts: [SelectedContact] = []
+
+    init(tribe: Tribe, multiSelect: Bool = false, onSelect: @escaping (String, String) -> Void = { _, _ in }, onMultiSelect: @escaping ([SelectedContact]) -> Void = { _ in }) {
+        self.tribe = tribe
+        self.multiSelect = multiSelect
+        self.onSelect = onSelect
+        self.onMultiSelect = onMultiSelect
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -31,12 +51,20 @@ struct ContactsPickerView: View {
                     }
                 }
             }
-            .navigationTitle("Invite to Tribe")
+            .navigationTitle(multiSelect ? "Select Contacts" : "Invite to Tribe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
+                    }
+                }
+                if multiSelect && !selectedContacts.isEmpty {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done (\(selectedContacts.count))") {
+                            onMultiSelect(selectedContacts)
+                            dismiss()
+                        }
                     }
                 }
             }
@@ -123,15 +151,23 @@ struct ContactsPickerView: View {
     
     private var contactsList: some View {
         List {
-            ForEach(viewModel.contacts, id: \.identifier) { contact in
+            ForEach(viewModel.filteredContacts, id: \.identifier) { contact in
                 Button {
                     handleContactSelection(contact)
                 } label: {
                     HStack {
+                        if multiSelect {
+                            // Checkmark for multi-select
+                            Image(systemName: isSelected(contact) ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(isSelected(contact) ? .blue : .gray)
+                                .font(.title2)
+                        }
+
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(contact.givenName) \(contact.familyName)")
                                 .font(.body)
-                            
+                                .foregroundColor(.primary)
+
                             // Show email if available, otherwise phone
                             if let email = contact.emailAddresses.first?.value as String?,
                                !email.isEmpty {
@@ -144,17 +180,34 @@ struct ContactsPickerView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        
+
                         Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+
+                        if !multiSelect {
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
         .searchable(text: $viewModel.searchText, prompt: "Search contacts")
+    }
+
+    private func isSelected(_ contact: CNContact) -> Bool {
+        guard let contactId = getContactId(contact) else { return false }
+        return selectedContacts.contains { $0.id == contactId }
+    }
+
+    private func getContactId(_ contact: CNContact) -> String? {
+        if let email = contact.emailAddresses.first?.value as String?, !email.isEmpty {
+            return email
+        } else if let phone = contact.phoneNumbers.first?.value.stringValue, !phone.isEmpty {
+            return phone.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        }
+        return nil
     }
     
     private var emptyState: some View {
@@ -175,32 +228,27 @@ struct ContactsPickerView: View {
     
     private func handleContactSelection(_ contact: CNContact) {
         // Extract email or phone from contact
-        // Priority: email first, then phone
-        var userId: String?
-        
-        // Try to get email first
-        if let email = contact.emailAddresses.first?.value as String?,
-           !email.isEmpty {
-            userId = email
-        } else if let phone = contact.phoneNumbers.first?.value.stringValue,
-                  !phone.isEmpty {
-            // Use phone number (normalized)
-            let normalizedPhone = phone.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
-            userId = normalizedPhone
-        }
-        
-        // Get contact name
-        let contactName = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
-        
-        // If we have an identifier, use it; otherwise show error
-        if let userId = userId {
-            AppLogger.info("Selected contact: \(contactName), userId: \(userId)", logger: AppLogger.general)
-            onSelect(userId, contactName)
-            dismiss()
-        } else {
+        guard let contactId = getContactId(contact) else {
+            let contactName = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
             AppLogger.error("Contact has no email or phone: \(contactName)", logger: AppLogger.general)
-            // Show error to user - contact needs email or phone
             viewModel.showContactError = true
+            return
+        }
+
+        let contactName = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
+
+        if multiSelect {
+            // Toggle selection
+            if let index = selectedContacts.firstIndex(where: { $0.id == contactId }) {
+                selectedContacts.remove(at: index)
+            } else {
+                selectedContacts.append(SelectedContact(id: contactId, name: contactName))
+            }
+        } else {
+            // Single select - immediately return
+            AppLogger.info("Selected contact: \(contactName), userId: \(contactId)", logger: AppLogger.general)
+            onSelect(contactId, contactName)
+            dismiss()
         }
     }
 }
@@ -214,13 +262,23 @@ class ContactsPickerViewModel: ObservableObject {
     @Published var searchText = ""
     @Published var permissionStatus: PermissionStatus = .notDetermined
     @Published var showContactError = false
-    
+
     private let contactStore = CNContactStore()
-    
+
     enum PermissionStatus {
         case notDetermined
         case denied
         case authorized
+    }
+
+    var filteredContacts: [CNContact] {
+        if searchText.isEmpty {
+            return contacts
+        }
+        return contacts.filter { contact in
+            let fullName = "\(contact.givenName) \(contact.familyName)".lowercased()
+            return fullName.contains(searchText.lowercased())
+        }
     }
     
     func checkPermissionStatus() {

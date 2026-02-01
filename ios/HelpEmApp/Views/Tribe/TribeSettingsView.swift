@@ -840,18 +840,19 @@ struct InviteMemberView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showingContacts = false
-    @State private var selectedUserId: String?
-    @State private var selectedContactName: String?
+    @State private var selectedContacts: [SelectedContact] = []
     @State private var isSending = false
     @State private var error: Error?
     @State private var showError = false
     @State private var showSuccess = false
+    @State private var successMessage = ""
 
     // Manual entry
     @State private var useManualEntry = false
     @State private var manualPhoneNumber = ""
     @State private var manualName = ""
 
+    // Permissions (for single invite)
     @State private var canAddTasks = true
     @State private var canRemoveTasks = false
     @State private var canAddRoutines = true
@@ -865,25 +866,17 @@ struct InviteMemberView: View {
         if useManualEntry {
             return !manualPhoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         } else {
-            return selectedUserId != nil
+            return !selectedContacts.isEmpty
         }
     }
 
-    private var effectiveContactId: String? {
-        if useManualEntry {
-            let cleaned = manualPhoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
-            return cleaned.isEmpty ? nil : cleaned
-        } else {
-            return selectedUserId
+    private var inviteButtonTitle: String {
+        if isSending { return "Sending..." }
+        if useManualEntry { return "Send Invite" }
+        if selectedContacts.count > 1 {
+            return "Send \(selectedContacts.count) Invites"
         }
-    }
-
-    private var effectiveContactName: String? {
-        if useManualEntry {
-            return manualName.isEmpty ? nil : manualName
-        } else {
-            return selectedContactName
-        }
+        return "Send Invite"
     }
 
     var body: some View {
@@ -895,6 +888,12 @@ struct InviteMemberView: View {
                         Text("Phone Number").tag(true)
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: useManualEntry) { _, _ in
+                        // Clear selections when switching modes
+                        selectedContacts.removeAll()
+                        manualPhoneNumber = ""
+                        manualName = ""
+                    }
                 }
 
                 if useManualEntry {
@@ -908,52 +907,76 @@ struct InviteMemberView: View {
                     } header: {
                         Text("Enter Phone Number")
                     } footer: {
-                        Text("Enter the phone number of the person you want to invite. They'll see your invitation when they sign up for HelpEm.")
+                        Text("Enter the phone number of the person you want to invite.")
                     }
+
+                    permissionsSection
                 } else {
+                    // Contacts selection
                     Section {
                         Button {
                             showingContacts = true
                         } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(selectedUserId == nil ? "Choose Contact" : "Contact Selected")
-                                        .foregroundColor(selectedUserId == nil ? .blue : .primary)
-
-                                    if let name = selectedContactName {
-                                        Text(name)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
+                                Label("Select Contacts", systemImage: "person.crop.circle.badge.plus")
                                 Spacer()
+                                if selectedContacts.isEmpty {
+                                    Text("None")
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    Text("\(selectedContacts.count) selected")
+                                        .foregroundColor(.blue)
+                                }
                                 Image(systemName: "chevron.right")
                                     .foregroundColor(.secondary)
                             }
                         }
                     } header: {
-                        Text("Select Contact")
-                    } footer: {
-                        Text("Your personal invitation will be waiting for them when they join HelpEm! They'll see it's from you and can choose to accept.")
+                        Text("Choose People to Invite")
+                    }
+
+                    // Show selected contacts
+                    if !selectedContacts.isEmpty {
+                        Section {
+                            ForEach(selectedContacts) { contact in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(contact.name)
+                                            .font(.body)
+                                        Text(contact.id)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                    Button {
+                                        selectedContacts.removeAll { $0.id == contact.id }
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.gray)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        } header: {
+                            Text("Selected (\(selectedContacts.count))")
+                        } footer: {
+                            Text("They'll see your personal invitation when they sign up for HelpEm!")
+                        }
+                    }
+
+                    // Only show permissions for single contact
+                    if selectedContacts.count == 1 {
+                        permissionsSection
+                    } else if selectedContacts.count > 1 {
+                        Section {
+                            Text("Default permissions will be applied to all invites. You can customize each member's permissions after they join.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
-
-                Section {
-                    Toggle("Can Add Tasks", isOn: $canAddTasks)
-                    Toggle("Can Remove Tasks", isOn: $canRemoveTasks)
-                    Toggle("Can Add Routines", isOn: $canAddRoutines)
-                    Toggle("Can Remove Routines", isOn: $canRemoveRoutines)
-                    Toggle("Can Add Appointments", isOn: $canAddAppointments)
-                    Toggle("Can Remove Appointments", isOn: $canRemoveAppointments)
-                    Toggle("Can Add Groceries", isOn: $canAddGroceries)
-                    Toggle("Can Remove Groceries", isOn: $canRemoveGroceries)
-                } header: {
-                    Text("Permissions")
-                } footer: {
-                    Text("Permissions can be updated any time after the invite is sent.")
-                }
             }
-            .navigationTitle("Invite Member")
+            .navigationTitle("Invite Members")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -962,9 +985,9 @@ struct InviteMemberView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isSending ? "Sending..." : "Send Invite") {
+                    Button(inviteButtonTitle) {
                         Task {
-                            await sendInvite()
+                            await sendInvites()
                         }
                     }
                     .disabled(isSending || !canSendInvite)
@@ -977,67 +1000,117 @@ struct InviteMemberView: View {
                     Text(error.localizedDescription)
                 }
             }
-            .alert("Invitation Ready! 🎉", isPresented: $showSuccess) {
+            .alert("Invitations Sent!", isPresented: $showSuccess) {
                 Button("Done") {
                     onComplete()
                     dismiss()
                 }
             } message: {
-                if let name = effectiveContactName {
-                    Text("\(name) will see your personal invitation to join '\(tribe.name)' when they sign up for HelpEm. They'll be excited to collaborate with you!")
-                } else {
-                    Text("Your personal invitation to join '\(tribe.name)' is ready and waiting!")
-                }
+                Text(successMessage)
             }
             .sheet(isPresented: $showingContacts) {
-                ContactsPickerView(tribe: tribe) { userId, contactName in
-                    selectedUserId = userId
-                    selectedContactName = contactName
-                }
+                ContactsPickerView(
+                    tribe: tribe,
+                    multiSelect: true,
+                    onMultiSelect: { contacts in
+                        selectedContacts = contacts
+                    }
+                )
             }
         }
     }
 
-    private func sendInvite() async {
-        guard let contactId = effectiveContactId else {
-            AppLogger.error("No contact ID for invite", logger: AppLogger.general)
-            return
+    private var permissionsSection: some View {
+        Section {
+            Toggle("Can Add Tasks", isOn: $canAddTasks)
+            Toggle("Can Remove Tasks", isOn: $canRemoveTasks)
+            Toggle("Can Add Routines", isOn: $canAddRoutines)
+            Toggle("Can Remove Routines", isOn: $canRemoveRoutines)
+            Toggle("Can Add Appointments", isOn: $canAddAppointments)
+            Toggle("Can Remove Appointments", isOn: $canRemoveAppointments)
+            Toggle("Can Add Groceries", isOn: $canAddGroceries)
+            Toggle("Can Remove Groceries", isOn: $canRemoveGroceries)
+        } header: {
+            Text("Permissions")
+        } footer: {
+            Text("Permissions can be updated any time after the invite is sent.")
         }
+    }
 
+    private func sendInvites() async {
         isSending = true
         defer { isSending = false }
 
-        do {
-            AppLogger.info("Sending invite to contact: \(contactId) for tribe: \(tribe.id)", logger: AppLogger.general)
+        let permissions = PermissionsUpdate(
+            canAddTasks: canAddTasks,
+            canRemoveTasks: canRemoveTasks,
+            canAddRoutines: canAddRoutines,
+            canRemoveRoutines: canRemoveRoutines,
+            canAddAppointments: canAddAppointments,
+            canRemoveAppointments: canRemoveAppointments,
+            canAddGroceries: canAddGroceries,
+            canRemoveGroceries: canRemoveGroceries
+        )
 
-            let permissions = PermissionsUpdate(
-                canAddTasks: canAddTasks,
-                canRemoveTasks: canRemoveTasks,
-                canAddRoutines: canAddRoutines,
-                canRemoveRoutines: canRemoveRoutines,
-                canAddAppointments: canAddAppointments,
-                canRemoveAppointments: canRemoveAppointments,
-                canAddGroceries: canAddGroceries,
-                canRemoveGroceries: canRemoveGroceries
-            )
+        if useManualEntry {
+            // Single manual entry
+            let cleaned = manualPhoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+            guard !cleaned.isEmpty else { return }
 
-            // Determine contact type (email or phone)
-            let contactType = contactId.contains("@") ? "email" : "phone"
+            do {
+                let invitation = try await AppContainer.shared.tribeRepository.inviteContact(
+                    tribeId: tribe.id,
+                    contactIdentifier: cleaned,
+                    contactType: "phone",
+                    contactName: manualName.isEmpty ? nil : manualName,
+                    permissions: permissions
+                )
+                AppLogger.info("Contact invited successfully: \(invitation.id)", logger: AppLogger.general)
+                successMessage = manualName.isEmpty
+                    ? "Your invitation is ready and waiting!"
+                    : "\(manualName) will see your invitation when they sign up for HelpEm!"
+                showSuccess = true
+            } catch {
+                self.error = error
+                showError = true
+                AppLogger.error("Failed to send invite: \(error)", logger: AppLogger.general)
+            }
+        } else {
+            // Batch invites from contacts
+            var successCount = 0
+            var failCount = 0
 
-            let invitation = try await AppContainer.shared.tribeRepository.inviteContact(
-                tribeId: tribe.id,
-                contactIdentifier: contactId,
-                contactType: contactType,
-                contactName: effectiveContactName,
-                permissions: permissions
-            )
-            AppLogger.info("Contact invited successfully: \(invitation.id)", logger: AppLogger.general)
+            for contact in selectedContacts {
+                let contactType = contact.id.contains("@") ? "email" : "phone"
 
-            showSuccess = true
-        } catch {
-            AppLogger.error("Failed to send invite: \(error.localizedDescription)", logger: AppLogger.general)
-            self.error = error
-            self.showError = true
+                do {
+                    let invitation = try await AppContainer.shared.tribeRepository.inviteContact(
+                        tribeId: tribe.id,
+                        contactIdentifier: contact.id,
+                        contactType: contactType,
+                        contactName: contact.name,
+                        permissions: permissions
+                    )
+                    AppLogger.info("Contact invited successfully: \(invitation.id)", logger: AppLogger.general)
+                    successCount += 1
+                } catch {
+                    AppLogger.error("Failed to invite \(contact.name): \(error)", logger: AppLogger.general)
+                    failCount += 1
+                }
+            }
+
+            if failCount == 0 {
+                successMessage = successCount == 1
+                    ? "\(selectedContacts.first?.name ?? "They") will see your invitation when they sign up for HelpEm!"
+                    : "\(successCount) invitations sent! They'll see your invitations when they sign up for HelpEm."
+                showSuccess = true
+            } else if successCount > 0 {
+                successMessage = "\(successCount) invitation(s) sent. \(failCount) failed."
+                showSuccess = true
+            } else {
+                self.error = NSError(domain: "InviteError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to send invitations. Please try again."])
+                showError = true
+            }
         }
     }
 }
