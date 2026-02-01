@@ -57,7 +57,20 @@ class TribeAPIClient {
     /// Rename a Tribe (owner only)
     func renameTribe(tribeId: String, newName: String) async throws -> Tribe {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!
-        let request = CreateTribeRequest(name: newName, tribeType: nil)
+        let request = UpdateTribeRequest(name: newName, tribeType: nil, avatarUrl: nil)
+        let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
+        let response = try decoder.decode([String: Tribe].self, from: data)
+        
+        guard let tribe = response["tribe"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return tribe
+    }
+    
+    /// Update tribe avatar (owner only)
+    func updateTribeAvatar(tribeId: String, avatarUrl: String) async throws -> Tribe {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!
+        let request = UpdateTribeRequest(name: nil, tribeType: nil, avatarUrl: avatarUrl)
         let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
         let response = try decoder.decode([String: Tribe].self, from: data)
         

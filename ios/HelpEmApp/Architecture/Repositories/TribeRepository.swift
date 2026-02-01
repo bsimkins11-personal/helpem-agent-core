@@ -10,6 +10,7 @@ protocol TribeRepository {
     func getTribe(id: String) async throws -> Tribe
     func createTribe(name: String, tribeType: TribeType) async throws -> Tribe
     func renameTribe(id: String, newName: String) async throws -> Tribe
+    func updateTribeAvatar(id: String, avatarUrl: String) async throws -> Tribe
     func deleteTribe(id: String) async throws
     func acceptInvitation(tribeId: String) async throws -> TribeMember
     func leaveTribe(id: String) async throws
@@ -108,6 +109,13 @@ class TribeAPIRepository: TribeRepository {
     
     func renameTribe(id: String, newName: String) async throws -> Tribe {
         let tribe = try await apiClient.renameTribe(tribeId: id, newName: newName)
+        await cacheService.invalidate("tribes")
+        await cacheService.invalidate("tribe_\(id)")
+        return tribe
+    }
+    
+    func updateTribeAvatar(id: String, avatarUrl: String) async throws -> Tribe {
+        let tribe = try await apiClient.updateTribeAvatar(tribeId: id, avatarUrl: avatarUrl)
         await cacheService.invalidate("tribes")
         await cacheService.invalidate("tribe_\(id)")
         return tribe

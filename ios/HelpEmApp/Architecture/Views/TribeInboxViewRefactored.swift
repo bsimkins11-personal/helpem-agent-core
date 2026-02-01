@@ -289,6 +289,7 @@ struct TribeInboxViewRefactored_Previews: PreviewProvider {
                 name: "Family",
                 ownerId: "user1",
                 isOwner: false,
+                avatarUrl: nil,
                 pendingProposals: 3,
                 joinedAt: Date()
             ))

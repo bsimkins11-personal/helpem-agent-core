@@ -429,6 +429,7 @@ struct TribeDetailView_Previews: PreviewProvider {
                 name: "Family",
                 ownerId: "user1",
                 isOwner: true,
+                avatarUrl: nil,
                 pendingProposals: 3,
                 joinedAt: Date()
             ))

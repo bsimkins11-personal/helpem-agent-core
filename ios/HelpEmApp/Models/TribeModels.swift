@@ -9,6 +9,7 @@ struct Tribe: Codable, Identifiable {
     let name: String
     let ownerId: String
     let isOwner: Bool
+    let avatarUrl: String?
     let pendingProposals: Int
     let joinedAt: Date
     
@@ -16,6 +17,7 @@ struct Tribe: Codable, Identifiable {
         case id, name
         case ownerId = "ownerId"
         case isOwner = "isOwner"
+        case avatarUrl = "avatarUrl"
         case pendingProposals = "pendingProposals"
         case pendingProposalsCount = "pendingProposalsCount"
         case joinedAt = "joinedAt"
@@ -27,6 +29,7 @@ struct Tribe: Codable, Identifiable {
         name = try container.decode(String.self, forKey: .name)
         ownerId = try container.decode(String.self, forKey: .ownerId)
         isOwner = try container.decode(Bool.self, forKey: .isOwner)
+        avatarUrl = try? container.decode(String.self, forKey: .avatarUrl)
         joinedAt = try container.decode(Date.self, forKey: .joinedAt)
         
         if let pending = try? container.decode(Int.self, forKey: .pendingProposals) {
@@ -48,11 +51,12 @@ struct Tribe: Codable, Identifiable {
         try container.encode(joinedAt, forKey: .joinedAt)
     }
 
-    init(id: String, name: String, ownerId: String, isOwner: Bool, pendingProposals: Int, joinedAt: Date) {
+    init(id: String, name: String, ownerId: String, isOwner: Bool, avatarUrl: String?, pendingProposals: Int, joinedAt: Date) {
         self.id = id
         self.name = name
         self.ownerId = ownerId
         self.isOwner = isOwner
+        self.avatarUrl = avatarUrl
         self.pendingProposals = pendingProposals
         self.joinedAt = joinedAt
     }
@@ -312,6 +316,12 @@ struct TribeInvitation: Codable, Identifiable {
 struct CreateTribeRequest: Codable {
     let name: String
     let tribeType: TribeType?
+}
+
+struct UpdateTribeRequest: Codable {
+    let name: String?
+    let tribeType: TribeType?
+    let avatarUrl: String?
 }
 
 struct InviteMemberRequest: Codable {

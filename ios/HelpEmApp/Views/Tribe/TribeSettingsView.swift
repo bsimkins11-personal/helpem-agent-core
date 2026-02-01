@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import PhotosUI
 
 /// Tribe Settings Screen
 /// - Rename Tribe (owner only)
@@ -16,6 +17,8 @@ struct TribeSettingsView: View {
     @State private var showingDeleteConfirm = false
     @State private var showingLeaveConfirm = false
     @State private var newTribeName = ""
+    @State private var selectedAvatarItem: PhotosPickerItem?
+    @State private var avatarImage: UIImage?
     
     var body: some View {
         List {
@@ -86,6 +89,12 @@ struct TribeSettingsView: View {
                 Text(error.localizedDescription)
             }
         }
+        .onChange(of: selectedAvatarItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                await updateAvatar(from: newItem)
+            }
+        }
     }
 
     private var tribeNameSection: some View {
@@ -102,7 +111,61 @@ struct TribeSettingsView: View {
                         .font(.subheadline)
                     }
                 }
+                
+                Section("Tribe Photo") {
+                    HStack(spacing: 12) {
+                        if let avatarUrl = tribe.avatarUrl, let url = URL(string: avatarUrl) {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                Circle().fill(Color.gray.opacity(0.2))
+                            }
+                            .frame(width: 56, height: 56)
+                            .clipShape(Circle())
+                        } else if let avatarImage = avatarImage {
+                            Image(uiImage: avatarImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 56, height: 56)
+                                .clipShape(Circle())
+                        } else {
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .frame(width: 56, height: 56)
+                                .overlay(
+                                    Image(systemName: "person.3")
+                                        .foregroundColor(.gray)
+                                )
+                        }
+                        
+                        PhotosPicker(
+                            selection: $selectedAvatarItem,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            Text(viewModel.isUploadingAvatar ? "Uploading..." : "Upload Photo")
+                                .font(.subheadline)
+                        }
+                        .disabled(viewModel.isUploadingAvatar)
+                    }
+                }
             }
+        }
+    }
+
+    private func updateAvatar(from item: PhotosPickerItem) async {
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                let resized = image.resizedSquare(to: 256)
+                avatarImage = resized
+                if let dataUrl = resized.jpegData(compressionQuality: 0.85)?.asDataURL() {
+                    await viewModel.updateTribeAvatar(tribeId: tribe.id, avatarUrl: dataUrl)
+                }
+            }
+        } catch {
+            viewModel.error = error
+            viewModel.showError = true
         }
     }
 
@@ -616,6 +679,7 @@ class TribeSettingsViewModel: ObservableObject {
     @Published var showError = false
     @Published var tribeDeleted = false
     @Published var tribeLeft = false
+    @Published var isUploadingAvatar = false
     
     private var currentMemberId: String?
     private let repository: TribeRepository
@@ -691,6 +755,18 @@ class TribeSettingsViewModel: ObservableObject {
         do {
             _ = try await repository.renameTribe(id: tribeId, newName: newName)
             AppLogger.info("Renamed tribe", logger: AppLogger.general)
+        } catch {
+            self.error = error
+            self.showError = true
+        }
+    }
+    
+    func updateTribeAvatar(tribeId: String, avatarUrl: String) async {
+        isUploadingAvatar = true
+        defer { isUploadingAvatar = false }
+        do {
+            _ = try await repository.updateTribeAvatar(id: tribeId, avatarUrl: avatarUrl)
+            AppLogger.info("Updated tribe avatar", logger: AppLogger.general)
         } catch {
             self.error = error
             self.showError = true
