@@ -474,6 +474,7 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
                           messagesEndRef={messagesEndRef}
                           error={error}
                           setError={setError}
+                          tribeName={tribe.name}
                         />
                       ) : activeTab === "events" ? (
                         <EventsTab
@@ -522,6 +523,7 @@ function MessagesTab({
   messagesEndRef,
   error,
   setError,
+  tribeName,
 }: {
   messages: TribeMessage[];
   newMessage: string;
@@ -532,9 +534,19 @@ function MessagesTab({
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   error: string | null;
   setError: (err: string | null) => void;
+  tribeName: string;
 }) {
   return (
     <div className="flex flex-col h-[350px]">
+      <div className="px-4 pt-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold">
+          <span className="text-sm">👥</span>
+          <span>Tribe: {tribeName.replace(/[\p{Emoji}]/gu, '').trim() || tribeName}</span>
+        </div>
+        <p className="mt-1 text-[11px] text-brandTextLight">
+          Messages and proposals here go only to this tribe.
+        </p>
+      </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
@@ -563,7 +575,7 @@ function MessagesTab({
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
+            placeholder={`Message ${tribeName.replace(/[\p{Emoji}]/gu, '').trim() || tribeName}...`}
             rows={1}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none text-sm"
             style={{ minHeight: "40px", maxHeight: "80px" }}

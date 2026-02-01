@@ -540,6 +540,12 @@ export default function AppPage() {
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div className="order-1">
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
+                  <span>👤</span>
+                  Personal
+                </span>
+              </div>
               <ChatInput onNavigateCalendar={setSelectedDate} inputMode={inputMode} />
             </div>
 

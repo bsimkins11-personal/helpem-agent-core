@@ -54,6 +54,10 @@ class TribeDetailViewModel: ObservableObject {
             let proposals = try await repository.getProposals(tribeId: tribeId)
             pendingCount = proposals.filter { $0.state == .proposed }.count
         } catch {
+            if shouldSuppressTribeError(error) {
+                pendingCount = 0
+                return
+            }
             AppLogger.error("Failed to load proposal count: \(error.localizedDescription)", logger: AppLogger.general)
         }
     }
@@ -63,6 +67,10 @@ class TribeDetailViewModel: ObservableObject {
             let members = try await repository.getMembers(tribeId: tribeId)
             memberCount = members.filter { $0.isAccepted }.count
         } catch {
+            if shouldSuppressTribeError(error) {
+                memberCount = 0
+                return
+            }
             AppLogger.error("Failed to load member count: \(error.localizedDescription)", logger: AppLogger.general)
         }
     }
@@ -72,6 +80,10 @@ class TribeDetailViewModel: ObservableObject {
             let items = try await repository.getSharedItems(tribeId: tribeId)
             sharedCount = items.count
         } catch {
+            if shouldSuppressTribeError(error) {
+                sharedCount = 0
+                return
+            }
             AppLogger.error("Failed to load shared count: \(error.localizedDescription)", logger: AppLogger.general)
         }
     }
@@ -80,5 +92,19 @@ class TribeDetailViewModel: ObservableObject {
         // TODO: Implement unread message tracking
         // This would require message read receipts to be implemented
         unreadCount = 0
+    }
+
+    private func shouldSuppressTribeError(_ error: Error) -> Bool {
+        if let apiError = error as? TribeAPIError {
+            switch apiError {
+            case .httpError(404), .httpError(410):
+                return true
+            case .serverError(let message):
+                return message.localizedCaseInsensitiveContains("no longer exists")
+            default:
+                return false
+            }
+        }
+        return false
     }
 }
