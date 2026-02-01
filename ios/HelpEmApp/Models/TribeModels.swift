@@ -7,6 +7,7 @@ import Foundation
 struct Tribe: Codable, Identifiable {
     let id: String
     let name: String
+    let description: String?
     let ownerId: String
     let isOwner: Bool
     let avatarUrl: String?
@@ -28,7 +29,7 @@ struct Tribe: Codable, Identifiable {
     var isFamily: Bool { tribeType == .family }
 
     enum CodingKeys: String, CodingKey {
-        case id, name
+        case id, name, description
         case ownerId = "ownerId"
         case isOwner = "isOwner"
         case avatarUrl = "avatarUrl"
@@ -46,6 +47,7 @@ struct Tribe: Codable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
+        description = try? container.decode(String.self, forKey: .description)
         ownerId = try container.decode(String.self, forKey: .ownerId)
         isOwner = try container.decode(Bool.self, forKey: .isOwner)
         avatarUrl = try? container.decode(String.self, forKey: .avatarUrl)
@@ -71,6 +73,7 @@ struct Tribe: Codable, Identifiable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(description, forKey: .description)
         try container.encode(ownerId, forKey: .ownerId)
         try container.encode(isOwner, forKey: .isOwner)
         try container.encode(tribeType, forKey: .tribeType)
@@ -85,6 +88,7 @@ struct Tribe: Codable, Identifiable {
     init(
         id: String,
         name: String,
+        description: String? = nil,
         ownerId: String,
         isOwner: Bool,
         avatarUrl: String?,
@@ -98,6 +102,7 @@ struct Tribe: Codable, Identifiable {
     ) {
         self.id = id
         self.name = name
+        self.description = description
         self.ownerId = ownerId
         self.isOwner = isOwner
         self.avatarUrl = avatarUrl
@@ -396,6 +401,7 @@ struct CreateTribeRequest: Codable {
 
 struct UpdateTribeRequest: Codable {
     let name: String?
+    let description: String?
     let tribeType: TribeType?
     let avatarUrl: String?
     let defaultTasksPermission: String?
@@ -405,6 +411,7 @@ struct UpdateTribeRequest: Codable {
 
     init(
         name: String? = nil,
+        description: String? = nil,
         tribeType: TribeType? = nil,
         avatarUrl: String? = nil,
         defaultTasksPermission: String? = nil,
@@ -413,6 +420,7 @@ struct UpdateTribeRequest: Codable {
         defaultGroceriesPermission: String? = nil
     ) {
         self.name = name
+        self.description = description
         self.tribeType = tribeType
         self.avatarUrl = avatarUrl
         self.defaultTasksPermission = defaultTasksPermission

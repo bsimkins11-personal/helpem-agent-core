@@ -143,6 +143,7 @@ model GroceryItem {
 model Tribe {
   id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
+  description String?        // Optional tribe description set by admin
   ownerId     String         @db.Uuid @map("owner_id")
   avatarUrl   String?        @map("avatar_url")
 

@@ -308,22 +308,27 @@ struct TribeListView: View {
 
 struct TribeRow: View {
     let tribe: Tribe
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(tribe.name)
                     .font(.headline)
-                
-                if tribe.isOwner {
+
+                if let description = tribe.description, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                } else if tribe.isOwner {
                     Text("Owner")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             // Muted pending count (neutral color, not red)
             if tribe.pendingProposals > 0 {
                 Text("\(tribe.pendingProposals)")

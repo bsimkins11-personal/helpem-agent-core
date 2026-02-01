@@ -103,6 +103,7 @@ router.get("/", async (req, res) => {
           return {
             id: membership.tribe.id,
             name: membership.tribe.name,
+            description: membership.tribe.description,
             ownerId: membership.tribe.ownerId,
             avatarUrl: membership.tribe.avatarUrl,
             tribeType: membership.tribe.tribeType,
@@ -123,6 +124,7 @@ router.get("/", async (req, res) => {
           return {
             id: membership.tribe.id,
             name: membership.tribe.name,
+            description: membership.tribe.description,
             ownerId: membership.tribe.ownerId,
             avatarUrl: membership.tribe.avatarUrl,
             tribeType: membership.tribe.tribeType || 'friend', // Default if missing
@@ -262,6 +264,7 @@ router.post("/", async (req, res) => {
     const formattedTribe = {
       id: tribe.id,
       name: tribe.name,
+      description: tribe.description,
       ownerId: tribe.ownerId,
       tribeType: tribe.tribeType,
       isOwner: true, // Creator is always owner
@@ -322,6 +325,7 @@ router.patch("/:tribeId", async (req, res) => {
     const { tribeId } = req.params;
     const {
       name,
+      description,
       tribeType,
       avatarUrl,
       defaultTasksPermission,
@@ -333,8 +337,13 @@ router.patch("/:tribeId", async (req, res) => {
     // At least one field must be provided
     const hasDefaultPermission = defaultTasksPermission || defaultAppointmentsPermission ||
                                   defaultRoutinesPermission || defaultGroceriesPermission;
-    if (!name && !tribeType && avatarUrl === undefined && !hasDefaultPermission) {
+    if (!name && description === undefined && !tribeType && avatarUrl === undefined && !hasDefaultPermission) {
       return res.status(400).json({ error: "At least one field must be provided" });
+    }
+
+    // Validate description if provided (max 500 chars)
+    if (description !== undefined && description !== null && typeof description === 'string' && description.length > 500) {
+      return res.status(400).json({ error: "Description must be 500 characters or less" });
     }
 
     // Validate default permissions if provided
@@ -405,6 +414,7 @@ router.patch("/:tribeId", async (req, res) => {
     // Build update data
     const updateData = {};
     if (name) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description ? description.trim() : null;
     if (tribeType) updateData.tribeType = tribeType;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
     if (defaultTasksPermission) updateData.defaultTasksPermission = defaultTasksPermission;
@@ -432,6 +442,7 @@ router.patch("/:tribeId", async (req, res) => {
       tribe: {
         id: updated.id,
         name: updated.name,
+        description: updated.description,
         ownerId: updated.ownerId,
         avatarUrl: updated.avatarUrl,
         tribeType: updated.tribeType,

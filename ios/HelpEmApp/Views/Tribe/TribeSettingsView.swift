@@ -12,17 +12,29 @@ struct TribeSettingsView: View {
     let tribe: Tribe
     @StateObject private var viewModel = TribeSettingsViewModel()
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var showingRename = false
     @State private var showingDeleteConfirm = false
     @State private var showingLeaveConfirm = false
     @State private var newTribeName = ""
+    @State private var tribeDescription = ""
+    @State private var showingEditDescription = false
     @State private var selectedAvatarItem: PhotosPickerItem?
     @State private var avatarImage: UIImage?
-    
+
     var body: some View {
         List {
             tribeNameSection
+            if tribe.isOwner {
+                tribeDescriptionSection
+            } else if let description = tribe.description, !description.isEmpty {
+                // Non-owners see description if it exists (read-only)
+                Section("Description") {
+                    Text(description)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+            }
             tribeTypeSection
             if tribe.isOwner {
                 tribeDefaultPermissionsSection
@@ -54,6 +66,19 @@ struct TribeSettingsView: View {
                     await viewModel.renameTribe(tribeId: tribe.id, newName: newTribeName)
                 }
             }
+        }
+        .sheet(isPresented: $showingEditDescription) {
+            EditDescriptionSheet(
+                description: $tribeDescription,
+                onSave: {
+                    Task {
+                        await viewModel.updateTribeDescription(tribeId: tribe.id, description: tribeDescription)
+                    }
+                }
+            )
+        }
+        .onAppear {
+            tribeDescription = tribe.description ?? ""
         }
         .alert("Delete Tribe", isPresented: $showingDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
@@ -171,6 +196,43 @@ struct TribeSettingsView: View {
         } catch {
             viewModel.error = error
             viewModel.showError = true
+        }
+    }
+
+    // MARK: - Tribe Description Section
+
+    private var tribeDescriptionSection: some View {
+        Section {
+            Button {
+                showingEditDescription = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Description")
+                            .font(.body)
+                            .foregroundColor(.primary)
+
+                        if let description = tribe.description, !description.isEmpty {
+                            Text(description)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(2)
+                        } else {
+                            Text("Add a description for your tribe")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .italic()
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+        } footer: {
+            Text("A description helps members understand the purpose of this tribe.")
         }
     }
 
@@ -515,6 +577,7 @@ struct MemberDetailView: View {
     let member: TribeMember
     @StateObject private var viewModel = MemberDetailViewModel()
     @Environment(\.dismiss) private var dismiss
+    @State private var showingRemoveConfirm = false
 
     var body: some View {
         List {
@@ -528,6 +591,11 @@ struct MemberDetailView: View {
 
             // Permissions section
             permissionsSection
+
+            // Remove member section (owner only, not for themselves or the owner)
+            if tribe.isOwner && member.userId != tribe.ownerId {
+                removeMemberSection
+            }
         }
         .navigationTitle("Member Details")
         .navigationBarTitleDisplayMode(.inline)
@@ -545,8 +613,44 @@ struct MemberDetailView: View {
                 Text(error.localizedDescription)
             }
         }
+        .alert("Remove Member", isPresented: $showingRemoveConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Remove", role: .destructive) {
+                Task {
+                    await viewModel.removeMember(tribeId: tribe.id, memberId: member.id)
+                    if viewModel.memberRemoved {
+                        dismiss()
+                    }
+                }
+            }
+        } message: {
+            Text("Are you sure you want to remove \(member.displayName ?? "this member") from the tribe? They will no longer have access to shared items.")
+        }
         .task {
             viewModel.loadMemberSettings(member: member, tribe: tribe)
+        }
+    }
+
+    // MARK: - Remove Member Section
+
+    private var removeMemberSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showingRemoveConfirm = true
+            } label: {
+                HStack {
+                    Label("Remove from Tribe", systemImage: "person.badge.minus")
+                    Spacer()
+                    if viewModel.isRemoving {
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(viewModel.isRemoving)
+        } header: {
+            Text("Danger Zone")
+        } footer: {
+            Text("This member will be removed from the tribe and will no longer see shared items or proposals.")
         }
     }
 
@@ -1256,7 +1360,22 @@ class TribeSettingsViewModel: ObservableObject {
             self.showError = true
         }
     }
-    
+
+    func updateTribeDescription(tribeId: String, description: String) async {
+        do {
+            let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+            _ = try await repository.updateTribeDescription(
+                id: tribeId,
+                description: trimmedDescription.isEmpty ? nil : trimmedDescription
+            )
+            AppLogger.info("Updated tribe description", logger: AppLogger.general)
+        } catch {
+            self.error = error
+            self.showError = true
+            AppLogger.error("Failed to update tribe description: \(error)", logger: AppLogger.general)
+        }
+    }
+
     func deleteTribe(tribeId: String) async {
         do {
             try await repository.deleteTribe(id: tribeId)
@@ -1307,6 +1426,8 @@ class MemberDetailViewModel: ObservableObject {
     @Published var defaultGroceriesPermission = "propose"
 
     @Published var isSaving = false
+    @Published var isRemoving = false
+    @Published var memberRemoved = false
     @Published var showSuccess = false
     @Published var showError = false
     @Published var error: Error?
@@ -1408,6 +1529,72 @@ class MemberDetailViewModel: ObservableObject {
             self.error = error
             self.showError = true
             AppLogger.error("Failed to save member settings: \(error)", logger: AppLogger.general)
+        }
+    }
+
+    func removeMember(tribeId: String, memberId: String) async {
+        isRemoving = true
+        defer { isRemoving = false }
+
+        do {
+            try await repository.removeMember(tribeId: tribeId, memberId: memberId)
+            memberRemoved = true
+            AppLogger.info("Removed member \(memberId) from tribe \(tribeId)", logger: AppLogger.general)
+        } catch {
+            self.error = error
+            self.showError = true
+            AppLogger.error("Failed to remove member: \(error)", logger: AppLogger.general)
+        }
+    }
+}
+
+// MARK: - Edit Description Sheet
+
+struct EditDescriptionSheet: View {
+    @Binding var description: String
+    let onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var editedDescription: String = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextEditor(text: $editedDescription)
+                        .frame(minHeight: 100)
+                } header: {
+                    Text("Description")
+                } footer: {
+                    Text("\(editedDescription.count)/500 characters")
+                        .foregroundColor(editedDescription.count > 500 ? .red : .secondary)
+                }
+
+                Section {
+                    Text("A good description helps members understand the purpose of this tribe. For example: \"Family coordination for weekly groceries and appointments\" or \"Work team for project updates\"")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("Tribe Description")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        description = editedDescription
+                        onSave()
+                        dismiss()
+                    }
+                    .disabled(editedDescription.count > 500)
+                }
+            }
+            .onAppear {
+                editedDescription = description
+            }
         }
     }
 }

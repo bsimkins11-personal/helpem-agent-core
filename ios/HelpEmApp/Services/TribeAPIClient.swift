@@ -104,6 +104,19 @@ class TribeAPIClient {
         return tribe
     }
 
+    /// Update tribe description (owner only)
+    func updateTribeDescription(tribeId: String, description: String?) async throws -> Tribe {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!
+        let request = UpdateTribeRequest(description: description)
+        let data = try await authenticatedRequest(url: url, method: "PATCH", body: request)
+        let response = try decoder.decode([String: Tribe].self, from: data)
+
+        guard let tribe = response["tribe"] else {
+            throw TribeAPIError.invalidResponse
+        }
+        return tribe
+    }
+
     /// Delete a Tribe (owner only, soft delete)
     func deleteTribe(tribeId: String) async throws {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)")!
@@ -127,7 +140,13 @@ class TribeAPIClient {
         let url = URL(string: "\(baseURL)/tribes/\(tribeId)/leave")!
         _ = try await authenticatedRequest(url: url, method: "POST")
     }
-    
+
+    /// Remove a member from a Tribe (admin only)
+    func removeMember(tribeId: String, memberId: String) async throws {
+        let url = URL(string: "\(baseURL)/tribes/\(tribeId)/members/\(memberId)")!
+        _ = try await authenticatedRequest(url: url, method: "DELETE")
+    }
+
     // MARK: - Tribe Members
     
     /// Get all members of a Tribe
