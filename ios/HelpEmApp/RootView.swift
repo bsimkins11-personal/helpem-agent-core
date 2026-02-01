@@ -339,36 +339,18 @@ struct RootView: View {
                                 
                                 Divider()
                                 
+                                // 1) Tribes
                                 Button(action: {
                                     isMenuPresented = false
-                                    openFeedbackURL()
+                                    isTribeManagerPresented = true
                                 }) {
-                                    Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.vertical, 12)
-                                }
-                                .padding(.horizontal, 20)
-                                
-                                Button(action: {
-                                    isMenuPresented = false
-                                    openUsageModal()
-                                }) {
-                                    Label("View Usage", systemImage: "chart.bar.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.vertical, 12)
-                                }
-                                .padding(.horizontal, 20)
-                                
-                                Button(action: {
-                                    isMenuPresented = false
-                                    openConnectorsModal()
-                                }) {
-                                    Label("Connectors", systemImage: "link.circle")
+                                    Label("Tribes", systemImage: "person.3")
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 12)
                                 }
                                 .padding(.horizontal, 20)
 
+                                // 2) Personal Analytics
                                 Button(action: {
                                     isMenuPresented = false
                                     openPersonalAnalytics()
@@ -379,16 +361,29 @@ struct RootView: View {
                                 }
                                 .padding(.horizontal, 20)
 
+                                // 3) Connectors
                                 Button(action: {
                                     isMenuPresented = false
-                                    isTribeManagerPresented = true
+                                    openConnectorsModal()
                                 }) {
-                                    Label("Tribes", systemImage: "person.3")
+                                    Label("Connectors", systemImage: "link.circle")
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.vertical, 12)
                                 }
                                 .padding(.horizontal, 20)
-                                
+
+                                // 4) View Usage
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openUsageModal()
+                                }) {
+                                    Label("View Usage", systemImage: "chart.bar.fill")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+
+                                // 5) Get Support
                                 Button(action: {
                                     isMenuPresented = false
                                     openSupportModal()
@@ -398,11 +393,23 @@ struct RootView: View {
                                         .padding(.vertical, 12)
                                 }
                                 .padding(.horizontal, 20)
-                                
+
+                                // 6) Give Feedback
+                                Button(action: {
+                                    isMenuPresented = false
+                                    openFeedbackURL()
+                                }) {
+                                    Label("Give Feedback", systemImage: "bubble.left.and.bubble.right")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+
                                 Divider()
                                     .padding(.top, 8)
-                                
-                                Button(action: {
+
+                                // 7) Clear App Data (red)
+                                Button(role: .destructive, action: {
                                     isMenuPresented = false
                                     openClearDataModal()
                                 }) {
@@ -411,7 +418,8 @@ struct RootView: View {
                                         .padding(.vertical, 12)
                                 }
                                 .padding(.horizontal, 20)
-                                
+
+                                // 8) Logout (red)
                                 Button(role: .destructive, action: {
                                     isMenuPresented = false
                                     authManager.logout()
