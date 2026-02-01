@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getClientSessionToken } from "@/lib/clientSession";
+import { DemoTribeBanner } from "@/components/DemoTribeBanner";
 
 type TribeMessage = {
   id: string;
@@ -177,6 +178,7 @@ export default function TribeInboxPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Demo Mode Banner */}
       <div className="px-4 pt-4 pb-0">
+        <DemoTribeBanner />
       </div>
       
       {/* Header */}

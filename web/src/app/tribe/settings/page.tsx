@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getClientSessionToken } from "@/lib/clientSession";
+import { DemoTribeBanner } from "@/components/DemoTribeBanner";
 
 type Tribe = {
   id: string;
@@ -58,6 +59,14 @@ export default function TribeSettingsPage() {
     try {
       const token = getClientSessionToken();
       
+      // Check if this is the first real tribe (before creating)
+      const checkRes = await fetch("/api/tribes/demo/cleanup", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      const checkData = checkRes.ok ? await checkRes.json() : null;
+      const hasDemoTribes = checkData?.demo > 0;
+      const isFirstRealTribe = tribes.length > 0 && hasDemoTribes && checkData?.real === 0;
+      
       // Create the new tribe
       const res = await fetch("/api/tribes", {
         method: "POST",
@@ -71,6 +80,27 @@ export default function TribeSettingsPage() {
       if (!res.ok) throw new Error("Failed to create tribe");
 
       const data = await res.json();
+      
+      // If this is their first real tribe, clean up demo tribes
+      if (isFirstRealTribe && token) {
+        console.log("🧹 First real tribe created, cleaning up demo tribes...");
+        try {
+          const cleanupRes = await fetch("/api/tribes/demo/cleanup", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (cleanupRes.ok) {
+            const cleanupData = await cleanupRes.json();
+            console.log("✅ Demo tribes cleaned up:", cleanupData);
+            // Reload to show clean state
+            await loadTribes();
+            return; // Exit early since loadTribes will update state
+          }
+        } catch (cleanupError) {
+          console.warn("Demo cleanup failed (non-critical):", cleanupError);
+        }
+      }
+      
       setTribes(prev => [data.tribe, ...prev]);
       setShowCreateForm(false);
       setNewTribeName("");
@@ -94,6 +124,11 @@ export default function TribeSettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Demo Mode Banner */}
+      <div className="px-4 pt-4 pb-0">
+        <DemoTribeBanner />
+      </div>
+      
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">

@@ -124,6 +124,27 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
       
       const data = await res.json();
       
+      if (!data.tribes || data.tribes.length === 0) {
+        try {
+          const seedRes = await fetch("/api/tribes/demo/seed", {
+            method: "POST",
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          });
+          if (seedRes.ok) {
+            const reloadRes = await fetch("/api/tribes", {
+              headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            });
+            if (reloadRes.ok) {
+              const reloadData = await reloadRes.json();
+              setTribes(reloadData.tribes || []);
+              return;
+            }
+          }
+        } catch {
+          // Ignore seed errors
+        }
+      }
+      
       setTribes(data.tribes || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tribes");
@@ -146,24 +167,35 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
           setMessages(data.messages || []);
         }
       } else if (tab === "events") {
-        const res = await fetch(`/api/tribes/${tribeId}/events`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setEvents(data.events || []);
-        } else {
-          setEvents([]);
+        // Try to load events, fall back to demo data
+        try {
+          const res = await fetch(`/api/tribes/${tribeId}/events`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setEvents(data.events || []);
+          } else {
+            // Demo events for now
+            setEvents(getDemoEvents(tribeId));
+          }
+        } catch {
+          setEvents(getDemoEvents(tribeId));
         }
       } else if (tab === "todos") {
-        const res = await fetch(`/api/tribes/${tribeId}/todos`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setTodos(data.todos || []);
-        } else {
-          setTodos([]);
+        // Try to load todos, fall back to demo data
+        try {
+          const res = await fetch(`/api/tribes/${tribeId}/todos`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setTodos(data.todos || []);
+          } else {
+            setTodos(getDemoTodos(tribeId));
+          }
+        } catch {
+          setTodos(getDemoTodos(tribeId));
         }
       }
     } catch (err) {
@@ -171,6 +203,65 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
     } finally {
       setContentLoading(false);
     }
+  };
+
+  // Demo data generators
+  const getDemoEvents = (tribeId: string): TribeEvent[] => {
+    const tribe = tribes.find(t => t.id === tribeId);
+    const tribeName = tribe?.name || "Tribe";
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    return [
+      {
+        id: `${tribeId}-event-1`,
+        title: `${tribeName} Weekly Sync`,
+        datetime: tomorrow.toISOString(),
+        location: "Video Call",
+        description: "Weekly check-in with the group",
+        createdBy: "Sarah",
+      },
+      {
+        id: `${tribeId}-event-2`,
+        title: "Group Dinner",
+        datetime: nextWeek.toISOString(),
+        location: "Downtown Restaurant",
+        description: "Monthly dinner gathering",
+        createdBy: "Mike",
+      },
+    ];
+  };
+
+  const getDemoTodos = (tribeId: string): TribeTodo[] => {
+    const tribe = tribes.find(t => t.id === tribeId);
+    const tribeName = tribe?.name || "Tribe";
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    return [
+      {
+        id: `${tribeId}-todo-1`,
+        title: `Plan ${tribeName} activity`,
+        priority: "medium",
+        dueDate: nextWeek.toISOString(),
+        createdBy: "Sarah",
+      },
+      {
+        id: `${tribeId}-todo-2`,
+        title: "Share photos from last meetup",
+        priority: "low",
+        createdBy: "Alex",
+      },
+      {
+        id: `${tribeId}-todo-3`,
+        title: "Coordinate schedules for next month",
+        priority: "high",
+        dueDate: new Date().toISOString(),
+        createdBy: "Mike",
+      },
+    ];
   };
 
   const sendMessage = async () => {
