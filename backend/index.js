@@ -586,6 +586,18 @@ app.get("/debug/user-by-phone/:phone", async (req, res) => {
   }
 });
 
+// Temporary: List all users
+app.get("/debug/users", async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, phone: true, createdAt: true }
+    });
+    return res.json({ count: users.length, users });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server with migrations
 (async () => {
   // Run migrations before starting server
