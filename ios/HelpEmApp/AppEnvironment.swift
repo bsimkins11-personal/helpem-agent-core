@@ -42,14 +42,15 @@ struct AppEnvironment {
     // MARK: - Environment URLs
     
     /// Web app URL for the current environment
+    /// This loads the auth-aware landing page which redirects to dashboard if logged in
     static var webAppURL: String {
         switch current {
         case .production:
-            return "https://app.helpem.ai/app"
+            return "https://app.helpem.ai/app?t=\(Int(Date().timeIntervalSince1970))"
         case .staging:
-            return "https://staging.helpem.ai/app"
+            return "https://staging.helpem.ai/app?t=\(Int(Date().timeIntervalSince1970))"
         case .development:
-            return "http://localhost:3000/app"
+            return "http://localhost:3000/app?t=\(Int(Date().timeIntervalSince1970))"
         }
     }
     
