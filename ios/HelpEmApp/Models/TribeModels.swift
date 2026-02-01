@@ -17,7 +17,34 @@ struct Tribe: Codable, Identifiable {
         case ownerId = "ownerId"
         case isOwner = "isOwner"
         case pendingProposals = "pendingProposals"
+        case pendingProposalsCount = "pendingProposalsCount"
         case joinedAt = "joinedAt"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        ownerId = try container.decode(String.self, forKey: .ownerId)
+        isOwner = try container.decode(Bool.self, forKey: .isOwner)
+        joinedAt = try container.decode(Date.self, forKey: .joinedAt)
+        
+        if let pending = try? container.decode(Int.self, forKey: .pendingProposals) {
+            pendingProposals = pending
+        } else if let pendingCount = try? container.decode(Int.self, forKey: .pendingProposalsCount) {
+            pendingProposals = pendingCount
+        } else {
+            pendingProposals = 0
+        }
+    }
+
+    init(id: String, name: String, ownerId: String, isOwner: Bool, pendingProposals: Int, joinedAt: Date) {
+        self.id = id
+        self.name = name
+        self.ownerId = ownerId
+        self.isOwner = isOwner
+        self.pendingProposals = pendingProposals
+        self.joinedAt = joinedAt
     }
 }
 
@@ -31,7 +58,7 @@ enum TribeType: String, Codable, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .friend: return "Friend"
+        case .friend: return "Friends"
         case .family: return "Family"
         }
     }
