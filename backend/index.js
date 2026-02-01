@@ -598,6 +598,64 @@ app.get("/debug/users", async (req, res) => {
   }
 });
 
+// Temporary: List active sessions (to identify users)
+app.get("/debug/sessions", async (req, res) => {
+  try {
+    const sessions = await prisma.session.findMany({
+      where: {
+        expiresAt: { gt: new Date() },
+        revokedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: {
+        user: {
+          select: { id: true, email: true, phone: true, createdAt: true }
+        }
+      }
+    });
+    return res.json({
+      count: sessions.length,
+      sessions: sessions.map(s => ({
+        sessionId: s.id,
+        userId: s.userId,
+        createdAt: s.createdAt,
+        expiresAt: s.expiresAt,
+        user: s.user
+      }))
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Temporary: Clean up duplicate invitations for a tribe
+app.post("/debug/cleanup-invitations/:tribeId", async (req, res) => {
+  try {
+    const { keepUserId } = req.body; // Keep only this user's invitation
+    const tribeId = req.params.tribeId;
+
+    // Get owner to exclude
+    const tribe = await prisma.tribe.findUnique({ where: { id: tribeId } });
+    if (!tribe) return res.status(404).json({ error: "Tribe not found" });
+
+    // Delete all pending invitations except owner and keepUserId
+    const deleted = await prisma.tribeMember.deleteMany({
+      where: {
+        tribeId,
+        acceptedAt: null,
+        userId: {
+          notIn: keepUserId ? [tribe.ownerId, keepUserId] : [tribe.ownerId]
+        }
+      }
+    });
+
+    return res.json({ success: true, deleted: deleted.count });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Temporary: Check invitations for a user
 app.get("/debug/invitations-for/:userId", async (req, res) => {
   try {
