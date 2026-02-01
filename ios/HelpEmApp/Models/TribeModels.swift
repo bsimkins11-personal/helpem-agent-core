@@ -38,6 +38,16 @@ struct Tribe: Codable, Identifiable {
         }
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(ownerId, forKey: .ownerId)
+        try container.encode(isOwner, forKey: .isOwner)
+        try container.encode(pendingProposals, forKey: .pendingProposals)
+        try container.encode(joinedAt, forKey: .joinedAt)
+    }
+
     init(id: String, name: String, ownerId: String, isOwner: Bool, pendingProposals: Int, joinedAt: Date) {
         self.id = id
         self.name = name
