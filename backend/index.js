@@ -598,6 +598,23 @@ app.get("/debug/users", async (req, res) => {
   }
 });
 
+// Temporary: Check invitations for a user
+app.get("/debug/invitations-for/:userId", async (req, res) => {
+  try {
+    const pending = await prisma.tribeMember.findMany({
+      where: {
+        userId: req.params.userId,
+        acceptedAt: null,
+        leftAt: null,
+      },
+      include: { tribe: true }
+    });
+    return res.json({ count: pending.length, invitations: pending });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Temporary: List tribe members
 app.get("/debug/tribe-members/:tribeId", async (req, res) => {
   try {
