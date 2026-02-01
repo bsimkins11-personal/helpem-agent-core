@@ -341,9 +341,9 @@ router.patch("/:tribeId", async (req, res) => {
       return res.status(400).json({ error: "At least one field must be provided" });
     }
 
-    // Validate description if provided (max 500 chars)
-    if (description !== undefined && description !== null && typeof description === 'string' && description.length > 500) {
-      return res.status(400).json({ error: "Description must be 500 characters or less" });
+    // Validate description if provided (max 125 chars)
+    if (description !== undefined && description !== null && typeof description === 'string' && description.length > 125) {
+      return res.status(400).json({ error: "Description must be 125 characters or less" });
     }
 
     // Validate default permissions if provided

@@ -1565,8 +1565,8 @@ struct EditDescriptionSheet: View {
                 } header: {
                     Text("Description")
                 } footer: {
-                    Text("\(editedDescription.count)/500 characters")
-                        .foregroundColor(editedDescription.count > 500 ? .red : .secondary)
+                    Text("\(editedDescription.count)/125 characters")
+                        .foregroundColor(editedDescription.count > 125 ? .red : .secondary)
                 }
 
                 Section {
@@ -1589,7 +1589,7 @@ struct EditDescriptionSheet: View {
                         onSave()
                         dismiss()
                     }
-                    .disabled(editedDescription.count > 500)
+                    .disabled(editedDescription.count > 125)
                 }
             }
             .onAppear {
