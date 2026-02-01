@@ -117,20 +117,30 @@ struct TribeDetailView: View {
         Section {
             VStack(spacing: 12) {
                 // Tribe Icon/Avatar
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue.opacity(0.6), .purple.opacity(0.6)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                if let avatarUrl = tribe.avatarUrl, let url = URL(string: avatarUrl) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Circle().fill(Color.gray.opacity(0.2))
+                    }
+                    .frame(width: 80, height: 80)
+                    .clipShape(Circle())
+                } else {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.blue.opacity(0.6), .purple.opacity(0.6)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 80, height: 80)
-                    
-                    Image(systemName: "person.3.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(.white)
+                            .frame(width: 80, height: 80)
+
+                        Image(systemName: "person.3.fill")
+                            .font(.system(size: 36))
+                            .foregroundColor(.white)
+                    }
                 }
                 
                 // Tribe Name & Owner Badge
