@@ -1640,12 +1640,17 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
       },
     });
     
-    await createTribeActivity({
-      tribeId,
-      type: "SYSTEM",
-      message: `${inviterName} invited ${invitedName} to join the tribe!`,
-      createdBy: userId,
-    });
+    // Non-blocking activity creation - don't fail invite if activity fails
+    try {
+      await createTribeActivity({
+        tribeId,
+        type: "SYSTEM",
+        message: `${inviterName} invited ${invitedName} to join the tribe!`,
+        createdBy: userId,
+      });
+    } catch (activityError) {
+      console.error("Failed to create activity (non-critical):", activityError);
+    }
 
     return res.json({ 
       success: true,
