@@ -48,12 +48,12 @@ struct TribeSettingsView: View {
             viewModel.loadDefaultPermissions(from: tribe)
             await viewModel.loadSettings(tribeId: tribe.id)
         }
-        .onChange(of: viewModel.tribeDeleted) { deleted in
+        .onChange(of: viewModel.tribeDeleted) { _, deleted in
             if deleted {
                 dismiss()
             }
         }
-        .onChange(of: viewModel.tribeLeft) { left in
+        .onChange(of: viewModel.tribeLeft) { _, left in
             if left {
                 dismiss()
             }
@@ -127,6 +127,10 @@ struct TribeSettingsView: View {
         }
     }
 
+    private var uploadButtonText: String {
+        viewModel.isUploadingAvatar ? "Uploading..." : "Upload Photo"
+    }
+
     private var tribeNameSection: some View {
         Group {
             if tribe.isOwner {
@@ -173,7 +177,7 @@ struct TribeSettingsView: View {
                             matching: .images,
                             photoLibrary: .shared()
                         ) {
-                            Text(viewModel.isUploadingAvatar ? "Uploading..." : "Upload Photo")
+                            Text(uploadButtonText)
                                 .font(.subheadline)
                         }
                         .disabled(viewModel.isUploadingAvatar)
