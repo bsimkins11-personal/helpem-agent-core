@@ -1719,25 +1719,24 @@ router.get("/:tribeId/shared", async (req, res) => {
       return res.status(403).json({ error: "Not a member of this Tribe" });
     }
 
-    // Get accepted items
+    // Get accepted items (filter by non-deleted items in the where clause)
     const acceptedProposals = await prisma.tribeProposal.findMany({
       where: {
         recipientId: member.id,
         state: "accepted",
+        item: {
+          deletedAt: null,
+        },
       },
       include: {
-        item: {
-          where: {
-            deletedAt: null,
-          },
-        },
+        item: true,
       },
       orderBy: {
         stateChangedAt: "desc",
       },
     });
 
-    return res.json({ items: acceptedProposals.map(p => p.item) });
+    return res.json({ items: acceptedProposals.map(p => p.item).filter(Boolean) });
   } catch (err) {
     console.error("ERROR GET /tribes/:tribeId/shared:", err);
     return res.status(500).json({ error: "Internal server error" });
