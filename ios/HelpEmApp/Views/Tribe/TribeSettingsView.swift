@@ -847,6 +847,11 @@ struct InviteMemberView: View {
     @State private var showError = false
     @State private var showSuccess = false
 
+    // Manual entry
+    @State private var useManualEntry = false
+    @State private var manualPhoneNumber = ""
+    @State private var manualName = ""
+
     @State private var canAddTasks = true
     @State private var canRemoveTasks = false
     @State private var canAddRoutines = true
@@ -856,33 +861,81 @@ struct InviteMemberView: View {
     @State private var canAddGroceries = true
     @State private var canRemoveGroceries = false
 
+    private var canSendInvite: Bool {
+        if useManualEntry {
+            return !manualPhoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } else {
+            return selectedUserId != nil
+        }
+    }
+
+    private var effectiveContactId: String? {
+        if useManualEntry {
+            let cleaned = manualPhoneNumber.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+            return cleaned.isEmpty ? nil : cleaned
+        } else {
+            return selectedUserId
+        }
+    }
+
+    private var effectiveContactName: String? {
+        if useManualEntry {
+            return manualName.isEmpty ? nil : manualName
+        } else {
+            return selectedContactName
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    Button {
-                        showingContacts = true
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(selectedUserId == nil ? "Choose Contact" : "Contact Selected")
-                                    .foregroundColor(selectedUserId == nil ? .blue : .primary)
-                                
-                                if let name = selectedContactName {
-                                    Text(name)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
-                        }
+                    Picker("Add by", selection: $useManualEntry) {
+                        Text("Contacts").tag(false)
+                        Text("Phone Number").tag(true)
                     }
-                } header: {
-                    Text("Select Contact")
-                } footer: {
-                    Text("Your personal invitation will be waiting for them when they join HelpEm! They'll see it's from you and can choose to accept.")
+                    .pickerStyle(.segmented)
+                }
+
+                if useManualEntry {
+                    Section {
+                        TextField("Phone Number", text: $manualPhoneNumber)
+                            .keyboardType(.phonePad)
+                            .textContentType(.telephoneNumber)
+
+                        TextField("Name (optional)", text: $manualName)
+                            .textContentType(.name)
+                    } header: {
+                        Text("Enter Phone Number")
+                    } footer: {
+                        Text("Enter the phone number of the person you want to invite. They'll see your invitation when they sign up for HelpEm.")
+                    }
+                } else {
+                    Section {
+                        Button {
+                            showingContacts = true
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(selectedUserId == nil ? "Choose Contact" : "Contact Selected")
+                                        .foregroundColor(selectedUserId == nil ? .blue : .primary)
+
+                                    if let name = selectedContactName {
+                                        Text(name)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    } header: {
+                        Text("Select Contact")
+                    } footer: {
+                        Text("Your personal invitation will be waiting for them when they join HelpEm! They'll see it's from you and can choose to accept.")
+                    }
                 }
 
                 Section {
@@ -914,7 +967,7 @@ struct InviteMemberView: View {
                             await sendInvite()
                         }
                     }
-                    .disabled(isSending || selectedUserId == nil)
+                    .disabled(isSending || !canSendInvite)
                 }
             }
             .alert("Error", isPresented: $showError) {
@@ -930,7 +983,7 @@ struct InviteMemberView: View {
                     dismiss()
                 }
             } message: {
-                if let name = selectedContactName {
+                if let name = effectiveContactName {
                     Text("\(name) will see your personal invitation to join '\(tribe.name)' when they sign up for HelpEm. They'll be excited to collaborate with you!")
                 } else {
                     Text("Your personal invitation to join '\(tribe.name)' is ready and waiting!")
@@ -946,17 +999,17 @@ struct InviteMemberView: View {
     }
 
     private func sendInvite() async {
-        guard let contactId = selectedUserId else { 
-            AppLogger.error("No contact ID selected for invite", logger: AppLogger.general)
-            return 
+        guard let contactId = effectiveContactId else {
+            AppLogger.error("No contact ID for invite", logger: AppLogger.general)
+            return
         }
-        
+
         isSending = true
         defer { isSending = false }
 
         do {
             AppLogger.info("Sending invite to contact: \(contactId) for tribe: \(tribe.id)", logger: AppLogger.general)
-            
+
             let permissions = PermissionsUpdate(
                 canAddTasks: canAddTasks,
                 canRemoveTasks: canRemoveTasks,
@@ -967,15 +1020,15 @@ struct InviteMemberView: View {
                 canAddGroceries: canAddGroceries,
                 canRemoveGroceries: canRemoveGroceries
             )
-            
+
             // Determine contact type (email or phone)
             let contactType = contactId.contains("@") ? "email" : "phone"
-            
+
             let invitation = try await AppContainer.shared.tribeRepository.inviteContact(
                 tribeId: tribe.id,
                 contactIdentifier: contactId,
                 contactType: contactType,
-                contactName: selectedContactName,
+                contactName: effectiveContactName,
                 permissions: permissions
             )
             AppLogger.info("Contact invited successfully: \(invitation.id)", logger: AppLogger.general)

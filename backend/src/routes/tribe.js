@@ -1543,7 +1543,7 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
       return res.status(session.status).json({ error: session.error });
     }
 
-    const userId = session.userId;
+    const userId = session.session.userId;
     const { tribeId } = req.params;
     const { contactIdentifier, contactType, contactName, permissions } = req.body;
 
