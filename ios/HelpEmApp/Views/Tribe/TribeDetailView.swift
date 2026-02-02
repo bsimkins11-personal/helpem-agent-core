@@ -15,6 +15,7 @@ struct TribeDetailView: View {
     @State private var selectedSection: TribeSection? = nil
     @State private var showingSettings = false
     @State private var showingInvite = false
+    @State private var showingCreateItem = false
     @State private var navigateToMessages = false
     @Environment(\.dismiss) private var dismiss
     
@@ -67,28 +68,39 @@ struct TribeDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    if tribe.isOwner {
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Label("Tribe Settings", systemImage: "gearshape")
-                        }
-
-                        Button {
-                            showingInvite = true
-                        } label: {
-                            Label("Invite Members", systemImage: "person.badge.plus")
-                        }
-                    }
-
+                HStack(spacing: 16) {
+                    // Create item button
                     Button {
-                        shareTribe()
+                        showingCreateItem = true
                     } label: {
-                        Label("Share Tribe Link", systemImage: "square.and.arrow.up")
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+
+                    // Menu button
+                    Menu {
+                        if tribe.isOwner {
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Label("Tribe Settings", systemImage: "gearshape")
+                            }
+
+                            Button {
+                                showingInvite = true
+                            } label: {
+                                Label("Invite Members", systemImage: "person.badge.plus")
+                            }
+                        }
+
+                        Button {
+                            shareTribe()
+                        } label: {
+                            Label("Share Tribe Link", systemImage: "square.and.arrow.up")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
                 }
             }
         }
@@ -98,6 +110,14 @@ struct TribeDetailView: View {
                     Task {
                         await viewModel.loadTribeData(tribeId: tribe.id)
                     }
+                }
+            }
+        }
+        .sheet(isPresented: $showingCreateItem) {
+            TribeCreateItemView(tribe: tribe) {
+                // Refresh data after creating an item
+                Task {
+                    await viewModel.loadTribeData(tribeId: tribe.id)
                 }
             }
         }
