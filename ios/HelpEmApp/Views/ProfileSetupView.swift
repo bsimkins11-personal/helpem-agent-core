@@ -4,11 +4,14 @@ import PhotosUI
 /// Profile setup view - shown after sign-in when user needs to set display name
 struct ProfileSetupView: View {
     @ObservedObject var authManager: AuthManager
+    @EnvironmentObject private var deepLinkHandler: DeepLinkHandler
     @State private var displayName: String = ""
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var avatarImage: UIImage?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var referralCode: String = ""
+    @State private var showReferralField = false
 
     var body: some View {
         NavigationStack {
@@ -84,6 +87,33 @@ struct ProfileSetupView: View {
                 }
                 .padding(.horizontal)
 
+                // Referral code section
+                VStack(spacing: 8) {
+                    if showReferralField {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Referral Code")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.secondary)
+
+                            TextField("Enter code", text: $referralCode)
+                                .textFieldStyle(.roundedBorder)
+                                .autocorrectionDisabled()
+                                .textInputAutocapitalization(.characters)
+                        }
+                        .padding(.horizontal)
+                    } else {
+                        Button {
+                            withAnimation {
+                                showReferralField = true
+                            }
+                        } label: {
+                            Text("Have a referral code?")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+
                 if let error = errorMessage {
                     Text(error)
                         .font(.caption)
@@ -140,6 +170,21 @@ struct ProfileSetupView: View {
                 }
 
                 try await authManager.updateProfile(displayName: trimmedName, avatarUrl: avatarUrl)
+
+                // Apply referral code if entered
+                let trimmedCode = referralCode.trimmingCharacters(in: .whitespaces)
+                if !trimmedCode.isEmpty {
+                    do {
+                        try await TribeAPIClient.shared.applyReferralCode(trimmedCode)
+                    } catch {
+                        // Log but don't block profile setup
+                        AppLogger.warning("Failed to apply referral code: \(error)", logger: AppLogger.general)
+                    }
+                }
+
+                // Also apply any pending code from deep link
+                await deepLinkHandler.applyPendingReferralCode()
+
                 authManager.needsDisplayName = false
             } catch {
                 errorMessage = error.localizedDescription
