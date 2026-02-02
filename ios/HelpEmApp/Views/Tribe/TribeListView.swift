@@ -38,18 +38,6 @@ struct TribeListView: View {
                 }
             }
             .navigationTitle("My Tribes")
-            // DEBUG: Temporary banner showing invitation count
-            .safeAreaInset(edge: .top) {
-                HStack {
-                    Text("DEBUG: \(viewModel.invitations.count) invitations")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 4)
-                .background(viewModel.invitations.isEmpty ? Color.red : Color.green)
-            }
             .searchable(text: $searchText, prompt: "Search tribes")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
