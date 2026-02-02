@@ -679,24 +679,13 @@ struct SentItemsResponse: Codable {
 struct ReferralInfo: Codable {
     let referralCode: String?
     let hasBadge: Bool
-    let badgeExpiresAt: Date?
-    let lifetimeCount: Int
-    let monthlyRewardCount: Int
-    let monthlyRewardLimit: Int
-    let lifetimeLimit: Int
-    let pendingReferees: Int
+    let signupCount: Int             // How many people signed up with their code
+    let earnedPremiumMonths: Int     // Premium months earned (1 per 5 signups)
+    let signupsToNextMonth: Int      // Signups needed for next premium month
     let wasReferred: Bool
     let referredAt: Date?
-
-    /// Check if user can still earn more rewards this month
-    var canEarnMoreThisMonth: Bool {
-        monthlyRewardCount < monthlyRewardLimit
-    }
-
-    /// Check if user has hit lifetime cap
-    var hasHitLifetimeCap: Bool {
-        lifetimeCount >= lifetimeLimit
-    }
+    let hasFreeMonths: Bool          // If user has active referral bonus
+    let freeMonthsExpiresAt: Date?   // When their 2 free months expire
 }
 
 /// Response for generating a referral code

@@ -20,8 +20,10 @@ model User {
   referralCode              String?   @unique @map("referral_code")  // 8-char code for sharing
   referredByUserId          String?   @db.Uuid @map("referred_by_user_id")
   referredAt                DateTime? @map("referred_at")
-  evangelistBadgeExpiresAt  DateTime? @map("evangelist_badge_expires_at")
-  evangelistLifetimeCount   Int       @default(0) @map("evangelist_lifetime_count")
+  referralBonusExpiresAt    DateTime? @map("referral_bonus_expires_at")  // 2 free months for referee
+  evangelistBadgeExpiresAt  DateTime? @map("evangelist_badge_expires_at")  // Deprecated
+  evangelistLifetimeCount   Int       @default(0) @map("evangelist_lifetime_count")  // Signup tally
+  earnedPremiumMonths       Int       @default(0) @map("earned_premium_months")  // Every 5 signups = 1 month
 
   // Relations
   inputs       UserInput[]

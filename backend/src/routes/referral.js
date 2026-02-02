@@ -1,13 +1,13 @@
 /**
  * Referral/Evangelist Program Routes
  *
- * CRITICAL RULES:
+ * REWARDS:
+ * - Referee: 2 free months of basic when they enter code
+ * - Inviter: Evangelist badge + 1 premium month at basic rate for every 5 signups
+ *
+ * RULES:
  * - One referral per referee (ignore subsequent codes)
- * - Max 2 rewards per month per inviter
- * - Max 5 lifetime rewards per inviter
  * - Self-referrals blocked
- * - Badge duration: 14 days
- * - Eligibility: 7 active days within 14 days of signup
  */
 
 import express from "express";
@@ -17,13 +17,10 @@ import { verifySessionToken } from "../lib/sessionAuth.js";
 
 const router = express.Router();
 
-// Constants - SINGLE SOURCE OF TRUTH
-const BADGE_DURATION_DAYS = 14;
-const REFERRAL_WINDOW_DAYS = 14;
-const REQUIRED_ACTIVE_DAYS = 7;
-const MAX_REWARDS_PER_MONTH = 2;
-const MAX_LIFETIME_REWARDS = 5;
+// Constants
 const REFERRAL_CODE_LENGTH = 8;
+const REFEREE_FREE_MONTHS = 2; // Months of free basic for new users
+const SIGNUPS_PER_PREMIUM_MONTH = 5; // Every 5 signups = 1 premium month for inviter
 
 /**
  * Generate a unique 8-character referral code
@@ -57,8 +54,9 @@ router.get("/", async (req, res) => {
         referralCode: true,
         referredByUserId: true,
         referredAt: true,
-        evangelistBadgeExpiresAt: true,
+        referralBonusExpiresAt: true,
         evangelistLifetimeCount: true,
+        earnedPremiumMonths: true,
       },
     });
 
@@ -66,44 +64,26 @@ router.get("/", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Check if badge is currently active
+    // Has evangelist badge if they've referred at least one person
+    const hasBadge = user.evangelistLifetimeCount > 0;
+
+    // Check if user has active free months bonus
     const now = new Date();
-    const hasBadge = user.evangelistBadgeExpiresAt && user.evangelistBadgeExpiresAt > now;
+    const hasFreeMonths = user.referralBonusExpiresAt && user.referralBonusExpiresAt > now;
 
-    // Get this month's reward count
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const monthlyRewardCount = await prisma.referralReward.count({
-      where: {
-        inviterId: userId,
-        awardMonth: currentMonth,
-      },
-    });
-
-    // Get total referees who are still in progress (signed up but not yet qualified)
-    const pendingReferees = await prisma.user.count({
-      where: {
-        referredByUserId: userId,
-        // Not yet rewarded
-        id: {
-          notIn: await prisma.referralReward.findMany({
-            where: { inviterId: userId },
-            select: { refereeId: true },
-          }).then(r => r.map(x => x.refereeId)),
-        },
-      },
-    });
+    // Progress toward next premium month
+    const signupsToNextMonth = SIGNUPS_PER_PREMIUM_MONTH - (user.evangelistLifetimeCount % SIGNUPS_PER_PREMIUM_MONTH);
 
     return res.json({
       referralCode: user.referralCode,
       hasBadge,
-      badgeExpiresAt: hasBadge ? user.evangelistBadgeExpiresAt : null,
-      lifetimeCount: user.evangelistLifetimeCount,
-      monthlyRewardCount,
-      monthlyRewardLimit: MAX_REWARDS_PER_MONTH,
-      lifetimeLimit: MAX_LIFETIME_REWARDS,
-      pendingReferees,
+      signupCount: user.evangelistLifetimeCount, // Tally of signups through their code
+      earnedPremiumMonths: user.earnedPremiumMonths || 0, // Premium months earned
+      signupsToNextMonth: user.evangelistLifetimeCount > 0 ? signupsToNextMonth : SIGNUPS_PER_PREMIUM_MONTH,
       wasReferred: !!user.referredByUserId,
       referredAt: user.referredAt,
+      hasFreeMonths,
+      freeMonthsExpiresAt: hasFreeMonths ? user.referralBonusExpiresAt : null,
     });
   } catch (err) {
     console.error("ERROR GET /referral:", err);
@@ -190,11 +170,15 @@ router.post("/generate-code", async (req, res) => {
  * POST /referral/apply
  * Apply a referral code during signup
  *
- * CRITICAL RULES:
+ * WHAT HAPPENS:
+ * - Referee gets 2 free months of basic
+ * - Inviter's signup tally increases by 1
+ * - Inviter gets evangelist badge (if not already)
+ *
+ * RULES:
  * - Can only be applied ONCE per user
  * - Cannot self-refer
  * - Code must exist
- * - Silent failure if already referred (don't reveal to user)
  */
 router.post("/apply", async (req, res) => {
   try {
@@ -234,7 +218,6 @@ router.post("/apply", async (req, res) => {
     // RULE: One referral per user - silently ignore if already referred
     if (currentUser.referredByUserId) {
       console.log(`User ${userId} already has a referrer, ignoring new code ${normalizedCode}`);
-      // Return success to avoid revealing that they're already referred
       return res.json({
         success: true,
         message: "Referral processed",
@@ -244,7 +227,7 @@ router.post("/apply", async (req, res) => {
     // Find the inviter by referral code
     const inviter = await prisma.user.findUnique({
       where: { referralCode: normalizedCode },
-      select: { id: true },
+      select: { id: true, evangelistLifetimeCount: true, earnedPremiumMonths: true },
     });
 
     if (!inviter) {
@@ -256,20 +239,54 @@ router.post("/apply", async (req, res) => {
       return res.status(400).json({ error: "Cannot use your own referral code" });
     }
 
-    // Apply the referral
+    // Calculate 2 months from now for referee's free bonus
+    const now = new Date();
+    const bonusExpiresAt = new Date(now);
+    bonusExpiresAt.setMonth(bonusExpiresAt.getMonth() + REFEREE_FREE_MONTHS);
+
+    // Apply the referral - give referee 2 free months
     await prisma.user.update({
       where: { id: userId },
       data: {
         referredByUserId: inviter.id,
-        referredAt: new Date(),
+        referredAt: now,
+        referralBonusExpiresAt: bonusExpiresAt,
       },
     });
 
+    // Calculate new inviter tally
+    const newSignupCount = inviter.evangelistLifetimeCount + 1;
+
+    // Check if inviter earns a premium month (every 5 signups)
+    const previousMilestone = Math.floor(inviter.evangelistLifetimeCount / SIGNUPS_PER_PREMIUM_MONTH);
+    const newMilestone = Math.floor(newSignupCount / SIGNUPS_PER_PREMIUM_MONTH);
+    const earnedNewMonth = newMilestone > previousMilestone;
+
+    // Update inviter's tally and premium months
+    const inviterUpdate = {
+      evangelistLifetimeCount: newSignupCount,
+    };
+
+    if (earnedNewMonth) {
+      inviterUpdate.earnedPremiumMonths = (inviter.earnedPremiumMonths || 0) + 1;
+    }
+
+    await prisma.user.update({
+      where: { id: inviter.id },
+      data: inviterUpdate,
+    });
+
     console.log(`User ${userId} applied referral code ${normalizedCode} from inviter ${inviter.id}`);
+    console.log(`  - Referee gets free months until ${bonusExpiresAt.toISOString()}`);
+    console.log(`  - Inviter tally now: ${newSignupCount}`);
+    if (earnedNewMonth) {
+      console.log(`  - 🎉 Inviter earned a premium month! Total: ${(inviter.earnedPremiumMonths || 0) + 1}`);
+    }
 
     return res.json({
       success: true,
-      message: "Referral applied! Use HelpEm for 7 days to earn your referrer a badge.",
+      message: `Welcome! You have ${REFEREE_FREE_MONTHS} free months of HelpEm Basic.`,
+      freeMonthsExpiresAt: bonusExpiresAt,
     });
   } catch (err) {
     console.error("ERROR POST /referral/apply:", err);

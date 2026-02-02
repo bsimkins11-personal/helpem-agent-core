@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Evangelist Program section - invite friends, earn badges
+/// Evangelist Program section - invite friends, earn rewards
 struct EvangelistSectionView: View {
     @State private var referralInfo: ReferralInfo?
     @State private var isLoading = true
@@ -11,43 +11,62 @@ struct EvangelistSectionView: View {
 
     var body: some View {
         List {
-            // Badge Status Section
+            // Your Stats Section
             if let info = referralInfo {
                 Section {
+                    // Badge and signup count
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             if info.hasBadge {
                                 HStack(spacing: 8) {
                                     EvangelistBadge()
-                                    Text("Active")
+                                    Text("Evangelist")
                                         .font(.subheadline)
                                         .foregroundColor(.green)
                                 }
-                                if let expires = info.badgeExpiresAt {
-                                    Text("Expires \(expires.formatted(date: .abbreviated, time: .omitted))")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
                             } else {
-                                Text("No active badge")
+                                Text("Invite friends to earn your badge!")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("\(info.lifetimeCount)")
+                            Text("\(info.signupCount)")
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.orange)
-                            Text("lifetime")
+                            Text("signups")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
                     }
                     .padding(.vertical, 4)
+
+                    // Premium months earned
+                    if info.earnedPremiumMonths > 0 {
+                        HStack {
+                            Label("Premium months earned", systemImage: "star.fill")
+                                .foregroundColor(.purple)
+                            Spacer()
+                            Text("\(info.earnedPremiumMonths)")
+                                .fontWeight(.bold)
+                                .foregroundColor(.purple)
+                        }
+                    }
+
+                    // Progress to next month
+                    if info.signupCount > 0 {
+                        HStack {
+                            Text("Next premium month")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(info.signupsToNextMonth) more signup\(info.signupsToNextMonth == 1 ? "" : "s")")
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 } header: {
-                    Text("Your Badge")
+                    Text("Your Rewards")
                 }
             }
 
@@ -81,42 +100,16 @@ struct EvangelistSectionView: View {
             } header: {
                 Text("Invite Friends")
             } footer: {
-                Text("When a friend signs up with your code and uses HelpEm for 7 days, you earn a 14-day Evangelist badge!")
-            }
-
-            // Stats Section (if has referrals)
-            if let info = referralInfo, info.pendingReferees > 0 || info.lifetimeCount > 0 {
-                Section {
-                    HStack {
-                        Text("Pending referrals")
-                        Spacer()
-                        Text("\(info.pendingReferees)")
-                            .foregroundColor(.secondary)
-                    }
-                    HStack {
-                        Text("This month")
-                        Spacer()
-                        Text("\(info.monthlyRewardCount) / \(info.monthlyRewardLimit)")
-                            .foregroundColor(.secondary)
-                    }
-                    HStack {
-                        Text("Lifetime limit")
-                        Spacer()
-                        Text("\(info.lifetimeCount) / \(info.lifetimeLimit)")
-                            .foregroundColor(.secondary)
-                    }
-                } header: {
-                    Text("Stats")
-                }
+                Text("Friends get 2 free months when they sign up with your code!")
             }
 
             // How It Works Section
             Section {
                 VStack(alignment: .leading, spacing: 16) {
                     HowItWorksRow(number: "1", text: "Share your invite link with friends")
-                    HowItWorksRow(number: "2", text: "Friend signs up for HelpEm")
-                    HowItWorksRow(number: "3", text: "Friend uses app for 7 days")
-                    HowItWorksRow(number: "4", text: "You earn the Evangelist badge!")
+                    HowItWorksRow(number: "2", text: "Friend signs up with your code")
+                    HowItWorksRow(number: "3", text: "Friend gets 2 free months, you get the badge!")
+                    HowItWorksRow(number: "4", text: "Every 5 signups = 1 premium month for you")
                 }
                 .padding(.vertical, 8)
             } header: {
@@ -126,32 +119,32 @@ struct EvangelistSectionView: View {
             // FAQ Section
             Section {
                 DisclosureGroup {
-                    Text("Your friend uses your invite code, finishes signup, and is active on 7 different days within their first 14 days.")
+                    Text("When a friend signs up using your referral code, you immediately earn the Evangelist badge. It shows next to your name in Tribes!")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
                 } label: {
-                    Text("How do I earn a badge?")
+                    Text("What's the Evangelist badge?")
                         .font(.subheadline)
                 }
 
                 DisclosureGroup {
-                    Text("Each badge lasts 14 days from when it's awarded.")
+                    Text("For every 5 friends who sign up with your code, you earn 1 month of Premium at the Basic rate.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
                 } label: {
-                    Text("How long does a badge last?")
+                    Text("How do I earn Premium months?")
                         .font(.subheadline)
                 }
 
                 DisclosureGroup {
-                    Text("You can earn up to 2 badges per month and 10 total. This helps keep the program fair for everyone.")
+                    Text("Your friends get 2 months of HelpEm Basic for free when they sign up with your code. It's a win-win!")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
                 } label: {
-                    Text("Is there a limit?")
+                    Text("What do my friends get?")
                         .font(.subheadline)
                 }
             } header: {
@@ -208,7 +201,7 @@ struct EvangelistSectionView: View {
         guard let code = referralCode ?? referralInfo?.referralCode else { return }
 
         let shareURL = "https://helpem.ai/join?ref=\(code)"
-        let shareText = "Join me on HelpEm - your AI assistant for daily life! \(shareURL)"
+        let shareText = "Join me on HelpEm - your AI assistant for daily life! Get 2 free months with my code: \(shareURL)"
 
         // Present share sheet
         let activityVC = UIActivityViewController(
