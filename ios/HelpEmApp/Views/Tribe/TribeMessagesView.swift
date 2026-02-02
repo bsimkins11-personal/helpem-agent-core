@@ -305,19 +305,16 @@ struct MessageAvatarView: View {
     let size: CGFloat
 
     var body: some View {
-        if let urlString = avatarUrl {
-            // Handle base64 data URLs
-            if urlString.hasPrefix("data:"),
-               let commaIndex = urlString.firstIndex(of: ","),
-               let data = Data(base64Encoded: String(urlString[urlString.index(after: commaIndex)...])),
-               let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
+        if let urlString = avatarUrl, !urlString.isEmpty {
+            if let image = decodeBase64Image(from: urlString) {
+                // Successfully decoded base64 data URL
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .clipShape(Circle())
-            } else if let url = URL(string: urlString) {
-                // Regular URL
+            } else if !urlString.hasPrefix("data:"), let url = URL(string: urlString) {
+                // Regular URL (not a data URL)
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
@@ -336,6 +333,34 @@ struct MessageAvatarView: View {
         } else {
             placeholderAvatar
         }
+    }
+
+    /// Decode a base64 data URL to UIImage
+    private func decodeBase64Image(from urlString: String) -> UIImage? {
+        guard urlString.hasPrefix("data:") else { return nil }
+        guard let commaIndex = urlString.firstIndex(of: ",") else { return nil }
+
+        let base64String = String(urlString[urlString.index(after: commaIndex)...])
+
+        // Try decoding with different options
+        if let data = Data(base64Encoded: base64String, options: .ignoreUnknownCharacters),
+           let image = UIImage(data: data) {
+            return image
+        }
+
+        // Try with padding fix
+        var paddedString = base64String
+        let remainder = paddedString.count % 4
+        if remainder > 0 {
+            paddedString += String(repeating: "=", count: 4 - remainder)
+        }
+
+        if let data = Data(base64Encoded: paddedString, options: .ignoreUnknownCharacters),
+           let image = UIImage(data: data) {
+            return image
+        }
+
+        return nil
     }
 
     private var placeholderAvatar: some View {
