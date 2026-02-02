@@ -2287,16 +2287,34 @@ router.post("/:tribeId/messages", async (req, res) => {
       return res.status(403).json({ error: "Not a member of this Tribe" });
     }
 
-    // Create message
+    // Create message with user info
     const tribeMessage = await prisma.tribeMessage.create({
       data: {
         tribeId,
         userId,
         message: message.trim(),
       },
+      include: {
+        user: {
+          select: { displayName: true, avatarUrl: true },
+        },
+      },
     });
 
-    return res.json({ message: tribeMessage });
+    // Format response with sender info
+    return res.json({
+      message: {
+        id: tribeMessage.id,
+        tribeId: tribeMessage.tribeId,
+        userId: tribeMessage.userId,
+        message: tribeMessage.message,
+        createdAt: tribeMessage.createdAt,
+        editedAt: tribeMessage.editedAt,
+        deletedAt: tribeMessage.deletedAt,
+        senderName: tribeMessage.user?.displayName || null,
+        senderAvatarUrl: tribeMessage.user?.avatarUrl || null,
+      },
+    });
   } catch (err) {
     console.error("ERROR POST /tribes/:tribeId/messages:", err);
     return res.status(500).json({ error: "Internal server error" });
