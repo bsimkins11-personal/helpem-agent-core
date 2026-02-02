@@ -105,7 +105,9 @@ class TribeListViewModel: ObservableObject {
     
     private func fetchInvitations() async {
         do {
-            invitations = try await repository.getPendingInvitations()
+            let fetched = try await repository.getPendingInvitations()
+            AppLogger.info("ViewModel: fetched \(fetched.count) invitations", logger: AppLogger.general)
+            invitations = fetched
         } catch {
             AppLogger.error("Failed to load invitations: \(error.localizedDescription)", logger: AppLogger.general)
         }

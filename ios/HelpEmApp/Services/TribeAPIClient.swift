@@ -57,8 +57,20 @@ class TribeAPIClient {
     func getPendingInvitations() async throws -> [TribeInvitation] {
         let url = URL(string: "\(baseURL)/tribes/invitations")!
         let data = try await authenticatedRequest(url: url, method: "GET")
-        let response = try decoder.decode(TribeInvitationsResponse.self, from: data)
-        return response.invitations
+
+        // Debug: Log raw response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            AppLogger.info("Invitations API response: \(jsonString)", logger: AppLogger.general)
+        }
+
+        do {
+            let response = try decoder.decode(TribeInvitationsResponse.self, from: data)
+            AppLogger.info("Decoded \(response.invitations.count) invitations", logger: AppLogger.general)
+            return response.invitations
+        } catch {
+            AppLogger.error("Failed to decode invitations: \(error)", logger: AppLogger.general)
+            throw error
+        }
     }
     
     /// Create a new Tribe
