@@ -9,6 +9,8 @@ struct TribeMessagesView: View {
     @State private var messageText = ""
     @State private var sendError: String?
     @State private var failedMessageText: String?
+    @State private var messageToDelete: TribeMessage?
+    @State private var showDeleteConfirmation = false
 
     init(tribe: Tribe) {
         self.tribe = tribe
@@ -63,8 +65,15 @@ struct TribeMessagesView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(viewModel.messages) { message in
-                        MessageBubble(message: message, isCurrentUser: message.userId == viewModel.currentUserId)
-                            .id(message.id)
+                        MessageBubble(
+                            message: message,
+                            isCurrentUser: message.userId == viewModel.currentUserId,
+                            onDelete: message.userId == viewModel.currentUserId ? {
+                                messageToDelete = message
+                                showDeleteConfirmation = true
+                            } : nil
+                        )
+                        .id(message.id)
                     }
                 }
                 .padding()
@@ -77,6 +86,25 @@ struct TribeMessagesView: View {
                     }
                 }
             }
+        }
+        .confirmationDialog(
+            "Delete Message",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let message = messageToDelete {
+                    Task {
+                        try? await viewModel.deleteMessage(tribeId: tribe.id, messageId: message.id)
+                        messageToDelete = nil
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                messageToDelete = nil
+            }
+        } message: {
+            Text("This message will be permanently deleted for everyone in this tribe.")
         }
     }
 
@@ -186,6 +214,7 @@ struct TribeMessagesView: View {
 struct MessageBubble: View {
     let message: TribeMessage
     let isCurrentUser: Bool
+    var onDelete: (() -> Void)?
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -210,6 +239,24 @@ struct MessageBubble: View {
                     .padding(.vertical, 10)
                     .background(isCurrentUser ? Color.blue : Color(.systemGray5))
                     .cornerRadius(18)
+                    .contextMenu {
+                        // Copy message
+                        Button {
+                            UIPasteboard.general.string = message.message
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+
+                        // Delete option (only for current user's messages)
+                        if let onDelete = onDelete {
+                            Divider()
+                            Button(role: .destructive) {
+                                onDelete()
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
 
                 HStack(spacing: 4) {
                     if message.editedAt != nil {
