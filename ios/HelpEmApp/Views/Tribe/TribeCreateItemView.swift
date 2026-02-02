@@ -34,12 +34,13 @@ enum TribeItemType: String, CaseIterable, Identifiable {
 /// Option to send to all members or select specific ones
 struct TribeCreateItemView: View {
     let tribe: Tribe
+    let initialType: TribeItemType
     let onCreated: () -> Void
 
     @StateObject private var viewModel: TribeCreateItemViewModel
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedType: TribeItemType = .appointment
+    @State private var selectedType: TribeItemType
     @State private var title = ""
     @State private var selectedDate = Date()
     @State private var sendToAll = true
@@ -48,10 +49,12 @@ struct TribeCreateItemView: View {
     @State private var errorMessage = ""
     @State private var isCreating = false
 
-    init(tribe: Tribe, onCreated: @escaping () -> Void) {
+    init(tribe: Tribe, initialType: TribeItemType = .appointment, onCreated: @escaping () -> Void) {
         self.tribe = tribe
+        self.initialType = initialType
         self.onCreated = onCreated
         _viewModel = StateObject(wrappedValue: TribeCreateItemViewModel())
+        _selectedType = State(initialValue: initialType)
     }
 
     var body: some View {

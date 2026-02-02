@@ -16,6 +16,7 @@ struct TribeDetailView: View {
     @State private var showingSettings = false
     @State private var showingInvite = false
     @State private var showingCreateItem = false
+    @State private var createItemType: TribeItemType = .appointment
     @State private var navigateToMessages = false
     @Environment(\.dismiss) private var dismiss
     
@@ -114,7 +115,7 @@ struct TribeDetailView: View {
             }
         }
         .sheet(isPresented: $showingCreateItem) {
-            TribeCreateItemView(tribe: tribe) {
+            TribeCreateItemView(tribe: tribe, initialType: createItemType) {
                 // Refresh data after creating an item
                 Task {
                     await viewModel.loadTribeData(tribeId: tribe.id)
@@ -236,22 +237,45 @@ struct TribeDetailView: View {
 
     private var quickActionsSection: some View {
         Section("Quick Actions") {
-            HStack(spacing: 12) {
-                QuickActionButton(
-                    icon: "message.fill",
-                    label: "Message",
-                    color: .blue
-                ) {
-                    navigateToMessages = true
-                }
-
-                if tribe.isOwner {
+            // Create items row - prominent for sharing
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
                     QuickActionButton(
-                        icon: "person.badge.plus",
-                        label: "Invite",
+                        icon: "calendar.badge.plus",
+                        label: "Add Event",
+                        color: .blue
+                    ) {
+                        createItemType = .appointment
+                        showingCreateItem = true
+                    }
+
+                    QuickActionButton(
+                        icon: "checkmark.circle.badge.plus",
+                        label: "Add To-Do",
                         color: .green
                     ) {
-                        showingInvite = true
+                        createItemType = .task
+                        showingCreateItem = true
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    QuickActionButton(
+                        icon: "message.fill",
+                        label: "Message",
+                        color: .purple
+                    ) {
+                        navigateToMessages = true
+                    }
+
+                    if tribe.isOwner {
+                        QuickActionButton(
+                            icon: "person.badge.plus",
+                            label: "Invite",
+                            color: .orange
+                        ) {
+                            showingInvite = true
+                        }
                     }
                 }
             }
