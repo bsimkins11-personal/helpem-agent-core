@@ -12,6 +12,7 @@
  *   the user who added them. This is a privacy-protecting feature.
  */
 
+import crypto from "crypto";
 import express from "express";
 import { prisma } from "../lib/prisma.js";
 import { verifySessionToken } from "../lib/sessionAuth.js";
@@ -25,7 +26,7 @@ import {
 } from "../lib/tribePermissions.js";
 import { createTribeActivity, getUserDisplayName } from "../lib/tribeActivity.js";
 import { sendToUser, isPushEnabled } from "../services/pushNotificationService.js";
-import { sendSMS, isSMSEnabled } from "../services/smsService.js";
+import { sendSMS, sendTribeInviteSMS, isSMSEnabled } from "../services/smsService.js";
 
 const router = express.Router();
 
@@ -1703,14 +1704,31 @@ router.post("/:tribeId/invite-contact", async (req, res) => {
           console.log(`📱 Push notification sent to existing user ${existingUser.id} for tribe invite`);
         }
       } else {
-        // Not an existing user - send SMS if phone contact
+        // Not an existing user - send SMS with invite link if phone contact
         if (contactType === "phone" && isSMSEnabled()) {
-          const appStoreUrl = process.env.APP_STORE_URL || "https://apps.apple.com/app/helpem";
-          const message = `${inviterName} invited you to join "${tribe.name}" on HelpEm! Download the app to accept: ${appStoreUrl}`;
-          await sendSMS(normalizedIdentifier, message);
+          // Generate a unique invite token for the deep link
+          const inviteToken = crypto.randomUUID();
+
+          // Create invite token record (7-day expiry, single use)
+          const tokenExpiry = new Date();
+          tokenExpiry.setDate(tokenExpiry.getDate() + 7);
+
+          await prisma.tribeInviteToken.create({
+            data: {
+              tribeId,
+              token: inviteToken,
+              createdBy: userId,
+              expiresAt: tokenExpiry,
+              maxUses: 1,
+              usedCount: 0,
+            },
+          });
+
+          // Send SMS with personalized invite link
+          await sendTribeInviteSMS(normalizedIdentifier, inviterName, tribe.name, inviteToken);
           notificationSent = true;
           notificationType = "sms";
-          console.log(`📱 SMS sent to ${normalizedIdentifier} for tribe invite`);
+          console.log(`📱 SMS sent to ${normalizedIdentifier} with invite link for tribe ${tribe.name}`);
         }
       }
     } catch (notifyError) {
