@@ -2221,14 +2221,29 @@ router.get("/:tribeId/messages", async (req, res) => {
       },
       take: limit,
       include: {
-        // We'll need to join with User to get display names
+        user: {
+          select: { displayName: true, avatarUrl: true },
+        },
       },
     });
 
     // Reverse to show oldest first (for chat UI)
     const reversed = messages.reverse();
 
-    return res.json({ messages: reversed });
+    // Format response with sender info
+    const formattedMessages = reversed.map((m) => ({
+      id: m.id,
+      tribeId: m.tribeId,
+      userId: m.userId,
+      message: m.message,
+      createdAt: m.createdAt,
+      editedAt: m.editedAt,
+      deletedAt: m.deletedAt,
+      senderName: m.user?.displayName || null,
+      senderAvatarUrl: m.user?.avatarUrl || null,
+    }));
+
+    return res.json({ messages: formattedMessages });
   } catch (err) {
     console.error("ERROR GET /tribes/:tribeId/messages:", err);
     return res.status(500).json({ error: "Internal server error" });

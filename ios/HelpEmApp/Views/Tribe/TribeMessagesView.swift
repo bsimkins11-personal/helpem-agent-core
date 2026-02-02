@@ -189,27 +189,39 @@ struct MessageBubble: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        HStack {
+        HStack(alignment: .bottom, spacing: 8) {
             if isCurrentUser {
                 Spacer()
+            } else {
+                // Sender avatar for other users
+                MessageAvatarView(avatarUrl: message.senderAvatarUrl, size: 32)
             }
 
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
+                // Sender name for other users
+                if !isCurrentUser, let senderName = message.senderName {
+                    Text(senderName)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 messageContent
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(isCurrentUser ? Color.blue : Color(.systemGray5))
                     .cornerRadius(18)
 
-                if message.editedAt != nil {
-                    Text("Edited")
+                HStack(spacing: 4) {
+                    if message.editedAt != nil {
+                        Text("Edited")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Text(message.createdAt.formatted(date: .omitted, time: .shortened))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-
-                Text(message.createdAt.formatted(date: .omitted, time: .shortened))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
             }
 
             if !isCurrentUser {
@@ -280,6 +292,58 @@ struct LinkedTextView: View {
 
         return Text(attributedString)
             .tint(linkColor)
+    }
+}
+
+// MARK: - Message Avatar View
+
+struct MessageAvatarView: View {
+    let avatarUrl: String?
+    let size: CGFloat
+
+    var body: some View {
+        if let urlString = avatarUrl {
+            // Handle base64 data URLs
+            if urlString.hasPrefix("data:"),
+               let commaIndex = urlString.firstIndex(of: ","),
+               let data = Data(base64Encoded: String(urlString[urlString.index(after: commaIndex)...])),
+               let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } else if let url = URL(string: urlString) {
+                // Regular URL
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: size, height: size)
+                            .clipShape(Circle())
+                    default:
+                        placeholderAvatar
+                    }
+                }
+            } else {
+                placeholderAvatar
+            }
+        } else {
+            placeholderAvatar
+        }
+    }
+
+    private var placeholderAvatar: some View {
+        Circle()
+            .fill(Color.blue.opacity(0.2))
+            .frame(width: size, height: size)
+            .overlay {
+                Image(systemName: "person.fill")
+                    .foregroundColor(.blue)
+                    .font(.system(size: size * 0.4))
+            }
     }
 }
 

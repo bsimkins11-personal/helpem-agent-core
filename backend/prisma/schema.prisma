@@ -18,6 +18,7 @@ model User {
   inputs       UserInput[]
   instruction  UserInstruction?
   tribeMemberships TribeMember[]
+  tribeMessages    TribeMessage[]
 
   @@index([email])
   @@index([phone])
@@ -357,9 +358,10 @@ model TribeMessage {
   createdAt   DateTime          @default(now()) @map("created_at")
   editedAt    DateTime?         @map("edited_at")
   deletedAt   DateTime?         @map("deleted_at")
-  
+
   tribe       Tribe             @relation(fields: [tribeId], references: [id], onDelete: Cascade)
-  
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([tribeId, createdAt])
   @@map("tribe_messages")
 }

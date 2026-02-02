@@ -526,7 +526,9 @@ struct TribeMessage: Codable, Identifiable {
     let createdAt: Date
     let editedAt: Date?
     let deletedAt: Date?
-    
+    let senderName: String?
+    let senderAvatarUrl: String?
+
     enum CodingKeys: String, CodingKey {
         case id
         case tribeId = "tribeId"
@@ -535,6 +537,8 @@ struct TribeMessage: Codable, Identifiable {
         case createdAt = "createdAt"
         case editedAt = "editedAt"
         case deletedAt = "deletedAt"
+        case senderName = "senderName"
+        case senderAvatarUrl = "senderAvatarUrl"
     }
 }
 
