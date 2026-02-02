@@ -4,7 +4,7 @@
  * CRITICAL RULES:
  * - One referral per referee (ignore subsequent codes)
  * - Max 2 rewards per month per inviter
- * - Max 10 lifetime rewards per inviter
+ * - Max 5 lifetime rewards per inviter
  * - Self-referrals blocked
  * - Badge duration: 14 days
  * - Eligibility: 7 active days within 14 days of signup
@@ -22,7 +22,7 @@ const BADGE_DURATION_DAYS = 14;
 const REFERRAL_WINDOW_DAYS = 14;
 const REQUIRED_ACTIVE_DAYS = 7;
 const MAX_REWARDS_PER_MONTH = 2;
-const MAX_LIFETIME_REWARDS = 10;
+const MAX_LIFETIME_REWARDS = 5;
 const REFERRAL_CODE_LENGTH = 8;
 
 /**

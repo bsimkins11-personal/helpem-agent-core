@@ -13,7 +13,7 @@
  *
  * CAPS:
  * - Max 2 rewards per month per inviter
- * - Max 10 lifetime rewards per inviter
+ * - Max 5 lifetime rewards per inviter
  *
  * Run via cron: 0 2 * * * (2 AM daily)
  * Or manually: node scripts/process-referral-rewards.js
@@ -37,7 +37,7 @@ const BADGE_DURATION_DAYS = 14;
 const REFERRAL_WINDOW_DAYS = 14;
 const REQUIRED_ACTIVE_DAYS = 7;
 const MAX_REWARDS_PER_MONTH = 2;
-const MAX_LIFETIME_REWARDS = 10;
+const MAX_LIFETIME_REWARDS = 5;
 
 async function main() {
   console.log("========================================");
