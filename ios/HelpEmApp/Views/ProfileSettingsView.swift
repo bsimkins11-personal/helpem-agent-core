@@ -86,6 +86,24 @@ struct ProfileSettingsView: View {
                 Text("Account")
             }
 
+            // Evangelist Program
+            Section {
+                NavigationLink {
+                    EvangelistSectionView()
+                } label: {
+                    HStack {
+                        Label("Evangelist Program", systemImage: "star.circle.fill")
+                            .foregroundColor(.orange)
+                        Spacer()
+                        // Show badge if active (would need to load this)
+                    }
+                }
+            } header: {
+                Text("Spread the Word")
+            } footer: {
+                Text("Earn Evangelist badges by inviting friends to HelpEm!")
+            }
+
             // Save button
             Section {
                 Button(action: saveProfile) {

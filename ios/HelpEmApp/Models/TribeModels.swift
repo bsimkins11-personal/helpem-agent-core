@@ -672,3 +672,41 @@ struct ProposalResponse: Codable {
 struct SentItemsResponse: Codable {
     let items: [SentTribeItem]
 }
+
+// MARK: - Referral/Evangelist Program
+
+/// User's referral information and Evangelist badge status
+struct ReferralInfo: Codable {
+    let referralCode: String?
+    let hasBadge: Bool
+    let badgeExpiresAt: Date?
+    let lifetimeCount: Int
+    let monthlyRewardCount: Int
+    let monthlyRewardLimit: Int
+    let lifetimeLimit: Int
+    let pendingReferees: Int
+    let wasReferred: Bool
+    let referredAt: Date?
+
+    /// Check if user can still earn more rewards this month
+    var canEarnMoreThisMonth: Bool {
+        monthlyRewardCount < monthlyRewardLimit
+    }
+
+    /// Check if user has hit lifetime cap
+    var hasHitLifetimeCap: Bool {
+        lifetimeCount >= lifetimeLimit
+    }
+}
+
+/// Response for generating a referral code
+struct GenerateCodeResponse: Codable {
+    let referralCode: String
+    let isNew: Bool
+}
+
+/// Response for applying a referral code
+struct ApplyCodeResponse: Codable {
+    let success: Bool
+    let message: String
+}

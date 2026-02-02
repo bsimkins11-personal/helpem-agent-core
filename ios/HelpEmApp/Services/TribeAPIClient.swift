@@ -504,6 +504,32 @@ class TribeAPIClient {
     ) async throws -> Data {
         return try await authenticatedRequest(url: url, method: method, body: EmptyBody?.none)
     }
+
+    // MARK: - Referral/Evangelist Program
+
+    /// Get current user's referral information and badge status
+    func getReferralInfo() async throws -> ReferralInfo {
+        let url = URL(string: "\(baseURL)/user/referral")!
+        let data = try await authenticatedRequest(url: url, method: "GET")
+        return try decoder.decode(ReferralInfo.self, from: data)
+    }
+
+    /// Generate a referral code for the current user
+    func generateReferralCode() async throws -> String {
+        let url = URL(string: "\(baseURL)/user/referral/generate-code")!
+        let data = try await authenticatedRequest(url: url, method: "POST")
+        let response = try decoder.decode(GenerateCodeResponse.self, from: data)
+        return response.referralCode
+    }
+
+    /// Apply a referral code during signup
+    func applyReferralCode(_ code: String) async throws {
+        let url = URL(string: "\(baseURL)/user/referral/apply")!
+        struct ApplyRequest: Encodable {
+            let code: String
+        }
+        let _ = try await authenticatedRequest(url: url, method: "POST", body: ApplyRequest(code: code))
+    }
 }
 
 // MARK: - Errors
