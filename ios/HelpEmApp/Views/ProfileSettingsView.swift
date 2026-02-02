@@ -104,17 +104,24 @@ struct ProfileSettingsView: View {
 
             if let error = errorMessage {
                 Section {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
+                    HStack {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundColor(.red)
+                        Text(error)
+                            .foregroundColor(.red)
+                    }
                 }
             }
 
             if let success = successMessage {
                 Section {
-                    Text(success)
-                        .foregroundColor(.green)
-                        .font(.caption)
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text(success)
+                            .foregroundColor(.green)
+                            .fontWeight(.medium)
+                    }
                 }
             }
         }

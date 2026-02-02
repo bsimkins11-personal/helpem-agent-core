@@ -193,13 +193,13 @@ struct MessageBubble: View {
             if isCurrentUser {
                 Spacer()
             } else {
-                // Sender avatar for other users
+                // Sender avatar on left for other users
                 MessageAvatarView(avatarUrl: message.senderAvatarUrl, size: 32)
             }
 
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
-                // Sender name for other users
-                if !isCurrentUser, let senderName = message.senderName {
+                // Sender name (show for all messages)
+                if let senderName = message.senderName {
                     Text(senderName)
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -224,7 +224,10 @@ struct MessageBubble: View {
                 }
             }
 
-            if !isCurrentUser {
+            if isCurrentUser {
+                // Sender avatar on right for current user
+                MessageAvatarView(avatarUrl: message.senderAvatarUrl, size: 32)
+            } else {
                 Spacer()
             }
         }
