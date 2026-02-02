@@ -11,6 +11,7 @@ import tribeRoutes from "./src/routes/tribe.js";
 import tribeInviteLinksRoutes from "./src/routes/tribe-invite-links.js";
 import googleCalendarRoutes from "./src/routes/google-calendar.js";
 import notificationsRoutes from "./src/routes/notifications.js";
+import referralRoutes from "./src/routes/referral.js";
 import debugTribesHandler from './routes/debug-tribes.js';
 import demoTribesRoutes from './routes/demo-tribes.js';
 import demoTribesCleanupRoutes from './routes/demo-tribes-cleanup.js';
@@ -209,13 +210,72 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
 
         if (pendingInvitations.length > 0) {
           console.log(`Found ${pendingInvitations.length} pending invitations for ${user.email}`);
-          // Note: We don't auto-accept - user will see these invitations in-app
-          // and can choose to accept or decline
+
+          // Convert pending invitations to TribeMember records so they appear in iOS app
+          for (const invitation of pendingInvitations) {
+            try {
+              // Check if user is already a member of this tribe
+              const existingMember = await prisma.tribeMember.findFirst({
+                where: {
+                  tribeId: invitation.tribeId,
+                  userId: userId,
+                },
+              });
+
+              if (!existingMember) {
+                // Create TribeMember record with acceptedAt: null (shows as pending invitation)
+                await prisma.tribeMember.create({
+                  data: {
+                    tribeId: invitation.tribeId,
+                    userId: userId,
+                    isAdmin: false,
+                    permissions: invitation.permissions || {},
+                    invitedBy: invitation.invitedBy,
+                    acceptedAt: null, // null = pending invitation, user must accept
+                  },
+                });
+                console.log(`Created pending TribeMember for tribe ${invitation.tribeId}`);
+              }
+
+              // Mark the pending invitation as converted
+              await prisma.pendingTribeInvitation.update({
+                where: { id: invitation.id },
+                data: {
+                  state: "accepted",
+                  acceptedAt: new Date(),
+                  acceptedBy: userId,
+                },
+              });
+            } catch (inviteErr) {
+              console.error(`Error converting invitation ${invitation.id}:`, inviteErr);
+              // Continue with other invitations even if one fails
+            }
+          }
         }
       } catch (err) {
         console.error("Error processing pending tribe invitations:", err);
         // Don't fail auth if tribe invitation processing fails
       }
+    }
+
+    // Track activity day for referral program (upsert to avoid duplicates)
+    try {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
+
+      await prisma.userActivityDay.upsert({
+        where: {
+          userId_date: { userId, date: today },
+        },
+        update: {}, // No update needed, just ensure exists
+        create: {
+          userId,
+          date: today,
+        },
+      });
+    } catch (activityErr) {
+      // Don't fail auth if activity tracking fails
+      console.error("Error tracking activity day:", activityErr);
     }
 
     // Issue app-owned session token
@@ -653,6 +713,9 @@ app.use("/tribes/demo/cleanup", apiLimiter, demoTribesCleanupRoutes);
 app.use("/tribes/demo", apiLimiter, demoTribesRoutes);
 app.use("/tribes", apiLimiter, tribeInviteLinksRoutes); // Invite links
 app.use("/tribes", apiLimiter, tribeRoutes);
+
+// Referral/Evangelist program routes
+app.use("/user", apiLimiter, referralRoutes);
 
 // =============================================================================
 // DEBUG ROUTES (temporary)

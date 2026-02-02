@@ -15,13 +15,26 @@ model User {
   avatarUrl    String?     @map("avatar_url")    // Profile photo URL
   createdAt    DateTime    @default(now()) @map("created_at")
   lastActiveAt DateTime    @default(now()) @map("last_active_at")
+
+  // Referral/Evangelist program
+  referralCode              String?   @unique @map("referral_code")  // 8-char code for sharing
+  referredByUserId          String?   @db.Uuid @map("referred_by_user_id")
+  referredAt                DateTime? @map("referred_at")
+  evangelistBadgeExpiresAt  DateTime? @map("evangelist_badge_expires_at")
+  evangelistLifetimeCount   Int       @default(0) @map("evangelist_lifetime_count")
+
+  // Relations
   inputs       UserInput[]
   instruction  UserInstruction?
   tribeMemberships TribeMember[]
   tribeMessages    TribeMessage[]
+  activityDays     UserActivityDay[]
+  referralRewardsGiven ReferralReward[] @relation("InviterRewards")
 
   @@index([email])
   @@index([phone])
+  @@index([referralCode])
+  @@index([referredByUserId])
   @@map("users")
 }
 
@@ -528,4 +541,44 @@ model TribeInviteToken {
   @@index([token])
   @@index([tribeId])
   @@map("tribe_invite_tokens")
+}
+
+// =============================================================================
+// REFERRAL/EVANGELIST PROGRAM
+// =============================================================================
+
+/// Tracks distinct active days per user for referral eligibility
+model UserActivityDay {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
+  date      DateTime @db.Date  // Date only, no time component
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("user_activity_days")
+}
+
+/// Tracks referral rewards (Evangelist badges) awarded to inviters
+model ReferralReward {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inviterId       String   @db.Uuid @map("inviter_id")
+  refereeId       String   @db.Uuid @map("referee_id")
+
+  // When the reward was issued
+  awardedAt       DateTime @default(now()) @map("awarded_at")
+
+  // Badge validity period
+  badgeExpiresAt  DateTime @map("badge_expires_at")
+
+  // For cap tracking (format: "2026-02")
+  awardMonth      String   @map("award_month")
+
+  inviter         User     @relation("InviterRewards", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([inviterId, awardMonth])
+  @@index([refereeId])
+  @@map("referral_rewards")
 }

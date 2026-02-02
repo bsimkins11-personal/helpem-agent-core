@@ -10,7 +10,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "rules:aggregate": "node scripts/aggregate-global-rules.js",
-    "digest:tribe": "node scripts/send-daily-tribe-digest.js"
+    "digest:tribe": "node scripts/send-daily-tribe-digest.js",
+    "referral:process": "node scripts/process-referral-rewards.js"
   },
   "engines": {
     "node": ">=22.12.0"
