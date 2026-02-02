@@ -189,6 +189,7 @@ router.get("/invitations", async (req, res) => {
     }));
 
     console.log(`[invitations] Found ${invitations.length} invitations for userId: ${userId}`);
+    if (global.logApiCall) global.logApiCall('invitations-result', userId, { count: invitations.length, first: invitations[0] });
     return res.json({ invitations });
   } catch (err) {
     console.error("ERROR GET /tribes/invitations:", err);
