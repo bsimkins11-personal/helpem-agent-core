@@ -54,12 +54,18 @@ struct HelpEmAppApp: App {
 /// Handles deep links and universal links for the app
 class DeepLinkHandler: ObservableObject {
     static let shared = DeepLinkHandler()
-    
+
     @Published var pendingInviteToken: String?
     @Published var pendingTribeId: String?
     @Published var showInviteSheet: Bool = false
-    
-    private init() {}
+
+    /// Pending referral code from deep link (applied after signup)
+    @Published var pendingReferralCode: String?
+
+    private init() {
+        // Load any stored referral code from UserDefaults (persists across app restarts)
+        pendingReferralCode = UserDefaults.standard.string(forKey: "pendingReferralCode")
+    }
     
     /// Handle a URL (either custom scheme or universal link)
     func handleURL(_ url: URL) {
@@ -79,12 +85,19 @@ class DeepLinkHandler: ObservableObject {
     }
     
     private func handleCustomScheme(_ url: URL) {
-        // Format: helpem://join/TOKEN
+        // Check for referral code in query parameter: ?ref=CODE
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+           let refCode = components.queryItems?.first(where: { $0.name == "ref" })?.value,
+           !refCode.isEmpty {
+            handleReferralCode(refCode)
+        }
+
+        // Format: helpem://join/TOKEN or helpem://join?ref=CODE
         guard let host = url.host else { return }
-        
+
         switch host {
         case "join":
-            // Extract token from path
+            // Extract token from path (for tribe invites)
             let pathComponents = url.pathComponents.filter { $0 != "/" }
             if let token = pathComponents.first {
                 handleInviteToken(token)
@@ -101,16 +114,29 @@ class DeepLinkHandler: ObservableObject {
     }
     
     private func handleUniversalLink(_ url: URL) {
-        // Format: https://helpem.ai/join/TOKEN
+        // Check for referral code in query parameter: ?ref=CODE
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+           let refCode = components.queryItems?.first(where: { $0.name == "ref" })?.value,
+           !refCode.isEmpty {
+            handleReferralCode(refCode)
+        }
+
+        // Format: https://helpem.ai/join/TOKEN or https://helpem.ai/join?ref=CODE
         let pathComponents = url.pathComponents.filter { $0 != "/" }
-        
-        guard pathComponents.count >= 2, pathComponents[0] == "join" else {
-            AppLogger.warning("Unknown universal link path: \(url.path)", logger: AppLogger.general)
+
+        // Handle /join path (for tribe invites with token in path)
+        if pathComponents.count >= 2, pathComponents[0] == "join" {
+            let token = pathComponents[1]
+            handleInviteToken(token)
             return
         }
-        
-        let token = pathComponents[1]
-        handleInviteToken(token)
+
+        // If just /join with ?ref= param, we already handled it above
+        if pathComponents.first == "join" {
+            return
+        }
+
+        AppLogger.warning("Unknown universal link path: \(url.path)", logger: AppLogger.general)
     }
     
     private func handleInviteToken(_ token: String) {
@@ -124,12 +150,50 @@ class DeepLinkHandler: ObservableObject {
     
     private func openTribe(_ tribeId: String) {
         AppLogger.info("Opening tribe: \(tribeId)", logger: AppLogger.general)
-        
+
         DispatchQueue.main.async {
             self.pendingTribeId = tribeId
         }
     }
-    
+
+    private func handleReferralCode(_ code: String) {
+        AppLogger.info("Storing referral code: \(code)", logger: AppLogger.general)
+
+        DispatchQueue.main.async {
+            self.pendingReferralCode = code
+            // Persist to UserDefaults so it survives app restarts before signup
+            UserDefaults.standard.set(code, forKey: "pendingReferralCode")
+        }
+    }
+
+    /// Apply the pending referral code after user signs up
+    /// Should be called after successful authentication
+    func applyPendingReferralCode() async {
+        guard let code = pendingReferralCode else { return }
+
+        AppLogger.info("Applying referral code: \(code)", logger: AppLogger.general)
+
+        do {
+            try await TribeAPIClient.shared.applyReferralCode(code)
+            AppLogger.info("Referral code applied successfully", logger: AppLogger.general)
+
+            // Clear the pending code
+            await MainActor.run {
+                self.pendingReferralCode = nil
+                UserDefaults.standard.removeObject(forKey: "pendingReferralCode")
+            }
+        } catch {
+            // Log but don't block - referral code might be invalid or already used
+            AppLogger.warning("Failed to apply referral code: \(error)", logger: AppLogger.general)
+
+            // Still clear it so we don't keep trying
+            await MainActor.run {
+                self.pendingReferralCode = nil
+                UserDefaults.standard.removeObject(forKey: "pendingReferralCode")
+            }
+        }
+    }
+
     /// Clear any pending deep link state
     func clearPendingState() {
         pendingInviteToken = nil

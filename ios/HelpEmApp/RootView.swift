@@ -7,8 +7,9 @@ import UIKit
 import AVFoundation
 
 struct RootView: View {
-    
+
     @StateObject private var authManager = AuthManager.shared
+    @EnvironmentObject private var deepLinkHandler: DeepLinkHandler
     @State private var webViewHandler: WebViewHandler?
     @State private var isMenuPresented = false
     @State private var isTribeManagerPresented = false
@@ -484,6 +485,14 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
+        .onChange(of: authManager.isAuthenticated) { wasAuthenticated, isAuthenticated in
+            // Apply pending referral code after successful signup
+            if !wasAuthenticated && isAuthenticated {
+                Task {
+                    await deepLinkHandler.applyPendingReferralCode()
+                }
+            }
+        }
         .onChange(of: scenePhase) { oldPhase, newPhase in
             if newPhase == .background {
                 print("📱 App entering background - force audio cleanup")
