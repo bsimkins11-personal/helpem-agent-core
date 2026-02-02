@@ -31,7 +31,7 @@ enum TribeItemType: String, CaseIterable, Identifiable {
 }
 
 /// Create a new item to share with tribe members
-/// Shows a minimal form: Title, Date (for appointments), and recipient selection
+/// Option to send to all members or select specific ones
 struct TribeCreateItemView: View {
     let tribe: Tribe
     let onCreated: () -> Void
@@ -42,11 +42,11 @@ struct TribeCreateItemView: View {
     @State private var selectedType: TribeItemType = .appointment
     @State private var title = ""
     @State private var selectedDate = Date()
+    @State private var sendToAll = true
     @State private var selectedRecipients: Set<String> = []
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var isCreating = false
-    @State private var showFirstTimeTooltip = false
 
     init(tribe: Tribe, onCreated: @escaping () -> Void) {
         self.tribe = tribe
@@ -57,41 +57,6 @@ struct TribeCreateItemView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // First-time education tooltip
-                if showFirstTimeTooltip {
-                    Section {
-                        HStack(spacing: 12) {
-                            Image(systemName: "info.circle.fill")
-                                .foregroundColor(.blue)
-                                .font(.title3)
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("How Tribe Sharing Works")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-
-                                Text("You choose who receives this. They'll decide whether to accept it.")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer()
-
-                            Button {
-                                withAnimation {
-                                    showFirstTimeTooltip = false
-                                    UserDefaults.standard.set(true, forKey: "tribe_create_tooltip_shown")
-                                }
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-
                 // Item type selection
                 Section("What to Share") {
                     Picker("Type", selection: $selectedType) {
@@ -118,7 +83,7 @@ struct TribeCreateItemView: View {
                     }
                 }
 
-                // Recipients
+                // Recipients section
                 Section {
                     if viewModel.isLoadingMembers {
                         HStack {
@@ -126,26 +91,40 @@ struct TribeCreateItemView: View {
                             Text("Loading members...")
                                 .foregroundColor(.secondary)
                         }
-                    } else if viewModel.availableRecipients.isEmpty {
-                        Text("No members available to share with")
-                            .foregroundColor(.secondary)
                     } else {
-                        ForEach(viewModel.availableRecipients) { member in
-                            Toggle(isOn: Binding(
-                                get: { selectedRecipients.contains(member.userId) },
-                                set: { isSelected in
-                                    if isSelected {
-                                        selectedRecipients.insert(member.userId)
-                                    } else {
-                                        selectedRecipients.remove(member.userId)
-                                    }
-                                }
-                            )) {
-                                HStack(spacing: 10) {
-                                    MemberAvatarView(avatarUrl: member.avatarUrl, size: 32)
+                        // Send to all toggle
+                        Toggle(isOn: $sendToAll) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "person.3.fill")
+                                    .foregroundColor(.blue)
+                                Text("Send to all members")
+                            }
+                        }
+                        .onChange(of: sendToAll) { _, newValue in
+                            if newValue {
+                                // Select all when toggled on
+                                selectedRecipients = Set(viewModel.allRecipients.map { $0.userId })
+                            }
+                        }
 
-                                    Text(viewModel.displayName(for: member))
-                                        .font(.body)
+                        // Individual member selection (only when not sending to all)
+                        if !sendToAll {
+                            ForEach(viewModel.allRecipients) { member in
+                                Toggle(isOn: Binding(
+                                    get: { selectedRecipients.contains(member.userId) },
+                                    set: { isSelected in
+                                        if isSelected {
+                                            selectedRecipients.insert(member.userId)
+                                        } else {
+                                            selectedRecipients.remove(member.userId)
+                                        }
+                                    }
+                                )) {
+                                    HStack(spacing: 10) {
+                                        MemberAvatarView(avatarUrl: member.avatarUrl, size: 32)
+                                        Text(viewModel.displayName(for: member))
+                                            .font(.body)
+                                    }
                                 }
                             }
                         }
@@ -153,8 +132,12 @@ struct TribeCreateItemView: View {
                 } header: {
                     Text("Send To")
                 } footer: {
-                    if !viewModel.availableRecipients.isEmpty {
-                        Text("Select who should receive this proposal.")
+                    if !viewModel.isLoadingMembers {
+                        if sendToAll {
+                            Text("All \(viewModel.allRecipients.count) members will receive this. Each decides whether to accept.")
+                        } else {
+                            Text("\(selectedRecipients.count) member(s) selected. Each decides whether to accept.")
+                        }
                     }
                 }
             }
@@ -183,11 +166,8 @@ struct TribeCreateItemView: View {
             }
             .task {
                 await viewModel.loadMembers(tribeId: tribe.id)
-
-                // Show tooltip if first time
-                if !UserDefaults.standard.bool(forKey: "tribe_create_tooltip_shown") {
-                    showFirstTimeTooltip = true
-                }
+                // Default to all selected
+                selectedRecipients = Set(viewModel.allRecipients.map { $0.userId })
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK", role: .cancel) {}
@@ -199,12 +179,13 @@ struct TribeCreateItemView: View {
 
     private var canCreate: Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmedTitle.isEmpty && !selectedRecipients.isEmpty
+        let hasRecipients = sendToAll ? viewModel.allRecipients.count > 0 : selectedRecipients.count > 0
+        return !trimmedTitle.isEmpty && hasRecipients && !viewModel.isLoadingMembers
     }
 
     private func createItem() async {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty, !selectedRecipients.isEmpty else { return }
+        guard !trimmedTitle.isEmpty else { return }
 
         isCreating = true
         defer { isCreating = false }
@@ -216,11 +197,18 @@ struct TribeCreateItemView: View {
                 data["datetime"] = ISO8601DateFormatter().string(from: selectedDate)
             }
 
+            let recipients: [String]
+            if sendToAll {
+                recipients = viewModel.allRecipients.map { $0.userId }
+            } else {
+                recipients = Array(selectedRecipients)
+            }
+
             try await viewModel.createItem(
                 tribeId: tribe.id,
                 itemType: selectedType.rawValue,
                 data: data,
-                recipientUserIds: Array(selectedRecipients)
+                recipientUserIds: recipients
             )
 
             onCreated()
@@ -237,7 +225,7 @@ struct TribeCreateItemView: View {
 
 @MainActor
 class TribeCreateItemViewModel: ObservableObject {
-    @Published var availableRecipients: [TribeMember] = []
+    @Published var allRecipients: [TribeMember] = []
     @Published var isLoadingMembers = false
 
     private let createItemUseCase = AppContainer.shared.makeCreateTribeItemUseCase()
@@ -253,12 +241,12 @@ class TribeCreateItemViewModel: ObservableObject {
             let allMembers = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
 
             // Filter: only accepted members, exclude current user
-            availableRecipients = allMembers.filter { member in
+            allRecipients = allMembers.filter { member in
                 member.userId != currentUserId && member.isAccepted
             }
 
             AppLogger.info(
-                "Loaded \(availableRecipients.count) available recipients for tribe item creation",
+                "Loaded \(allRecipients.count) tribe members for sharing",
                 logger: AppLogger.general
             )
         } catch {
@@ -280,6 +268,14 @@ class TribeCreateItemViewModel: ObservableObject {
         data: [String: Any],
         recipientUserIds: [String]
     ) async throws {
+        guard !recipientUserIds.isEmpty else {
+            throw NSError(
+                domain: "TribeCreateItem",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "No tribe members selected"]
+            )
+        }
+
         _ = try await createItemUseCase.execute(
             tribeId: tribeId,
             itemType: itemType,
@@ -288,7 +284,7 @@ class TribeCreateItemViewModel: ObservableObject {
         )
 
         AppLogger.info(
-            "Created tribe item: \(itemType), sent to \(recipientUserIds.count) recipients",
+            "Created tribe item: \(itemType), sent to \(recipientUserIds.count) members",
             logger: AppLogger.general
         )
     }
