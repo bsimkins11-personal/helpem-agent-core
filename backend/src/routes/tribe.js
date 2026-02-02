@@ -568,13 +568,24 @@ router.get("/:tribeId/members", async (req, res) => {
       },
       include: {
         permissions: true,
+        user: {
+          select: { displayName: true, avatarUrl: true },
+        },
       },
       orderBy: {
         acceptedAt: "asc",
       },
     });
 
-    return res.json({ members });
+    // Format response: use user.displayName/avatarUrl if member doesn't have own
+    const formattedMembers = members.map((m) => ({
+      ...m,
+      displayName: m.displayName || m.user?.displayName || null,
+      avatarUrl: m.user?.avatarUrl || null,
+      user: undefined, // Don't expose full user object
+    }));
+
+    return res.json({ members: formattedMembers });
   } catch (err) {
     console.error("ERROR GET /tribes/:tribeId/members:", err);
     return res.status(500).json({ error: "Internal server error" });

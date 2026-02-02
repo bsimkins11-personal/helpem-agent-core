@@ -186,36 +186,100 @@ struct TribeMessagesView: View {
 struct MessageBubble: View {
     let message: TribeMessage
     let isCurrentUser: Bool
-    
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
         HStack {
             if isCurrentUser {
                 Spacer()
             }
-            
+
             VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
-                Text(message.message)
+                messageContent
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(isCurrentUser ? Color.blue : Color(.systemGray5))
-                    .foregroundColor(isCurrentUser ? .white : .primary)
                     .cornerRadius(18)
-                
+
                 if message.editedAt != nil {
                     Text("Edited")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Text(message.createdAt.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-            
+
             if !isCurrentUser {
                 Spacer()
             }
         }
+    }
+
+    @ViewBuilder
+    private var messageContent: some View {
+        let urls = detectURLs(in: message.message)
+
+        if urls.isEmpty {
+            // No URLs, just plain text
+            Text(message.message)
+                .foregroundColor(isCurrentUser ? .white : .primary)
+        } else {
+            // Has URLs - make them tappable
+            LinkedTextView(
+                text: message.message,
+                urls: urls,
+                textColor: isCurrentUser ? .white : .primary,
+                linkColor: isCurrentUser ? .white.opacity(0.9) : .blue
+            )
+        }
+    }
+
+    private func detectURLs(in text: String) -> [(range: Range<String.Index>, url: URL)] {
+        var results: [(range: Range<String.Index>, url: URL)] = []
+
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+        let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
+
+        detector?.enumerateMatches(in: text, options: [], range: nsRange) { match, _, _ in
+            if let match = match,
+               let url = match.url,
+               let range = Range(match.range, in: text) {
+                results.append((range: range, url: url))
+            }
+        }
+
+        return results
+    }
+}
+
+// MARK: - Linked Text View
+
+struct LinkedTextView: View {
+    let text: String
+    let urls: [(range: Range<String.Index>, url: URL)]
+    let textColor: Color
+    let linkColor: Color
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        // Build attributed text with tappable links
+        var attributedString = AttributedString(text)
+        attributedString.foregroundColor = textColor
+
+        // Apply link styling to URL ranges
+        for urlInfo in urls {
+            if let attrRange = Range(urlInfo.range, in: attributedString) {
+                attributedString[attrRange].link = urlInfo.url
+                attributedString[attrRange].foregroundColor = linkColor
+                attributedString[attrRange].underlineStyle = .single
+            }
+        }
+
+        return Text(attributedString)
+            .tint(linkColor)
     }
 }
 

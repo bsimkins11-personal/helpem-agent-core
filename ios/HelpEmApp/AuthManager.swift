@@ -20,6 +20,9 @@ final class AuthManager: NSObject, ObservableObject {
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var error: String?
+    @Published var needsDisplayName = false
+    @Published var currentDisplayName: String?
+    @Published var currentAvatarUrl: String?
 
     /// Current user's ID (from keychain)
     var currentUserId: String? {
@@ -159,32 +162,38 @@ final class AuthManager: NSObject, ObservableObject {
     // MARK: - Backend Communication
     
     /// Exchange Apple identity token for app session token
-    private func authenticateWithBackend(appleUserId: String, identityToken: String) async throws {
+    private func authenticateWithBackend(appleUserId: String, identityToken: String, displayName: String?) async throws {
         guard let url = URL(string: "\(apiBaseURL)/auth/apple") else {
             throw AuthError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30
-        
-        let body: [String: String] = [
+
+        var body: [String: Any] = [
             "apple_user_id": appleUserId,
             "identity_token": identityToken
         ]
+        if let displayName = displayName, !displayName.isEmpty {
+            body["display_name"] = displayName
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
+
         print("🔐 Authenticating with backend...")
-        
+        if let displayName = displayName {
+            print("   Display name from Apple: \(displayName)")
+        }
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AuthError.invalidResponse
         }
-        
+
         print("📊 Backend response status: \(httpResponse.statusCode)")
-        
+
         guard httpResponse.statusCode == 200 else {
             // Try to extract error message from response
             if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -193,30 +202,104 @@ final class AuthManager: NSObject, ObservableObject {
             }
             throw AuthError.httpError(httpResponse.statusCode)
         }
-        
+
         // Parse response
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let sessionToken = json["session_token"] as? String,
               let userId = json["user_id"] as? String else {
             throw AuthError.invalidResponse
         }
-        
+
+        // Check if user needs to set display name
+        let needsName = json["needs_display_name"] as? Bool ?? false
+        let storedDisplayName = json["display_name"] as? String
+        let storedAvatarUrl = json["avatar_url"] as? String
+
         // Store credentials securely in Keychain
         print("💾 Storing credentials in Keychain...")
         print("   Session Token length: \(sessionToken.count)")
         print("   Session Token preview: \(sessionToken.prefix(30))...")
         print("   Apple User ID: \(appleUserId)")
         print("   User ID: \(userId)")
-        
+        print("   Needs display name: \(needsName)")
+
         KeychainHelper.shared.sessionToken = sessionToken
         KeychainHelper.shared.appleUserId = appleUserId
         KeychainHelper.shared.userId = userId
-        
+
+        // Update published properties
+        self.needsDisplayName = needsName
+        self.currentDisplayName = storedDisplayName
+        self.currentAvatarUrl = storedAvatarUrl
+
         // Verify storage
         let storedToken = KeychainHelper.shared.sessionToken
         print("✅ Verification - Token stored successfully:", storedToken != nil)
         print("✅ Verification - Stored token length:", storedToken?.count ?? 0)
         print("✅ Session established for user: \(userId.prefix(8))...")
+    }
+
+    /// Update user profile (display name, avatar)
+    func updateProfile(displayName: String? = nil, avatarUrl: String? = nil) async throws {
+        guard let sessionToken = KeychainHelper.shared.sessionToken else {
+            throw AuthError.missingCredentials
+        }
+
+        guard let url = URL(string: "\(apiBaseURL)/user/profile") else {
+            throw AuthError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(sessionToken)", forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 30
+
+        var body: [String: Any] = [:]
+        if let displayName = displayName {
+            body["displayName"] = displayName
+        }
+        if let avatarUrl = avatarUrl {
+            body["avatarUrl"] = avatarUrl
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        print("📝 Updating profile...")
+        print("   Display name: \(displayName ?? "nil")")
+        print("   Avatar URL length: \(avatarUrl?.count ?? 0) chars")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        print("📡 Response received")
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AuthError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            print("❌ Profile update failed: HTTP \(httpResponse.statusCode)")
+            if let responseStr = String(data: data, encoding: .utf8) {
+                print("   Response: \(responseStr.prefix(500))")
+            }
+            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMessage = errorJson["error"] as? String {
+                throw AuthError.serverError(errorMessage)
+            }
+            throw AuthError.httpError(httpResponse.statusCode)
+        }
+
+        // Parse response
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw AuthError.invalidResponse
+        }
+
+        // Update local state
+        self.currentDisplayName = json["displayName"] as? String
+        self.currentAvatarUrl = json["avatarUrl"] as? String
+        self.needsDisplayName = json["needsDisplayName"] as? Bool ?? false
+
+        print("✅ Profile updated: \(self.currentDisplayName ?? "nil"), avatar: \(self.currentAvatarUrl != nil)")
     }
 
     /// Sign out and clear all stored credentials
@@ -273,32 +356,45 @@ extension AuthManager: ASAuthorizationControllerDelegate {
                 handleAuthError(AuthError.missingCredentials)
                 return
             }
-            
+
             // Extract identity token
             guard let identityTokenData = credential.identityToken,
                   let identityToken = String(data: identityTokenData, encoding: .utf8) else {
                 handleAuthError(AuthError.missingCredentials)
                 return
             }
-            
+
             let appleUserId = credential.user
-            
+
+            // Extract display name from Apple credential (only available on first sign-in)
+            var displayName: String?
+            if let fullName = credential.fullName {
+                let givenName = fullName.givenName ?? ""
+                let familyName = fullName.familyName ?? ""
+                let combinedName = "\(givenName) \(familyName)".trimmingCharacters(in: .whitespaces)
+                if !combinedName.isEmpty {
+                    displayName = combinedName
+                    print("📝 Got display name from Apple: \(combinedName)")
+                }
+            }
+
             do {
                 // Exchange Apple token for app session token
                 try await authenticateWithBackend(
                     appleUserId: appleUserId,
-                    identityToken: identityToken
+                    identityToken: identityToken,
+                    displayName: displayName
                 )
-                
+
                 isAuthenticated = true
                 isLoading = false
-                
+
                 // Resume silent auth continuation if present
                 if let continuation = silentAuthContinuation {
                     silentAuthContinuation = nil
                     continuation.resume(returning: true)
                 }
-                
+
             } catch {
                 handleAuthError(error)
             }

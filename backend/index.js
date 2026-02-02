@@ -133,7 +133,7 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
   console.log("ROUTE HIT: POST /auth/apple");
 
   try {
-    const { apple_user_id, identity_token } = req.body;
+    const { apple_user_id, identity_token, display_name } = req.body;
 
     // Validate required fields
     if (!apple_user_id || typeof apple_user_id !== "string") {
@@ -165,19 +165,25 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
     // Extract email from Apple token (if user shared it)
     const appleEmail = appleAuth.user.email;
 
+    // Sanitize display name (trim, limit length)
+    const sanitizedDisplayName = display_name?.trim()?.slice(0, 100) || null;
+
     const user = await prisma.user.upsert({
       where: { appleUserId: apple_user_id },
       update: {
         lastActiveAt: new Date(),
         // Update email if provided and not already set
         ...(appleEmail ? { email: appleEmail.toLowerCase() } : {}),
+        // Only update displayName if provided and user doesn't have one
+        ...(sanitizedDisplayName ? { displayName: sanitizedDisplayName } : {}),
       },
       create: {
         appleUserId: apple_user_id,
         lastActiveAt: new Date(),
         email: appleEmail ? appleEmail.toLowerCase() : null,
+        displayName: sanitizedDisplayName,
       },
-      select: { id: true, createdAt: true, email: true },
+      select: { id: true, createdAt: true, email: true, displayName: true, avatarUrl: true },
     });
 
     const userId = user.id;
@@ -215,14 +221,20 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
     // Issue app-owned session token
     const sessionToken = createSessionToken(userId, apple_user_id);
 
+    // Check if user needs to set their display name
+    const needsDisplayName = !user.displayName;
+
     console.log(
-      `✅ Auth success: user=${userId}, apple_user=${apple_user_id.substring(0, 10)}..., new=${isNewUser}`
+      `✅ Auth success: user=${userId}, apple_user=${apple_user_id.substring(0, 10)}..., new=${isNewUser}, needsName=${needsDisplayName}`
     );
 
     return res.json({
       session_token: sessionToken,
       user_id: userId,
       is_new_user: isNewUser,
+      needs_display_name: needsDisplayName,
+      display_name: user.displayName,
+      avatar_url: user.avatarUrl,
     });
 
   } catch (err) {
@@ -241,6 +253,108 @@ app.get("/auth/apple", (_req, res) => {
     service: "auth/apple",
     version: "1.0.0",
   });
+});
+
+/**
+ * GET /user/profile
+ * Get current user's profile
+ */
+app.get("/user/profile", apiLimiter, async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.session.userId },
+      select: { id: true, displayName: true, avatarUrl: true, email: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.json({
+      id: user.id,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      email: user.email,
+      needsDisplayName: !user.displayName,
+    });
+  } catch (err) {
+    console.error("Error getting profile:", err);
+    return res.status(500).json({ error: "Failed to get profile" });
+  }
+});
+
+/**
+ * PATCH /user/profile
+ * Update current user's profile (display name, avatar)
+ */
+app.patch("/user/profile", apiLimiter, async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const { displayName, avatarUrl } = req.body;
+
+    // Build update object
+    const updateData = {};
+    if (displayName !== undefined) {
+      const sanitized = displayName?.trim()?.slice(0, 100) || null;
+      if (sanitized && sanitized.length < 1) {
+        return res.status(400).json({ error: "Display name cannot be empty" });
+      }
+      updateData.displayName = sanitized;
+    }
+    if (avatarUrl !== undefined) {
+      // Validate avatar - allow data URLs (base64) or regular URLs
+      if (avatarUrl && typeof avatarUrl === "string") {
+        if (avatarUrl.length > 2_000_000) {
+          return res.status(400).json({ error: "Avatar image too large" });
+        }
+        // Accept data URLs (base64 images) or valid URLs
+        if (!avatarUrl.startsWith("data:")) {
+          try {
+            new URL(avatarUrl);
+          } catch {
+            return res.status(400).json({ error: "Invalid avatar URL" });
+          }
+        }
+        updateData.avatarUrl = avatarUrl;
+      } else {
+        updateData.avatarUrl = null; // Allow clearing avatar
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: session.session.userId },
+      data: updateData,
+      select: { id: true, displayName: true, avatarUrl: true, email: true },
+    });
+
+    const logData = { ...updateData };
+    if (logData.avatarUrl) logData.avatarUrl = `[${logData.avatarUrl.length} chars]`;
+    console.log(`✅ Profile updated for user ${user.id}: ${JSON.stringify(logData)}`);
+
+    return res.json({
+      id: user.id,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      email: user.email,
+      needsDisplayName: !user.displayName,
+    });
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    return res.status(500).json({ error: "Failed to update profile" });
+  }
 });
 
 // --- TEST ROUTE (PRODUCTION-STYLE) ---

@@ -147,6 +147,7 @@ struct TribeMember: Codable, Identifiable {
     let userId: String
     let invitedBy: String
     let displayName: String?
+    let avatarUrl: String?
     let isAdmin: Bool
     let useTribeDefaults: Bool
     let invitedAt: Date
@@ -162,6 +163,7 @@ struct TribeMember: Codable, Identifiable {
         case tribeId = "tribeId"
         case invitedBy = "invitedBy"
         case displayName = "displayName"
+        case avatarUrl = "avatarUrl"
         case isAdmin = "isAdmin"
         case useTribeDefaults = "useTribeDefaults"
         case invitedAt = "invitedAt"
@@ -180,6 +182,7 @@ struct TribeMember: Codable, Identifiable {
         userId = try container.decode(String.self, forKey: .userId)
         invitedBy = try container.decode(String.self, forKey: .invitedBy)
         displayName = try? container.decode(String.self, forKey: .displayName)
+        avatarUrl = try? container.decode(String.self, forKey: .avatarUrl)
         isAdmin = (try? container.decode(Bool.self, forKey: .isAdmin)) ?? false
         useTribeDefaults = (try? container.decode(Bool.self, forKey: .useTribeDefaults)) ?? true
         invitedAt = try container.decode(Date.self, forKey: .invitedAt)

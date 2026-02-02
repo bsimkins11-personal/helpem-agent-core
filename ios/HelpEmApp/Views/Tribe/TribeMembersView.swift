@@ -37,37 +37,31 @@ struct TribeMembersListView: View {
 struct TribeMemberRow: View {
     let member: TribeMember
     let isOwner: Bool
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            Circle()
-                .fill(Color.blue.opacity(0.2))
-                .frame(width: 44, height: 44)
-                .overlay {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(.blue)
-                }
-            
+            MemberAvatarView(avatarUrl: member.avatarUrl, size: 44)
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(memberDisplayName)
                         .font(.headline)
-                    
+
                     if member.isAccepted {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
                             .font(.caption)
                     }
                 }
-                
+
                 Text(memberStatus)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             Spacer()
-            
+
             if isOwner && member.isAccepted {
                 Image(systemName: "chevron.right")
                     .foregroundColor(.secondary)
@@ -76,7 +70,7 @@ struct TribeMemberRow: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     private var memberDisplayName: String {
         if let name = member.displayName, !name.isEmpty {
             return name
@@ -107,11 +101,55 @@ class TribeMembersListViewModel: ObservableObject {
     func loadMembers(tribeId: String) async {
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
             members = try await TribeAPIClient.shared.getTribeMembers(tribeId: tribeId)
         } catch {
             AppLogger.error("Failed to load members: \(error.localizedDescription)", logger: AppLogger.general)
         }
+    }
+}
+
+// MARK: - Member Avatar View
+
+struct MemberAvatarView: View {
+    let avatarUrl: String?
+    let size: CGFloat
+
+    var body: some View {
+        if let urlString = avatarUrl, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                case .failure:
+                    placeholderAvatar
+                case .empty:
+                    placeholderAvatar
+                        .overlay {
+                            ProgressView()
+                        }
+                @unknown default:
+                    placeholderAvatar
+                }
+            }
+        } else {
+            placeholderAvatar
+        }
+    }
+
+    private var placeholderAvatar: some View {
+        Circle()
+            .fill(Color.blue.opacity(0.2))
+            .frame(width: size, height: size)
+            .overlay {
+                Image(systemName: "person.fill")
+                    .foregroundColor(.blue)
+                    .font(.system(size: size * 0.4))
+            }
     }
 }

@@ -11,10 +11,13 @@ model User {
   appleUserId  String      @unique @map("apple_user_id")
   email        String?     @unique  // From Apple Sign-In (if shared)
   phone        String?     @unique  // Normalized E.164 format
+  displayName  String?     @map("display_name")  // User's display name for tribes
+  avatarUrl    String?     @map("avatar_url")    // Profile photo URL
   createdAt    DateTime    @default(now()) @map("created_at")
   lastActiveAt DateTime    @default(now()) @map("last_active_at")
   inputs       UserInput[]
   instruction  UserInstruction?
+  tribeMemberships TribeMember[]
 
   @@index([email])
   @@index([phone])
@@ -197,10 +200,11 @@ model TribeMember {
   digestNotifs      Boolean                   @default(false) @map("digest_notifications")
   
   tribe             Tribe                     @relation(fields: [tribeId], references: [id], onDelete: Cascade)
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   permissions       TribeMemberPermissions?
   personalItemPermissions TribeMemberPersonalItemPermissions?
   proposals         TribeProposal[]
-  
+
   @@unique([tribeId, userId])
   @@map("tribe_members")
 }

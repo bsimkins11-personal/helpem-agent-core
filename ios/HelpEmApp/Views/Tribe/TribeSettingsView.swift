@@ -191,9 +191,9 @@ struct TribeSettingsView: View {
         do {
             if let data = try await item.loadTransferable(type: Data.self),
                let image = UIImage(data: data) {
-                let resized = image.resizedSquare(to: 256)
+                let resized = image.resizedSquare(to: 128)
                 avatarImage = resized
-                if let dataUrl = resized.jpegData(compressionQuality: 0.85)?.asDataURL() {
+                if let dataUrl = resized.jpegData(compressionQuality: 0.6)?.asDataURL() {
                     await viewModel.updateTribeAvatar(tribeId: tribe.id, avatarUrl: dataUrl)
                 }
             }

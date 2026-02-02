@@ -12,6 +12,7 @@ struct RootView: View {
     @State private var webViewHandler: WebViewHandler?
     @State private var isMenuPresented = false
     @State private var isTribeManagerPresented = false
+    @State private var isProfilePresented = false
     @Environment(\.scenePhase) private var scenePhase
     
     private func openFeedbackURL() {
@@ -263,7 +264,10 @@ struct RootView: View {
     
     var body: some View {
         Group {
-            if authManager.isAuthenticated {
+            if authManager.isAuthenticated && authManager.needsDisplayName {
+                // Profile setup - shown once after first sign-in if no name
+                ProfileSetupView(authManager: authManager)
+            } else if authManager.isAuthenticated {
                 // Main app view with custom header
                     GeometryReader { geometry in
                         ZStack {
@@ -338,7 +342,18 @@ struct RootView: View {
                                     .padding(.bottom, 12)
                                 
                                 Divider()
-                                
+
+                                // 0) Profile
+                                Button(action: {
+                                    isMenuPresented = false
+                                    isProfilePresented = true
+                                }) {
+                                    Label("Profile", systemImage: "person.circle")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 12)
+                                }
+                                .padding(.horizontal, 20)
+
                                 // 1) Tribes
                                 Button(action: {
                                     isMenuPresented = false
@@ -443,6 +458,20 @@ struct RootView: View {
                                         ToolbarItem(placement: .cancellationAction) {
                                             Button("Done") {
                                                 isTribeManagerPresented = false
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                        .sheet(isPresented: $isProfilePresented) {
+                            NavigationStack {
+                                ProfileSettingsView(authManager: authManager)
+                                    .navigationTitle("Profile")
+                                    .navigationBarTitleDisplayMode(.inline)
+                                    .toolbar {
+                                        ToolbarItem(placement: .cancellationAction) {
+                                            Button("Done") {
+                                                isProfilePresented = false
                                             }
                                         }
                                     }
