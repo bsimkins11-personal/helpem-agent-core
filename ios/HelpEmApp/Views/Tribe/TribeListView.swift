@@ -29,9 +29,9 @@ struct TribeListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.tribes.isEmpty {
+                if viewModel.isLoading && viewModel.tribes.isEmpty && viewModel.invitations.isEmpty {
                     ProgressView("Loading Tribes...")
-                } else if viewModel.tribes.isEmpty {
+                } else if viewModel.tribes.isEmpty && viewModel.invitations.isEmpty {
                     emptyState
                 } else {
                     tribeList
