@@ -181,6 +181,7 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
     });
 
     const userId = user.id;
+    logApiCall('auth', userId, { isNew: false, email: user.email });
 
     // Determine if this is a new user (createdAt is very recent)
     const createdAt = new Date(user.createdAt);
@@ -597,6 +598,22 @@ app.get("/debug/users", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
+});
+
+// In-memory log for debugging (recent auth/API calls)
+const recentApiCalls = [];
+const MAX_RECENT_CALLS = 50;
+
+function logApiCall(type, userId, data = {}) {
+  recentApiCalls.unshift({ type, userId, data, timestamp: new Date().toISOString() });
+  if (recentApiCalls.length > MAX_RECENT_CALLS) recentApiCalls.pop();
+}
+// Make available globally for routes
+global.logApiCall = logApiCall;
+
+// Debug: View recent API calls
+app.get("/debug/recent-calls", (req, res) => {
+  return res.json({ count: recentApiCalls.length, calls: recentApiCalls });
 });
 
 // Debug: Who am I (get current user ID from auth token)

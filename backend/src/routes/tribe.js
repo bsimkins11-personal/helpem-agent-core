@@ -165,6 +165,7 @@ router.get("/invitations", async (req, res) => {
 
     const userId = session.session.userId;
     console.log(`[invitations] Fetching invitations for userId: ${userId}`);
+    if (global.logApiCall) global.logApiCall('invitations', userId, {});
     const pending = await prisma.tribeMember.findMany({
       where: {
         userId,
