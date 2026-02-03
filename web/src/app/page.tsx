@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { AppStoreQRCode } from "@/components/AppStoreQRCode";
 
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -345,19 +346,27 @@ export default function LandingPage() {
             <p className="text-lg sm:text-xl mb-10 text-white/90 max-w-2xl mx-auto">
               Start with a 30-day free trial. No credit card required.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a
-                href="https://apps.apple.com/app/helpem/id6738968880"
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-brandBlue font-semibold text-lg hover:shadow-2xl transition-all"
-              >
-                Download for iOS
-              </a>
-              <Link
-                href="/pricing"
-                className="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white text-white font-semibold text-lg hover:bg-white hover:text-brandBlue transition-all"
-              >
-                View Pricing
-              </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              <div className="flex flex-col items-center gap-4">
+                <a
+                  href="https://apps.apple.com/app/helpem/id6738968880"
+                  className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-brandBlue font-semibold text-lg hover:shadow-2xl transition-all"
+                >
+                  Download for iOS
+                </a>
+                <Link
+                  href="/pricing"
+                  className="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white text-white font-semibold text-lg hover:bg-white hover:text-brandBlue transition-all"
+                >
+                  View Pricing
+                </Link>
+              </div>
+
+              {/* QR Code - Desktop only */}
+              <div className="hidden md:flex items-center gap-4">
+                <div className="text-white/50">or scan</div>
+                <AppStoreQRCode size={120} />
+              </div>
             </div>
           </div>
         </div>
