@@ -12,6 +12,8 @@ import tribeInviteLinksRoutes from "./src/routes/tribe-invite-links.js";
 import googleCalendarRoutes from "./src/routes/google-calendar.js";
 import notificationsRoutes from "./src/routes/notifications.js";
 import referralRoutes from "./src/routes/referral.js";
+import { evaluateReferralProgressForReferee } from "./src/services/referralService.js";
+import subscriptionsRoutes from "./src/routes/subscriptions.js";
 import debugTribesHandler from './routes/debug-tribes.js';
 import demoTribesRoutes from './routes/demo-tribes.js';
 import demoTribesCleanupRoutes from './routes/demo-tribes-cleanup.js';
@@ -273,6 +275,13 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
           date: today,
         },
       });
+
+      // Rolling referral evaluation (non-blocking)
+      try {
+        await evaluateReferralProgressForReferee(userId);
+      } catch (evalErr) {
+        console.error("Error evaluating referral progress:", evalErr);
+      }
     } catch (activityErr) {
       // Don't fail auth if activity tracking fails
       console.error("Error tracking activity day:", activityErr);
@@ -703,6 +712,12 @@ app.use("/google", apiLimiter, googleCalendarRoutes);
 // =============================================================================
 
 app.use("/notifications", apiLimiter, notificationsRoutes);
+
+// =============================================================================
+// SUBSCRIPTIONS ROUTES
+// =============================================================================
+
+app.use("/subscriptions", apiLimiter, subscriptionsRoutes);
 
 // =============================================================================
 // TRIBE ROUTES

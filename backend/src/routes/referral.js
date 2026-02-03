@@ -2,34 +2,43 @@
  * Referral/Evangelist Program Routes
  *
  * REWARDS:
- * - Referee: 2 free months of basic when they enter code
- * - Inviter: Evangelist badge + 1 premium month at basic rate for every 3 signups
+ * - Inviter: Evangelist badge for each referral signup
+ * - Inviter: 1 free Premium month when invitee completes:
+ *   - 5 distinct app opens in first 30 days
+ *   - 1 meaningful in-app action
+ *   - 1 completed paid subscription period (Apple verified)
  *
  * RULES:
  * - One referral per referee (ignore subsequent codes)
  * - Self-referrals blocked
- * - Max 3 premium months per year for inviter (resets each calendar year)
+ * - Max 3 free premium months per calendar year
  */
 
 import express from "express";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma.js";
 import { verifySessionToken } from "../lib/sessionAuth.js";
+import {
+  evaluateReferralProgressForReferee,
+  getEligibilityWindowEnd,
+  getReferralCountsForInviter,
+  REFERRAL_MAX_FREE_MONTHS_PER_YEAR,
+} from "../services/referralService.js";
+import { createInAppNotification } from "../services/inAppNotificationService.js";
+import { isSMSEnabled, sendReferralInviteSMS } from "../services/smsService.js";
 
 const router = express.Router();
 
 // Constants
-const REFERRAL_CODE_LENGTH = 8;
-const REFEREE_FREE_MONTHS = 2; // Months of free basic for new users
-const SIGNUPS_PER_PREMIUM_MONTH = 3; // Every 3 signups = 1 premium month for inviter
-const MAX_PREMIUM_MONTHS_PER_YEAR = 3; // Yearly cap on earned premium months
+const REFERRAL_CODE_LENGTH = 6;
+const MAX_FREE_MONTHS_PER_YEAR = REFERRAL_MAX_FREE_MONTHS_PER_YEAR;
 
 /**
  * Generate a unique 8-character referral code
  * Uses alphanumeric chars, uppercase for readability
  */
 function generateReferralCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed confusing chars (0, O, 1, I)
+  const chars = "0123456789";
   let code = "";
   for (let i = 0; i < REFERRAL_CODE_LENGTH; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -56,7 +65,6 @@ router.get("/", async (req, res) => {
         referralCode: true,
         referredByUserId: true,
         referredAt: true,
-        referralBonusExpiresAt: true,
         evangelistLifetimeCount: true,
         earnedPremiumMonths: true,
         premiumMonthsThisYear: true,
@@ -71,20 +79,12 @@ router.get("/", async (req, res) => {
     // Has evangelist badge if they've referred at least one person
     const hasBadge = user.evangelistLifetimeCount > 0;
 
-    // Check if user has active free months bonus
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const hasFreeMonths = user.referralBonusExpiresAt && user.referralBonusExpiresAt > now;
+    const counts = await getReferralCountsForInviter(userId, now);
 
-    // Progress toward next premium month
-    const signupsToNextMonth = SIGNUPS_PER_PREMIUM_MONTH - (user.evangelistLifetimeCount % SIGNUPS_PER_PREMIUM_MONTH);
-
-    // Yearly cap tracking - reset if new year
-    let premiumMonthsThisYear = user.premiumMonthsThisYear || 0;
-    if (user.premiumMonthsYear !== currentYear) {
-      premiumMonthsThisYear = 0;
-    }
-    const premiumMonthsRemainingThisYear = Math.max(0, MAX_PREMIUM_MONTHS_PER_YEAR - premiumMonthsThisYear);
+    // For backward compatibility with existing clients
+    const premiumMonthsThisYear = counts.yearlyRewards;
+    const premiumMonthsRemainingThisYear = Math.max(0, MAX_FREE_MONTHS_PER_YEAR - counts.yearlyRewards);
 
     return res.json({
       referralCode: user.referralCode,
@@ -93,12 +93,15 @@ router.get("/", async (req, res) => {
       earnedPremiumMonths: user.earnedPremiumMonths || 0, // Premium months earned (lifetime)
       premiumMonthsThisYear, // Earned this calendar year
       premiumMonthsRemainingThisYear, // Can still earn this year
-      maxPremiumMonthsPerYear: MAX_PREMIUM_MONTHS_PER_YEAR, // The cap
-      signupsToNextMonth: user.evangelistLifetimeCount > 0 ? signupsToNextMonth : SIGNUPS_PER_PREMIUM_MONTH,
+      maxPremiumMonthsPerYear: MAX_FREE_MONTHS_PER_YEAR, // Back-compat field (yearly cap)
+      signupsToNextMonth: 1, // Back-compat field (now per-qualified referral)
       wasReferred: !!user.referredByUserId,
       referredAt: user.referredAt,
-      hasFreeMonths,
-      freeMonthsExpiresAt: hasFreeMonths ? user.referralBonusExpiresAt : null,
+      hasFreeMonths: false,
+      freeMonthsExpiresAt: null,
+      freeMonthsInProgress: counts.inProgressCount,
+      freeMonthsAvailable: counts.availableRewards,
+      freeMonthActiveUntil: counts.activeReward?.endsAt || null,
     });
   } catch (err) {
     console.error("ERROR GET /referral:", err);
@@ -182,11 +185,79 @@ router.post("/generate-code", async (req, res) => {
 });
 
 /**
+ * POST /referral/invite-sms
+ * Send referral code via SMS to a phone number
+ */
+router.post("/invite-sms", async (req, res) => {
+  try {
+    if (!isSMSEnabled()) {
+      return res.status(400).json({ error: "SMS is not configured" });
+    }
+
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { phone } = req.body || {};
+
+    if (!phone || typeof phone !== "string") {
+      return res.status(400).json({ error: "Phone number is required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        referralCode: true,
+        displayName: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    let code = user.referralCode;
+    if (!code) {
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (attempts < maxAttempts) {
+        code = generateReferralCode();
+        const existing = await prisma.user.findUnique({
+          where: { referralCode: code },
+          select: { id: true },
+        });
+        if (!existing) break;
+        attempts++;
+      }
+
+      if (!code || attempts >= maxAttempts) {
+        return res.status(500).json({ error: "Failed to generate referral code" });
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { referralCode: code },
+      });
+    }
+
+    const inviterName = user.displayName || "Your friend";
+    await sendReferralInviteSMS(phone, inviterName, code);
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("ERROR POST /referral/invite-sms:", err);
+    return res.status(500).json({ error: "Failed to send referral SMS" });
+  }
+});
+
+/**
  * POST /referral/apply
  * Apply a referral code during signup
  *
  * WHAT HAPPENS:
- * - Referee gets 2 free months of basic
  * - Inviter's signup tally increases by 1
  * - Inviter gets evangelist badge (if not already)
  *
@@ -212,7 +283,10 @@ router.post("/apply", async (req, res) => {
     // Normalize code (uppercase, trim)
     const normalizedCode = code.trim().toUpperCase();
 
-    if (normalizedCode.length !== REFERRAL_CODE_LENGTH) {
+    const isSixDigit = /^[0-9]{6}$/.test(normalizedCode);
+    const isLegacyEightChar = /^[A-Z2-9]{8}$/.test(normalizedCode);
+
+    if (!isSixDigit && !isLegacyEightChar) {
       return res.status(400).json({ error: "Invalid referral code format" });
     }
 
@@ -260,77 +334,151 @@ router.post("/apply", async (req, res) => {
       return res.status(400).json({ error: "Cannot use your own referral code" });
     }
 
-    // Calculate 2 months from now for referee's free bonus
     const now = new Date();
-    const bonusExpiresAt = new Date(now);
-    bonusExpiresAt.setMonth(bonusExpiresAt.getMonth() + REFEREE_FREE_MONTHS);
 
-    // Apply the referral - give referee 2 free months
+    // Apply the referral
     await prisma.user.update({
       where: { id: userId },
       data: {
         referredByUserId: inviter.id,
         referredAt: now,
-        referralBonusExpiresAt: bonusExpiresAt,
       },
     });
 
     // Calculate new inviter tally
     const newSignupCount = inviter.evangelistLifetimeCount + 1;
-    const currentYear = now.getFullYear();
 
-    // Check if inviter earns a premium month (every 3 signups)
-    const previousMilestone = Math.floor(inviter.evangelistLifetimeCount / SIGNUPS_PER_PREMIUM_MONTH);
-    const newMilestone = Math.floor(newSignupCount / SIGNUPS_PER_PREMIUM_MONTH);
-    const hitMilestone = newMilestone > previousMilestone;
-
-    // Check yearly cap - reset counter if new year
-    let premiumMonthsThisYear = inviter.premiumMonthsThisYear || 0;
-    if (inviter.premiumMonthsYear !== currentYear) {
-      premiumMonthsThisYear = 0; // Reset for new year
-    }
-
-    // Only award if under yearly cap
-    const canEarnMore = premiumMonthsThisYear < MAX_PREMIUM_MONTHS_PER_YEAR;
-    const earnedNewMonth = hitMilestone && canEarnMore;
-
-    // Update inviter's tally and premium months
     const inviterUpdate = {
       evangelistLifetimeCount: newSignupCount,
     };
-
-    if (earnedNewMonth) {
-      inviterUpdate.earnedPremiumMonths = (inviter.earnedPremiumMonths || 0) + 1;
-      inviterUpdate.premiumMonthsThisYear = premiumMonthsThisYear + 1;
-      inviterUpdate.premiumMonthsYear = currentYear;
-    } else if (inviter.premiumMonthsYear !== currentYear) {
-      // Reset yearly counter even if no award (for tracking)
-      inviterUpdate.premiumMonthsThisYear = 0;
-      inviterUpdate.premiumMonthsYear = currentYear;
-    }
 
     await prisma.user.update({
       where: { id: inviter.id },
       data: inviterUpdate,
     });
 
+    // Create referral progress tracker
+    const eligibilityEndsAt = getEligibilityWindowEnd(now);
+    await prisma.referralProgress.create({
+      data: {
+        inviterId: inviter.id,
+        refereeId: userId,
+        signupAt: now,
+        eligibilityEndsAt,
+        status: "pending",
+      },
+    });
+
+    await createInAppNotification(inviter.id, {
+      type: "referral_started",
+      title: "Referral started",
+      body: "Your friend joined. Tracking is on for a free Premium month.",
+    });
+
     console.log(`User ${userId} applied referral code ${normalizedCode} from inviter ${inviter.id}`);
-    console.log(`  - Referee gets free months until ${bonusExpiresAt.toISOString()}`);
     console.log(`  - Inviter tally now: ${newSignupCount}`);
-    if (hitMilestone && !canEarnMore) {
-      console.log(`  - ⚠️ Inviter hit milestone but at yearly cap (${MAX_PREMIUM_MONTHS_PER_YEAR}/year)`);
-    } else if (earnedNewMonth) {
-      console.log(`  - 🎉 Inviter earned a premium month! Total: ${(inviter.earnedPremiumMonths || 0) + 1}, This year: ${premiumMonthsThisYear + 1}/${MAX_PREMIUM_MONTHS_PER_YEAR}`);
-    }
 
     return res.json({
       success: true,
-      message: `Welcome! You have ${REFEREE_FREE_MONTHS} free months of HelpEm Basic.`,
-      freeMonthsExpiresAt: bonusExpiresAt,
+      message: "Referral applied!",
     });
   } catch (err) {
     console.error("ERROR POST /referral/apply:", err);
     return res.status(500).json({ error: "Failed to apply referral code" });
+  }
+});
+
+/**
+ * POST /referral/mark-usage
+ * Mark a meaningful in-app action for the current user (used for referral qualification)
+ */
+router.post("/mark-usage", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstMeaningfulUseAt: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!user.firstMeaningfulUseAt) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { firstMeaningfulUseAt: new Date() },
+      });
+    }
+
+    const evaluation = await evaluateReferralProgressForReferee(userId);
+
+    return res.json({ success: true, status: evaluation.status });
+  } catch (err) {
+    console.error("ERROR POST /referral/mark-usage:", err);
+    return res.status(500).json({ error: "Failed to record usage" });
+  }
+});
+
+/**
+ * POST /referral/evaluate
+ * Evaluate referral progress for current user (rolling trigger check)
+ */
+router.post("/evaluate", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const evaluation = await evaluateReferralProgressForReferee(userId);
+
+    return res.json({ success: true, status: evaluation.status });
+  } catch (err) {
+    console.error("ERROR POST /referral/evaluate:", err);
+    return res.status(500).json({ error: "Failed to evaluate referral status" });
+  }
+});
+
+/**
+ * POST /referral/ping-open
+ * Track a distinct open day for referral qualification.
+ */
+router.post("/ping-open", async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    await prisma.userActivityDay.upsert({
+      where: {
+        userId_date: { userId, date: today },
+      },
+      update: {},
+      create: {
+        userId,
+        date: today,
+      },
+    });
+
+    const evaluation = await evaluateReferralProgressForReferee(userId);
+
+    return res.json({ success: true, status: evaluation.status });
+  } catch (err) {
+    console.error("ERROR POST /referral/ping-open:", err);
+    return res.status(500).json({ error: "Failed to record open" });
   }
 });
 
@@ -359,23 +507,18 @@ router.get("/stats", async (req, res) => {
       },
     });
 
-    // Get activity days for each referee
-    const refereesWithActivity = await Promise.all(
+    // Get referral progress for each referee
+    const refereesWithProgress = await Promise.all(
       referees.map(async (referee) => {
-        const activityDays = await prisma.userActivityDay.count({
-          where: {
-            userId: referee.id,
-            date: {
-              gte: referee.createdAt,
-            },
-          },
+        const progress = await prisma.referralProgress.findUnique({
+          where: { refereeId: referee.id },
         });
 
-        // Check if already rewarded
         const reward = await prisma.referralReward.findFirst({
           where: {
             inviterId: userId,
             refereeId: referee.id,
+            rewardType: "premium_month",
           },
         });
 
@@ -383,16 +526,18 @@ router.get("/stats", async (req, res) => {
           id: referee.id,
           displayName: referee.displayName || "Anonymous",
           signupDate: referee.createdAt,
-          activityDays,
-          requiredDays: REQUIRED_ACTIVE_DAYS,
-          isEligible: activityDays >= REQUIRED_ACTIVE_DAYS,
+          status: progress?.status || "unknown",
+          openDaysCount: progress?.openDaysCount || 0,
+          openDaysRequired: progress?.openDaysRequired || 0,
+          usageQualifiedAt: progress?.usageQualifiedAt || null,
+          paidQualifiedAt: progress?.paidQualifiedAt || null,
+          eligibilityEndsAt: progress?.eligibilityEndsAt || null,
           wasRewarded: !!reward,
           rewardedAt: reward?.awardedAt,
         };
       })
     );
 
-    // Get all rewards
     const rewards = await prisma.referralReward.findMany({
       where: { inviterId: userId },
       orderBy: { awardedAt: "desc" },
@@ -400,12 +545,13 @@ router.get("/stats", async (req, res) => {
 
     return res.json({
       totalReferees: referees.length,
-      eligibleReferees: refereesWithActivity.filter(r => r.isEligible && !r.wasRewarded).length,
-      rewardedReferees: refereesWithActivity.filter(r => r.wasRewarded).length,
-      referees: refereesWithActivity,
+      eligibleReferees: refereesWithProgress.filter(r => r.status === "paid_qualified" && !r.wasRewarded).length,
+      rewardedReferees: refereesWithProgress.filter(r => r.wasRewarded).length,
+      referees: refereesWithProgress,
       rewards: rewards.map(r => ({
         awardedAt: r.awardedAt,
-        badgeExpiresAt: r.badgeExpiresAt,
+        rewardType: r.rewardType,
+        status: r.status,
         awardMonth: r.awardMonth,
       })),
     });

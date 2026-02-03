@@ -8,6 +8,11 @@ import express from 'express';
 import { verifySessionToken } from '../lib/sessionAuth.js';
 import { prisma } from '../lib/prisma.js';
 import { registerDeviceToken, unregisterDeviceToken, isPushEnabled } from '../services/pushNotificationService.js';
+import {
+  listInAppNotifications,
+  markAllInAppNotificationsRead,
+  markInAppNotificationsRead,
+} from '../services/inAppNotificationService.js';
 
 const router = express.Router();
 
@@ -169,6 +174,60 @@ router.patch('/preferences', async (req, res) => {
   } catch (err) {
     console.error('Error updating notification preferences:', err);
     return res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+/**
+ * GET /notifications/in-app
+ * List in-app notifications for the current user.
+ */
+router.get('/in-app', async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+    const unreadOnly = req.query.unreadOnly === 'true';
+
+    const notifications = await listInAppNotifications(userId, { limit, unreadOnly });
+    return res.json({ notifications });
+  } catch (err) {
+    console.error('Error listing in-app notifications:', err);
+    return res.status(500).json({ error: 'Failed to list notifications' });
+  }
+});
+
+/**
+ * POST /notifications/in-app/read
+ * Mark in-app notifications as read.
+ */
+router.post('/in-app/read', async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { ids, all } = req.body || {};
+
+    if (all === true) {
+      const result = await markAllInAppNotificationsRead(userId);
+      return res.json({ success: true, count: result.count });
+    }
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const result = await markInAppNotificationsRead(userId, ids);
+    return res.json({ success: true, count: result.count });
+  } catch (err) {
+    console.error('Error marking in-app notifications read:', err);
+    return res.status(500).json({ error: 'Failed to update notifications' });
   }
 });
 

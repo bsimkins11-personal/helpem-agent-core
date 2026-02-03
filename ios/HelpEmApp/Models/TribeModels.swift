@@ -684,11 +684,14 @@ struct ReferralInfo: Codable {
     let premiumMonthsThisYear: Int   // Premium months earned this calendar year
     let premiumMonthsRemainingThisYear: Int  // Can still earn this year
     let maxPremiumMonthsPerYear: Int // The yearly cap (3)
-    let signupsToNextMonth: Int      // Signups needed for next premium month
+    let signupsToNextMonth: Int      // Back-compat (unused)
     let wasReferred: Bool
     let referredAt: Date?
     let hasFreeMonths: Bool          // If user has active referral bonus
     let freeMonthsExpiresAt: Date?   // When their 2 free months expire
+    let freeMonthsInProgress: Int?
+    let freeMonthsAvailable: Int?
+    let freeMonthActiveUntil: Date?
 }
 
 /// Response for generating a referral code

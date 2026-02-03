@@ -26,6 +26,7 @@ model User {
   earnedPremiumMonths       Int       @default(0) @map("earned_premium_months")  // Every 3 signups = 1 month (lifetime total)
   premiumMonthsThisYear     Int       @default(0) @map("premium_months_this_year")  // Yearly counter (max 3)
   premiumMonthsYear         Int?      @map("premium_months_year")  // Year for the counter (e.g. 2026)
+  firstMeaningfulUseAt      DateTime? @map("first_meaningful_use_at")  // First meaningful in-app action
 
   // Relations
   inputs       UserInput[]
@@ -34,6 +35,9 @@ model User {
   tribeMessages    TribeMessage[]
   activityDays     UserActivityDay[]
   referralRewardsGiven ReferralReward[] @relation("InviterRewards")
+  inAppNotifications InAppNotification[]
+  subscriptionStatuses UserSubscriptionStatus[]
+  appStoreNotifications AppStoreNotification[]
 
   @@index([email])
   @@index([phone])
@@ -524,6 +528,24 @@ model NotificationLog {
   @@map("notification_logs")
 }
 
+/// In-app notifications (no push)
+model InAppNotification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
+  type      String
+  title     String
+  body      String?
+  data      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  readAt    DateTime? @map("read_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("in_app_notifications")
+}
+
 /// Tribe invite tokens for shareable links
 model TribeInviteToken {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -574,8 +596,17 @@ model ReferralReward {
   // When the reward was issued
   awardedAt       DateTime @default(now()) @map("awarded_at")
 
-  // Badge validity period
-  badgeExpiresAt  DateTime @map("badge_expires_at")
+  // Reward type and state
+  rewardType      String   @default("premium_month") @map("reward_type")
+  status          String   @default("earned") @map("status")
+
+  // Optional reward validity period (used for temporary badges or active months)
+  badgeExpiresAt  DateTime? @map("badge_expires_at")
+  startsAt        DateTime? @map("starts_at")
+  endsAt          DateTime? @map("ends_at")
+
+  // Optional metadata (e.g., source event ids)
+  metadata        Json?     @map("metadata")
 
   // For cap tracking (format: "2026-02")
   awardMonth      String   @map("award_month")
@@ -585,4 +616,83 @@ model ReferralReward {
   @@index([inviterId, awardMonth])
   @@index([refereeId])
   @@map("referral_rewards")
+}
+
+/// Tracks referral qualification progress for each invitee
+model ReferralProgress {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inviterId          String   @db.Uuid @map("inviter_id")
+  refereeId          String   @db.Uuid @map("referee_id")
+  signupAt           DateTime @map("signup_at")
+  eligibilityEndsAt  DateTime @map("eligibility_ends_at")
+  status             String   @default("pending") @map("status") // pending, usage_qualified, paid_qualified, rewarded, expired
+  openDaysRequired   Int      @default(5) @map("open_days_required")
+  openDaysCount      Int      @default(0) @map("open_days_count")
+  usageQualifiedAt   DateTime? @map("usage_qualified_at")
+  paidQualifiedAt    DateTime? @map("paid_qualified_at")
+  rewardedAt         DateTime? @map("rewarded_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  // Invitee bonus: +1 free month when they subscribe to Basic/Premium
+  inviteeBonusGrantedAt  DateTime? @map("invitee_bonus_granted_at")
+  inviteeBonusProductId  String?   @map("invitee_bonus_product_id")
+
+  @@unique([refereeId])
+  @@index([inviterId, status])
+  @@index([inviterId, eligibilityEndsAt])
+  @@map("referral_progress")
+}
+
+/// Stores the latest subscription status per user (App Store / Apple IAP)
+model UserSubscriptionStatus {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String   @db.Uuid @map("user_id")
+  platform             String   @default("apple") @map("platform")
+  productId            String?  @map("product_id")
+  status               String   @map("status") // active, expired, grace, billing_retry, revoked
+  verified             Boolean  @default(false) @map("verified")
+  environment          String?  @map("environment") // Sandbox or Production
+  appAccountToken      String?  @map("app_account_token")
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  firstPaidAt          DateTime? @map("first_paid_at")
+  lastPaidAt           DateTime? @map("last_paid_at")
+  originalTransactionId String? @map("original_transaction_id")
+  latestTransactionId  String?  @map("latest_transaction_id")
+  lastEventAt          DateTime? @map("last_event_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+  @@index([status])
+  @@map("user_subscription_status")
+}
+
+/// App Store Server Notifications (v2)
+model AppStoreNotification {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notificationUUID String?  @map("notification_uuid")
+  notificationType String?  @map("notification_type")
+  subtype          String?  @map("subtype")
+  environment      String?  @map("environment")
+  bundleId         String?  @map("bundle_id")
+  appAppleId       String?  @map("app_apple_id")
+  userId           String?  @db.Uuid @map("user_id")
+  originalTransactionId String? @map("original_transaction_id")
+  latestTransactionId   String? @map("latest_transaction_id")
+  signedPayload    String   @map("signed_payload")
+  decodedPayload   Json?    @map("decoded_payload")
+  receivedAt       DateTime @default(now()) @map("received_at")
+  processedAt      DateTime? @map("processed_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([notificationUUID])
+  @@index([notificationType])
+  @@index([userId])
+  @@index([originalTransactionId])
+  @@map("app_store_notifications")
 }

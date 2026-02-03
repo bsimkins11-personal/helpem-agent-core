@@ -66,23 +66,22 @@ struct EvangelistSectionView: View {
                         }
                     }
 
-                    // Progress to next month (only show if not at yearly cap)
-                    if info.signupCount > 0 && info.premiumMonthsRemainingThisYear > 0 {
+                    if let inProgress = info.freeMonthsInProgress, inProgress > 0 {
                         HStack {
-                            Text("Next premium month")
+                            Text("Free months in progress")
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("\(info.signupsToNextMonth) more signup\(info.signupsToNextMonth == 1 ? "" : "s")")
+                            Text("\(inProgress)")
                                 .foregroundColor(.secondary)
                         }
-                    } else if info.premiumMonthsRemainingThisYear == 0 {
+                    }
+
+                    if let activeUntil = info.freeMonthActiveUntil {
                         HStack {
-                            Text("Yearly limit reached")
-                                .font(.caption)
-                                .foregroundColor(.orange)
+                            Text("Free month active until")
+                                .foregroundColor(.secondary)
                             Spacer()
-                            Text("Resets Jan 1")
-                                .font(.caption)
+                            Text(activeUntil.formatted(date: .abbreviated, time: .omitted))
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -121,55 +120,27 @@ struct EvangelistSectionView: View {
             } header: {
                 Text("Invite Friends")
             } footer: {
-                Text("Friends get 2 free months when they sign up with your code!")
+                Text("Friends get +1 free month when they subscribe. You earn a free Premium month when they complete a paid month.")
             }
 
             // How It Works Section
             Section {
                 VStack(alignment: .leading, spacing: 16) {
-                    HowItWorksRow(number: "1", text: "Share your invite link with friends")
-                    HowItWorksRow(number: "2", text: "Friend signs up with your code")
-                    HowItWorksRow(number: "3", text: "Friend gets 2 free months, you get the badge!")
-                    HowItWorksRow(number: "4", text: "Every 3 signups = 1 premium month for you")
+                    HowItWorksRow(number: "1", text: "Share your 6-digit invite code")
+                    HowItWorksRow(number: "2", text: "Friend signs up and uses your code")
+                    HowItWorksRow(number: "3", text: "They subscribe to Basic or Premium and get +1 free month")
+                    HowItWorksRow(number: "4", text: "You earn a free Premium month when they complete a paid month within 60 days")
                 }
                 .padding(.vertical, 8)
             } header: {
                 Text("How It Works")
             }
 
-            // FAQ Section
+            // FAQ Link
             Section {
-                DisclosureGroup {
-                    Text("When a friend signs up using your referral code, you immediately earn the Evangelist badge. It shows next to your name in Tribes!")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
-                } label: {
-                    Text("What's the Evangelist badge?")
-                        .font(.subheadline)
-                }
-
-                DisclosureGroup {
-                    Text("For every 3 friends who sign up with your code, you earn 1 month of Premium at the Basic rate. You can earn up to 3 premium months per year.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
-                } label: {
-                    Text("How do I earn Premium months?")
-                        .font(.subheadline)
-                }
-
-                DisclosureGroup {
-                    Text("Your friends get 2 months of HelpEm Basic for free when they sign up with your code. It's a win-win!")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
-                } label: {
-                    Text("What do my friends get?")
-                        .font(.subheadline)
-                }
+                Link("View full FAQ", destination: URL(string: "https://helpem.ai/referrals")!)
             } header: {
-                Text("FAQ")
+                Text("Learn More")
             }
         }
         .listStyle(.insetGrouped)
@@ -222,7 +193,7 @@ struct EvangelistSectionView: View {
         guard let code = referralCode ?? referralInfo?.referralCode else { return }
 
         let shareURL = "https://helpem.ai/join?ref=\(code)"
-        let shareText = "Join me on HelpEm - your AI assistant for daily life! Get 2 free months with my code: \(shareURL)"
+        let shareText = "Join me on HelpEm - your AI assistant for daily life! Subscribe with my code and we both get a free month: \(shareURL)"
 
         // Present share sheet
         let activityVC = UIActivityViewController(

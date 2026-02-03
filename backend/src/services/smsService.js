@@ -81,6 +81,20 @@ export async function sendTribeInviteSMS(phoneNumber, inviterName, tribeName, in
 }
 
 /**
+ * Send a referral invitation SMS
+ *
+ * @param {string} phoneNumber - Recipient phone number
+ * @param {string} inviterName - Name of the person inviting
+ * @param {string} referralCode - 6-digit referral code
+ * @returns {Promise<Object>} Result
+ */
+export async function sendReferralInviteSMS(phoneNumber, inviterName, referralCode) {
+  const baseUrl = process.env.WEB_APP_URL || 'https://helpem.ai';
+  const message = `${inviterName} invited you to HelpEm! Use code ${referralCode} when you sign up. Learn more: ${baseUrl}`;
+  return sendSMS(phoneNumber, message);
+}
+
+/**
  * Normalize a phone number to E.164 format
  * 
  * @param {string} phone - Phone number in any format
@@ -125,5 +139,6 @@ export function isSMSEnabled() {
 export default {
   sendSMS,
   sendTribeInviteSMS,
+  sendReferralInviteSMS,
   isSMSEnabled,
 };
