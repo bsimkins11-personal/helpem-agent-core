@@ -132,7 +132,7 @@ export function LayoutHeader() {
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center gap-1.5">
                 <img src="/helpem-logo.png" alt="helpem" className="h-16 w-auto" />
-                <p className="text-[10px] text-brandTextLight font-medium">Built for you.</p>
+                <p className="text-[12.5px] text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>
 
@@ -205,7 +205,7 @@ export function LayoutHeader() {
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center gap-1">
                 <img src="/helpem-logo.png" alt="helpem" className="h-12 w-auto" />
-                <p className="text-[9px] text-brandTextLight font-medium">Built for you.</p>
+                <p className="text-[11.25px] text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>
 
