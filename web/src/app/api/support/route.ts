@@ -62,7 +62,7 @@ USE ONLY: Plain sentences, periods, line breaks for separation. Natural conversa
 
 === CURRENT STATUS: ALPHA ===
 - iOS app: Available NOW (TestFlight alpha, iOS 15+)
-- Web app: Available at helpem.ai/app
+- Web demo: Available at helpem.ai/app/dashboard
 - Alpha limit: $2/month API (~1000 messages)
 - Sign in: Apple Sign In (iOS only), web demo (no login needed)
 

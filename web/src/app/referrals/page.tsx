@@ -128,12 +128,12 @@ export default function ReferralsFaqPage() {
           </div>
 
           <div className="text-center mt-8">
-            <Link
-              href="/app"
+            <a
+              href="https://apps.apple.com/app/helpem/id6738968880"
               className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-brandBlue to-brandGreen text-white font-semibold shadow-sm"
             >
-              Open HelpEm
-            </Link>
+              Download for iOS
+            </a>
           </div>
         </div>
       </section>

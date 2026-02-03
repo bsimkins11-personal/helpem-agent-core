@@ -10,6 +10,8 @@ import ClearDataModal from './ClearDataModal';
 import { useLife } from '@/state/LifeStore';
 import { useConnectionQuality } from '@/hooks/useConnectionQuality';
 
+const APP_STORE_URL = "https://apps.apple.com/app/helpem/id6738968880";
+
 const navItems = [
   { href: '/app', label: 'Today', icon: '◐' },
   { href: '/appointments', label: 'Appts', icon: '◷' },
@@ -153,10 +155,10 @@ export function LayoutHeader() {
               </Link>
               {!isAppRoute && (
                 <Link
-                  href="/app"
+                  href={APP_STORE_URL}
                   className="px-2.5 py-1 rounded-md bg-gradient-to-r from-brandBlue to-brandGreen text-white text-[11px] font-semibold hover:shadow-lg transition-all"
                 >
-                  Try App
+                  Download App
                 </Link>
               )}
             </div>
@@ -227,10 +229,10 @@ export function LayoutHeader() {
               {/* Try App CTA - Only show on informational pages */}
               {!isAppRoute && (
                 <Link
-                  href="/app"
+                  href={APP_STORE_URL}
                   className="px-2.5 py-1 rounded-md bg-gradient-to-r from-brandBlue to-brandGreen text-white text-[10px] font-semibold hover:shadow-lg transition-all"
                 >
-                  Try App
+                  Download App
                 </Link>
               )}
             </div>

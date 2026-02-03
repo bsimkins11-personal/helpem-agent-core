@@ -16,6 +16,12 @@ function AppLandingContent() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    const fromiOSApp = navigator.userAgent.includes("helpem");
+    if (!fromiOSApp) {
+      router.replace("/app/dashboard");
+      return;
+    }
+
     // Show splash briefly unless we can immediately route to dashboard
     const minimumSplashTime = 800;
     const startTime = Date.now();

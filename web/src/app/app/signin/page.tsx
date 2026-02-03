@@ -13,6 +13,16 @@ export default function SignInPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const isNativeApp = 
+      navigator.userAgent.includes("helpem") ||
+      (window as any).webkit?.messageHandlers?.native ||
+      (window as any).__IS_HELPEM_APP__;
+
+    if (!isNativeApp) {
+      router.replace("/app/dashboard");
+      return;
+    }
+
     // Check if already signed in
     const hasSession = document.cookie.includes("session_token");
     if (hasSession) {
@@ -27,31 +37,17 @@ export default function SignInPage() {
       return;
     }
 
-    // Check if running in iOS app
-    const isNativeApp = 
-      navigator.userAgent.includes("helpem") ||
-      (window as any).webkit?.messageHandlers?.native ||
-      (window as any).__IS_HELPEM_APP__;
-
-    if (isNativeApp) {
-      // Trigger native Apple Sign In
-      console.log("📱 Triggering native Apple Sign In");
-      
-      // Try multiple methods to trigger native auth
-      if ((window as any).webkit?.messageHandlers?.signInWithApple) {
-        (window as any).webkit.messageHandlers.signInWithApple.postMessage({});
-      } else if ((window as any).nativeBridge?.signInWithApple) {
-        (window as any).nativeBridge.signInWithApple();
-      } else {
-        // Fallback: dispatch event that iOS listens for
-        window.dispatchEvent(new CustomEvent("requestAppleSignIn"));
-      }
+    // Trigger native Apple Sign In
+    console.log("📱 Triggering native Apple Sign In");
+    
+    // Try multiple methods to trigger native auth
+    if ((window as any).webkit?.messageHandlers?.signInWithApple) {
+      (window as any).webkit.messageHandlers.signInWithApple.postMessage({});
+    } else if ((window as any).nativeBridge?.signInWithApple) {
+      (window as any).nativeBridge.signInWithApple();
     } else {
-      // Web flow: Redirect to Apple OAuth or show web sign in
-      console.log("🌐 Web Apple Sign In flow");
-      // For now, redirect to /api/auth/apple
-      // This should trigger Apple's web OAuth flow
-      window.location.href = "/api/auth/apple";
+      // Fallback: dispatch event that iOS listens for
+      window.dispatchEvent(new CustomEvent("requestAppleSignIn"));
     }
   }, [router]);
 

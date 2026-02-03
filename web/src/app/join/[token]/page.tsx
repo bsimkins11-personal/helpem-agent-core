@@ -61,7 +61,7 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
     const sessionToken = getClientSessionToken();
     
     if (!sessionToken) {
-      window.location.href = `/app?invite=${token}`;
+      openInApp();
       return;
     }
 
@@ -124,18 +124,12 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
           <div className="text-6xl mb-6">😕</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Invalid Invite</h1>
           <p className="text-gray-600 mb-6">{error}</p>
-          <Link
-            href={`/app?invite=${token}`}
+          <button
+            onClick={openInApp}
             className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
-            Sign Up to Join
-          </Link>
-          <p className="mt-4 text-sm text-gray-500">
-            Already have an account?{" "}
-            <Link href={`/app/signin?invite=${token}`} className="text-blue-500 hover:underline">
-              Sign in
-            </Link>
-          </p>
+            Open in App
+          </button>
         </div>
       </div>
     );
@@ -149,12 +143,12 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
           <div className="text-6xl mb-6">🎉</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Welcome to {tribe?.name}!</h1>
           <p className="text-gray-600 mb-6">You&apos;ve successfully joined the tribe. Your 30-day trial has started!</p>
-          <Link
-            href="/app"
+          <button
+            onClick={openInApp}
             className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
             Open helpem
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -247,14 +241,14 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
                   disabled={joining}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-70"
                 >
-                  {joining ? "Joining..." : isAuthenticated ? "Join Tribe" : "Sign In with Apple"}
+                  {joining ? "Joining..." : isAuthenticated ? "Join Tribe" : "Open helpem"}
                 </button>
                 {!isAuthenticated && (
                   <button
-                    onClick={handleJoin}
+                    onClick={openInApp}
                     className="px-6 py-2 text-blue-500 text-sm font-medium hover:underline"
                   >
-                    Already have helpem? Sign in
+                    Already have helpem? Open the app
                   </button>
                 )}
               </div>

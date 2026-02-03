@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TrialOfferCard } from "@/components/TrialOfferCard";
@@ -42,6 +42,17 @@ const FEATURES = [
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    const isNativeApp =
+      navigator.userAgent.includes("helpem") ||
+      (window as any).webkit?.messageHandlers?.native ||
+      (window as any).__IS_HELPEM_APP__;
+
+    if (!isNativeApp) {
+      router.replace("/app/dashboard");
+    }
+  }, [router]);
 
   const handleGetStarted = () => {
     if (step < 3) {

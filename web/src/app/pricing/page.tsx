@@ -25,7 +25,7 @@ export default function PricingPage() {
         "Limited storage"
       ],
       cta: "Start Free",
-      href: "/app",
+      href: "https://apps.apple.com/app/helpem/id6738968880",
       popular: false,
       color: "gray"
     },
@@ -46,7 +46,7 @@ export default function PricingPage() {
       ],
       limitations: [],
       cta: "Start 30-Day Free Trial",
-      href: "/app",
+      href: "https://apps.apple.com/app/helpem/id6738968880",
       popular: true,
       color: "blue"
     },
@@ -69,7 +69,7 @@ export default function PricingPage() {
       ],
       limitations: [],
       cta: "Start 30-Day Free Trial",
-      href: "/app",
+      href: "https://apps.apple.com/app/helpem/id6738968880",
       popular: false,
       color: "green"
     }
@@ -311,7 +311,7 @@ export default function PricingPage() {
             Start with our Free plan. No credit card required. Upgrade when you're ready.
           </p>
           <Link
-            href="/app"
+            href="https://apps.apple.com/app/helpem/id6738968880"
             className="inline-block px-8 py-4 rounded-xl bg-white text-brandBlue font-semibold text-lg hover:shadow-2xl transition-all"
           >
             Get Started Free

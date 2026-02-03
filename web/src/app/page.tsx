@@ -192,12 +192,12 @@ export default function LandingPage() {
             No typing, no friction, no forgetting.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
-            <Link
-              href="/app"
+            <a
+              href="https://apps.apple.com/app/helpem/id6738968880"
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-brandBlue to-brandGreen text-white font-semibold text-lg hover:shadow-2xl transition-all"
             >
-              Try helpem Free
-            </Link>
+              Download for iOS
+            </a>
             <a
               href="#how-it-works"
               className="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-brandBlue text-brandBlue font-semibold text-lg hover:bg-brandBlue hover:text-white transition-all"
@@ -346,12 +346,12 @@ export default function LandingPage() {
               Start with a 30-day free trial. No credit card required.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/app"
+              <a
+                href="https://apps.apple.com/app/helpem/id6738968880"
                 className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-brandBlue font-semibold text-lg hover:shadow-2xl transition-all"
               >
-                Get Started Free
-              </Link>
+                Download for iOS
+              </a>
               <Link
                 href="/pricing"
                 className="w-full sm:w-auto px-8 py-4 rounded-xl border-2 border-white text-white font-semibold text-lg hover:bg-white hover:text-brandBlue transition-all"
@@ -389,7 +389,7 @@ export default function LandingPage() {
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
                 <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
                 <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/app" className="hover:text-white transition-colors">Try App</Link></li>
+                <li><a href="https://apps.apple.com/app/helpem/id6738968880" className="hover:text-white transition-colors">Download iOS App</a></li>
               </ul>
             </div>
             <div>
