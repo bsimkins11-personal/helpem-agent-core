@@ -23,7 +23,9 @@ model User {
   referralBonusExpiresAt    DateTime? @map("referral_bonus_expires_at")  // 2 free months for referee
   evangelistBadgeExpiresAt  DateTime? @map("evangelist_badge_expires_at")  // Deprecated
   evangelistLifetimeCount   Int       @default(0) @map("evangelist_lifetime_count")  // Signup tally
-  earnedPremiumMonths       Int       @default(0) @map("earned_premium_months")  // Every 5 signups = 1 month
+  earnedPremiumMonths       Int       @default(0) @map("earned_premium_months")  // Every 3 signups = 1 month (lifetime total)
+  premiumMonthsThisYear     Int       @default(0) @map("premium_months_this_year")  // Yearly counter (max 3)
+  premiumMonthsYear         Int?      @map("premium_months_year")  // Year for the counter (e.g. 2026)
 
   // Relations
   inputs       UserInput[]

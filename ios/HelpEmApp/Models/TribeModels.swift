@@ -680,7 +680,10 @@ struct ReferralInfo: Codable {
     let referralCode: String?
     let hasBadge: Bool
     let signupCount: Int             // How many people signed up with their code
-    let earnedPremiumMonths: Int     // Premium months earned (1 per 5 signups)
+    let earnedPremiumMonths: Int     // Premium months earned (lifetime total)
+    let premiumMonthsThisYear: Int   // Premium months earned this calendar year
+    let premiumMonthsRemainingThisYear: Int  // Can still earn this year
+    let maxPremiumMonthsPerYear: Int // The yearly cap (3)
     let signupsToNextMonth: Int      // Signups needed for next premium month
     let wasReferred: Bool
     let referredAt: Date?

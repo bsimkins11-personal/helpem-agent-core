@@ -43,7 +43,7 @@ struct EvangelistSectionView: View {
                     }
                     .padding(.vertical, 4)
 
-                    // Premium months earned
+                    // Premium months earned (lifetime)
                     if info.earnedPremiumMonths > 0 {
                         HStack {
                             Label("Premium months earned", systemImage: "star.fill")
@@ -55,13 +55,34 @@ struct EvangelistSectionView: View {
                         }
                     }
 
-                    // Progress to next month
-                    if info.signupCount > 0 {
+                    // Yearly cap status
+                    if info.premiumMonthsThisYear > 0 || info.earnedPremiumMonths > 0 {
+                        HStack {
+                            Text("This year")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(info.premiumMonthsThisYear)/\(info.maxPremiumMonthsPerYear)")
+                                .foregroundColor(info.premiumMonthsRemainingThisYear == 0 ? .orange : .secondary)
+                        }
+                    }
+
+                    // Progress to next month (only show if not at yearly cap)
+                    if info.signupCount > 0 && info.premiumMonthsRemainingThisYear > 0 {
                         HStack {
                             Text("Next premium month")
                                 .foregroundColor(.secondary)
                             Spacer()
                             Text("\(info.signupsToNextMonth) more signup\(info.signupsToNextMonth == 1 ? "" : "s")")
+                                .foregroundColor(.secondary)
+                        }
+                    } else if info.premiumMonthsRemainingThisYear == 0 {
+                        HStack {
+                            Text("Yearly limit reached")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            Spacer()
+                            Text("Resets Jan 1")
+                                .font(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -109,7 +130,7 @@ struct EvangelistSectionView: View {
                     HowItWorksRow(number: "1", text: "Share your invite link with friends")
                     HowItWorksRow(number: "2", text: "Friend signs up with your code")
                     HowItWorksRow(number: "3", text: "Friend gets 2 free months, you get the badge!")
-                    HowItWorksRow(number: "4", text: "Every 5 signups = 1 premium month for you")
+                    HowItWorksRow(number: "4", text: "Every 3 signups = 1 premium month for you")
                 }
                 .padding(.vertical, 8)
             } header: {
@@ -129,7 +150,7 @@ struct EvangelistSectionView: View {
                 }
 
                 DisclosureGroup {
-                    Text("For every 5 friends who sign up with your code, you earn 1 month of Premium at the Basic rate.")
+                    Text("For every 3 friends who sign up with your code, you earn 1 month of Premium at the Basic rate. You can earn up to 3 premium months per year.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)

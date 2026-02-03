@@ -3,11 +3,12 @@
  *
  * REWARDS:
  * - Referee: 2 free months of basic when they enter code
- * - Inviter: Evangelist badge + 1 premium month at basic rate for every 5 signups
+ * - Inviter: Evangelist badge + 1 premium month at basic rate for every 3 signups
  *
  * RULES:
  * - One referral per referee (ignore subsequent codes)
  * - Self-referrals blocked
+ * - Max 3 premium months per year for inviter (resets each calendar year)
  */
 
 import express from "express";
@@ -20,7 +21,8 @@ const router = express.Router();
 // Constants
 const REFERRAL_CODE_LENGTH = 8;
 const REFEREE_FREE_MONTHS = 2; // Months of free basic for new users
-const SIGNUPS_PER_PREMIUM_MONTH = 5; // Every 5 signups = 1 premium month for inviter
+const SIGNUPS_PER_PREMIUM_MONTH = 3; // Every 3 signups = 1 premium month for inviter
+const MAX_PREMIUM_MONTHS_PER_YEAR = 3; // Yearly cap on earned premium months
 
 /**
  * Generate a unique 8-character referral code
@@ -57,6 +59,8 @@ router.get("/", async (req, res) => {
         referralBonusExpiresAt: true,
         evangelistLifetimeCount: true,
         earnedPremiumMonths: true,
+        premiumMonthsThisYear: true,
+        premiumMonthsYear: true,
       },
     });
 
@@ -69,16 +73,27 @@ router.get("/", async (req, res) => {
 
     // Check if user has active free months bonus
     const now = new Date();
+    const currentYear = now.getFullYear();
     const hasFreeMonths = user.referralBonusExpiresAt && user.referralBonusExpiresAt > now;
 
     // Progress toward next premium month
     const signupsToNextMonth = SIGNUPS_PER_PREMIUM_MONTH - (user.evangelistLifetimeCount % SIGNUPS_PER_PREMIUM_MONTH);
 
+    // Yearly cap tracking - reset if new year
+    let premiumMonthsThisYear = user.premiumMonthsThisYear || 0;
+    if (user.premiumMonthsYear !== currentYear) {
+      premiumMonthsThisYear = 0;
+    }
+    const premiumMonthsRemainingThisYear = Math.max(0, MAX_PREMIUM_MONTHS_PER_YEAR - premiumMonthsThisYear);
+
     return res.json({
       referralCode: user.referralCode,
       hasBadge,
       signupCount: user.evangelistLifetimeCount, // Tally of signups through their code
-      earnedPremiumMonths: user.earnedPremiumMonths || 0, // Premium months earned
+      earnedPremiumMonths: user.earnedPremiumMonths || 0, // Premium months earned (lifetime)
+      premiumMonthsThisYear, // Earned this calendar year
+      premiumMonthsRemainingThisYear, // Can still earn this year
+      maxPremiumMonthsPerYear: MAX_PREMIUM_MONTHS_PER_YEAR, // The cap
       signupsToNextMonth: user.evangelistLifetimeCount > 0 ? signupsToNextMonth : SIGNUPS_PER_PREMIUM_MONTH,
       wasReferred: !!user.referredByUserId,
       referredAt: user.referredAt,
@@ -227,7 +242,13 @@ router.post("/apply", async (req, res) => {
     // Find the inviter by referral code
     const inviter = await prisma.user.findUnique({
       where: { referralCode: normalizedCode },
-      select: { id: true, evangelistLifetimeCount: true, earnedPremiumMonths: true },
+      select: {
+        id: true,
+        evangelistLifetimeCount: true,
+        earnedPremiumMonths: true,
+        premiumMonthsThisYear: true,
+        premiumMonthsYear: true,
+      },
     });
 
     if (!inviter) {
@@ -256,11 +277,22 @@ router.post("/apply", async (req, res) => {
 
     // Calculate new inviter tally
     const newSignupCount = inviter.evangelistLifetimeCount + 1;
+    const currentYear = now.getFullYear();
 
-    // Check if inviter earns a premium month (every 5 signups)
+    // Check if inviter earns a premium month (every 3 signups)
     const previousMilestone = Math.floor(inviter.evangelistLifetimeCount / SIGNUPS_PER_PREMIUM_MONTH);
     const newMilestone = Math.floor(newSignupCount / SIGNUPS_PER_PREMIUM_MONTH);
-    const earnedNewMonth = newMilestone > previousMilestone;
+    const hitMilestone = newMilestone > previousMilestone;
+
+    // Check yearly cap - reset counter if new year
+    let premiumMonthsThisYear = inviter.premiumMonthsThisYear || 0;
+    if (inviter.premiumMonthsYear !== currentYear) {
+      premiumMonthsThisYear = 0; // Reset for new year
+    }
+
+    // Only award if under yearly cap
+    const canEarnMore = premiumMonthsThisYear < MAX_PREMIUM_MONTHS_PER_YEAR;
+    const earnedNewMonth = hitMilestone && canEarnMore;
 
     // Update inviter's tally and premium months
     const inviterUpdate = {
@@ -269,6 +301,12 @@ router.post("/apply", async (req, res) => {
 
     if (earnedNewMonth) {
       inviterUpdate.earnedPremiumMonths = (inviter.earnedPremiumMonths || 0) + 1;
+      inviterUpdate.premiumMonthsThisYear = premiumMonthsThisYear + 1;
+      inviterUpdate.premiumMonthsYear = currentYear;
+    } else if (inviter.premiumMonthsYear !== currentYear) {
+      // Reset yearly counter even if no award (for tracking)
+      inviterUpdate.premiumMonthsThisYear = 0;
+      inviterUpdate.premiumMonthsYear = currentYear;
     }
 
     await prisma.user.update({
@@ -279,8 +317,10 @@ router.post("/apply", async (req, res) => {
     console.log(`User ${userId} applied referral code ${normalizedCode} from inviter ${inviter.id}`);
     console.log(`  - Referee gets free months until ${bonusExpiresAt.toISOString()}`);
     console.log(`  - Inviter tally now: ${newSignupCount}`);
-    if (earnedNewMonth) {
-      console.log(`  - 🎉 Inviter earned a premium month! Total: ${(inviter.earnedPremiumMonths || 0) + 1}`);
+    if (hitMilestone && !canEarnMore) {
+      console.log(`  - ⚠️ Inviter hit milestone but at yearly cap (${MAX_PREMIUM_MONTHS_PER_YEAR}/year)`);
+    } else if (earnedNewMonth) {
+      console.log(`  - 🎉 Inviter earned a premium month! Total: ${(inviter.earnedPremiumMonths || 0) + 1}, This year: ${premiumMonthsThisYear + 1}/${MAX_PREMIUM_MONTHS_PER_YEAR}`);
     }
 
     return res.json({
