@@ -3,9 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AppStoreQRCode } from "@/components/AppStoreQRCode";
-
-const APP_STORE_URL = "https://apps.apple.com/app/helpem/id6738968880";
 
 const VALUE_PROPS = [
   { icon: "🤖", title: "AI Life Assistant", desc: "Smart categorization and helpful responses" },
@@ -27,31 +24,24 @@ export default function ReferralsPage() {
     const code = params.get("ref");
 
     if (code) {
-      setReferralCode(code.toUpperCase());
-      // Store for the app to pick up after install
-      localStorage.setItem("pendingReferralCode", code.toUpperCase());
-      setIsLoading(false);
+      const normalizedCode = code.toUpperCase();
+      const initTimer = window.setTimeout(() => {
+        setReferralCode(normalizedCode);
+        // Store code for post-signup application.
+        localStorage.setItem("pendingReferralCode", normalizedCode);
+        setIsLoading(false);
+      }, 0);
+      return () => {
+        window.clearTimeout(initTimer);
+      };
     } else {
       // No referral code - redirect to main landing page
       router.replace("/");
     }
   }, [router]);
 
-  const handleDownload = () => {
-    // Try deep link first (for users who already have the app)
-    const appUrl = `helpem://referral?code=${referralCode}`;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = appUrl;
-    document.body.appendChild(iframe);
-
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      if (!document.hidden) {
-        window.location.href = APP_STORE_URL;
-      }
-    }, 1500);
+  const handleGetStarted = () => {
+    window.location.href = `/app/onboarding?ref=${referralCode}`;
   };
 
   const copyCode = () => {
@@ -65,7 +55,7 @@ export default function ReferralsPage() {
   const faqs = [
     {
       q: "Where do I enter the referral code?",
-      a: "During signup in the app, you'll see a 'Have a referral code?' link. Tap it and enter your 6-digit code there."
+      a: "During signup on web, you'll see a referral code field. Enter your 6-digit code there."
     },
     {
       q: "What do I get for using a referral code?",
@@ -81,7 +71,7 @@ export default function ReferralsPage() {
     },
     {
       q: "What if I forget to enter the code?",
-      a: "You can only enter a referral code during initial signup. If you forget, unfortunately it can't be applied later."
+      a: "You can only enter a referral code during initial signup. If you forget, it can't be applied later."
     },
   ];
 
@@ -107,10 +97,10 @@ export default function ReferralsPage() {
       {/* Sticky mobile CTA */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg md:hidden z-50">
         <button
-          onClick={handleDownload}
+          onClick={handleGetStarted}
           className="w-full py-4 bg-gradient-to-r from-brandBlue to-brandGreen text-white rounded-xl font-bold text-lg shadow-lg"
         >
-          Download for iOS
+          Start Free on Web
         </button>
       </div>
 
@@ -120,7 +110,7 @@ export default function ReferralsPage() {
         <section className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
             <span>🎁</span>
-            <span>You've got a referral code!</span>
+            <span>You&apos;ve got a referral code!</span>
           </div>
 
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -161,24 +151,17 @@ export default function ReferralsPage() {
             </p>
           </div>
 
-          {/* Download Options - Desktop */}
+          {/* Web CTA - Desktop */}
           <div className="hidden md:flex items-center justify-center gap-8">
             <button
-              onClick={handleDownload}
+              onClick={handleGetStarted}
               className="inline-flex items-center gap-3 px-8 py-4 bg-black text-white rounded-xl font-semibold text-lg hover:bg-gray-800 transition-all shadow-lg"
             >
-              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-              </svg>
               <div className="text-left">
-                <div className="text-xs opacity-80">Download on the</div>
-                <div className="text-xl font-semibold -mt-1">App Store</div>
+                <div className="text-xs opacity-80">Continue to</div>
+                <div className="text-xl font-semibold -mt-1">Web Signup</div>
               </div>
             </button>
-
-            <div className="text-gray-300">or</div>
-
-            <AppStoreQRCode referralCode={referralCode || undefined} />
           </div>
         </section>
 
@@ -189,8 +172,8 @@ export default function ReferralsPage() {
             <div className="grid sm:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl font-bold mx-auto mb-3">1</div>
-                <h3 className="font-semibold text-gray-900 mb-1">Download App</h3>
-                <p className="text-sm text-gray-600">Get HelpEm from the App Store</p>
+                <h3 className="font-semibold text-gray-900 mb-1">Start on Web</h3>
+                <p className="text-sm text-gray-600">Open helpem in your browser</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl font-bold mx-auto mb-3">2</div>
@@ -270,19 +253,16 @@ export default function ReferralsPage() {
           </div>
         </section>
 
-        {/* Download CTA */}
+        {/* Web CTA */}
         <section className="hidden md:block text-center mb-10">
           <div className="bg-gradient-to-r from-brandBlue to-brandGreen rounded-2xl p-8 text-white">
             <h2 className="text-2xl font-bold mb-3">Ready to get started?</h2>
-            <p className="text-white/80 mb-6">Download helpem and start your 30-day free trial.</p>
+            <p className="text-white/80 mb-6">Start your 30-day free trial in your browser.</p>
             <button
-              onClick={handleDownload}
+              onClick={handleGetStarted}
               className="inline-flex items-center gap-3 px-6 py-3 bg-white text-gray-900 rounded-xl font-semibold hover:shadow-lg transition-all"
             >
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-              </svg>
-              Download for iOS
+              Start Free on Web
             </button>
           </div>
         </section>

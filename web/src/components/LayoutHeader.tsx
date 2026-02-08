@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -7,10 +8,9 @@ import { AlphaFeedbackModal } from './AlphaFeedbackModal';
 import { UsageModal } from './UsageModal';
 import SupportModal from './SupportModal';
 import ClearDataModal from './ClearDataModal';
-import { useLife } from '@/state/LifeStore';
 import { useConnectionQuality } from '@/hooks/useConnectionQuality';
 
-const APP_STORE_URL = "https://apps.apple.com/app/helpem/id6738968880";
+const WEB_CTA_URL = "/app/onboarding";
 
 const navItems = [
   { href: '/app', label: 'Today', icon: '◐' },
@@ -22,14 +22,18 @@ const navItems = [
 
 export function LayoutHeader() {
   const pathname = usePathname();
-  const [isDemo, setIsDemo] = useState(false);
+  const [isDemo] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const hasSessionToken =
+      document.cookie.includes("session_token") ||
+      !!window.localStorage?.getItem("helpem_session");
+    return !hasSessionToken;
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [showClearDataModal, setShowClearDataModal] = useState(false);
-  const [isFromiOSApp, setIsFromiOSApp] = useState(false);
-  const { clearAllData } = useLife();
   const connectionInfo = useConnectionQuality();
 
   // Debug state changes
@@ -37,40 +41,43 @@ export function LayoutHeader() {
     console.log("showUsageModal state changed:", showUsageModal);
   }, [showUsageModal]);
   
-  // Check if user is in demo mode or iOS app
   useEffect(() => {
-    const hasSessionToken = document.cookie.includes("session_token") || !!(window as any).__nativeSessionToken;
-    const fromiOSApp = navigator.userAgent.includes("helpem");
-    const isDemoMode = !hasSessionToken && !fromiOSApp;
-    setIsDemo(isDemoMode);
-    setIsFromiOSApp(fromiOSApp);
+    type HeaderWindow = Window & {
+      showFeedbackModal?: () => void;
+      showUsageModal?: () => void;
+      showSupportModal?: () => void;
+      showClearDataModal?: () => void;
+      __clearAllData?: () => void;
+      __connectionInfo?: ReturnType<typeof useConnectionQuality>;
+    };
+    const headerWindow = window as HeaderWindow;
 
-    // Expose functions globally for iOS to call
-    console.log('📱 Web: Exposing functions for iOS and web');
-    (window as any).showFeedbackModal = () => {
+    // Expose functions globally for web shell integrations
+    console.log('📱 Web: Exposing header modal functions');
+    headerWindow.showFeedbackModal = () => {
       console.log('🌐 Web: showFeedbackModal called');
       setShowFeedbackModal(true);
     };
-    (window as any).showUsageModal = () => {
+    headerWindow.showUsageModal = () => {
       console.log('🌐 Web: showUsageModal called');
       setShowUsageModal(true);
     };
-    (window as any).showSupportModal = () => {
+    headerWindow.showSupportModal = () => {
       console.log('🌐 Web: showSupportModal called');
       setShowSupportModal(true);
     };
-    (window as any).showClearDataModal = () => {
+    headerWindow.showClearDataModal = () => {
       console.log('🌐 Web: showClearDataModal called');
       setShowClearDataModal(true);
     };
-    (window as any).__clearAllData = () => {
+    headerWindow.__clearAllData = () => {
       console.log('🌐 Web: __clearAllData called from window (deprecated)');
       // Redirect to new modal
       setShowClearDataModal(true);
     };
     console.log('✅ Web: Functions exposed globally');
 
-    // Listen for iOS native triggers (backup method)
+    // Listen for external modal triggers (backup method)
     const handleShowFeedback = () => {
       console.log('🌐 Web: showFeedbackModal event received');
       setShowFeedbackModal(true);
@@ -88,7 +95,7 @@ export function LayoutHeader() {
       setShowClearDataModal(true);
     };
     
-    console.log('🎧 Web: Setting up event listeners for iOS');
+    console.log('🎧 Web: Setting up event listeners');
     window.addEventListener('showFeedbackModal', handleShowFeedback);
     window.addEventListener('showUsageModal', handleShowUsage);
     window.addEventListener('showSupportModal', handleShowSupport);
@@ -100,16 +107,18 @@ export function LayoutHeader() {
       window.removeEventListener('showUsageModal', handleShowUsage);
       window.removeEventListener('showSupportModal', handleShowSupport);
       window.removeEventListener('showClearDataModal', handleShowClearData);
-      delete (window as any).showFeedbackModal;
-      delete (window as any).showUsageModal;
-      delete (window as any).showSupportModal;
-      delete (window as any).showClearDataModal;
-      delete (window as any).__clearAllData;
+      delete headerWindow.showFeedbackModal;
+      delete headerWindow.showUsageModal;
+      delete headerWindow.showSupportModal;
+      delete headerWindow.showClearDataModal;
+      delete headerWindow.__clearAllData;
     };
   }, []);
 
   useEffect(() => {
-    (window as any).__connectionInfo = connectionInfo;
+    type ConnectionWindow = Window & { __connectionInfo?: ReturnType<typeof useConnectionQuality> };
+    const connectionWindow = window as ConnectionWindow;
+    connectionWindow.__connectionInfo = connectionInfo;
     document.documentElement.dataset.connection = connectionInfo.isSlow ? "slow" : "normal";
     window.dispatchEvent(new CustomEvent("connectionInfo", { detail: connectionInfo }));
   }, [connectionInfo]);
@@ -123,15 +132,21 @@ export function LayoutHeader() {
 
   return (
     <>
-      {/* Global Header - Desktop (hidden for iOS) */}
-      {!isFromiOSApp && (
+      {/* Global Header - Desktop */}
       <header className="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-1">
           <div className="flex items-center justify-between">
             {/* Logo + Tagline */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center gap-1.5">
-                <img src="/helpem-logo.png" alt="helpem" className="h-16 w-auto" />
+                <Image
+                  src="/helpem-logo.png"
+                  alt="helpem"
+                  width={256}
+                  height={96}
+                  className="h-16 w-auto"
+                  priority
+                />
                 <p className="text-[12.5px] text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>
@@ -155,20 +170,19 @@ export function LayoutHeader() {
               </Link>
               {!isAppRoute && (
                 <Link
-                  href={APP_STORE_URL}
+                  href={WEB_CTA_URL}
                   className="px-2.5 py-1 rounded-md bg-gradient-to-r from-brandBlue to-brandGreen text-white text-[11px] font-semibold hover:shadow-lg transition-all"
                 >
-                  Download App
+                  Start Free
                 </Link>
               )}
             </div>
           </div>
         </div>
       </header>
-      )}
 
       {/* Demo App Navigation - Desktop (only for app routes in demo mode) */}
-      {!isFromiOSApp && showDemoNav && (
+      {showDemoNav && (
         <div className="hidden md:block bg-purple-50 border-b border-purple-200">
           <div className="max-w-7xl mx-auto px-4 lg:px-6 py-2">
             <div className="flex items-center justify-between">
@@ -196,15 +210,21 @@ export function LayoutHeader() {
         </div>
       )}
 
-      {/* Global Header - Mobile (hidden for iOS) */}
-      {!isFromiOSApp && (
+      {/* Global Header - Mobile */}
       <header className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-3 py-1">
           <div className="flex items-center justify-between">
             {/* Logo + Tagline */}
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center gap-1">
-                <img src="/helpem-logo.png" alt="helpem" className="h-12 w-auto" />
+                <Image
+                  src="/helpem-logo.png"
+                  alt="helpem"
+                  width={192}
+                  height={72}
+                  className="h-12 w-auto"
+                  priority
+                />
                 <p className="text-[11.25px] text-brandTextLight font-medium">Built for you.</p>
               </div>
             </Link>
@@ -229,10 +249,10 @@ export function LayoutHeader() {
               {/* Try App CTA - Only show on informational pages */}
               {!isAppRoute && (
                 <Link
-                  href={APP_STORE_URL}
+                  href={WEB_CTA_URL}
                   className="px-2.5 py-1 rounded-md bg-gradient-to-r from-brandBlue to-brandGreen text-white text-[10px] font-semibold hover:shadow-lg transition-all"
                 >
-                  Download App
+                  Start Free
                 </Link>
               )}
             </div>
@@ -353,7 +373,6 @@ export function LayoutHeader() {
                       });
                       localStorage.clear();
                       sessionStorage.clear();
-                      delete (window as any).__nativeSessionToken;
                       setMobileMenuOpen(false);
                       // Redirect to auth gate with logout flag
                       window.location.href = "/app?logout=true";
@@ -368,10 +387,9 @@ export function LayoutHeader() {
           </div>
         )}
       </header>
-      )}
 
       {/* Demo App Navigation - Mobile Banner (only for app routes in demo mode) */}
-      {!isFromiOSApp && showDemoNav && (
+      {showDemoNav && (
         <div className="md:hidden bg-purple-50 border-b border-purple-200 px-4 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -385,7 +403,7 @@ export function LayoutHeader() {
       )}
 
       {/* Demo App Bottom Navigation - Mobile (only for app routes in demo mode) */}
-      {!isFromiOSApp && showDemoNav && (
+      {showDemoNav && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-purple-50 border-t-2 border-purple-200 z-50 safe-area-bottom">
           <div className="flex justify-around items-center py-2">
             {navItems.map((item) => (

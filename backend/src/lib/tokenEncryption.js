@@ -15,17 +15,17 @@ const IV_LENGTH = 16;
  * Key must be a 32-byte (64 hex character) string.
  */
 function getEncryptionKey() {
-  const key = process.env.GOOGLE_TOKEN_ENCRYPTION_KEY;
-  
+  const key = process.env.TOKEN_ENCRYPTION_KEY || process.env.GOOGLE_TOKEN_ENCRYPTION_KEY;
+
   if (!key) {
-    throw new Error('GOOGLE_TOKEN_ENCRYPTION_KEY environment variable is not set');
+    throw new Error('TOKEN_ENCRYPTION_KEY (or GOOGLE_TOKEN_ENCRYPTION_KEY) environment variable is not set');
   }
-  
+
   // Key should be 64 hex characters (32 bytes)
   if (key.length !== 64) {
-    throw new Error('GOOGLE_TOKEN_ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
+    throw new Error('TOKEN_ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
   }
-  
+
   return Buffer.from(key, 'hex');
 }
 

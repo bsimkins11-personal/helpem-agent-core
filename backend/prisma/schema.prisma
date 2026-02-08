@@ -8,8 +8,10 @@ datasource db {
 
 model User {
   id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appleUserId  String      @unique @map("apple_user_id")
-  email        String?     @unique  // From Apple Sign-In (if shared)
+  appleUserId  String?     @unique @map("apple_user_id")
+  googleUserId String?     @unique @map("google_user_id")
+  stripeCustomerId String? @unique @map("stripe_customer_id")
+  email        String?     @unique  // From Apple or Google Sign-In
   phone        String?     @unique  // Normalized E.164 format
   displayName  String?     @map("display_name")  // User's display name for tribes
   avatarUrl    String?     @map("avatar_url")    // Profile photo URL
@@ -36,7 +38,7 @@ model User {
   activityDays     UserActivityDay[]
   referralRewardsGiven ReferralReward[] @relation("InviterRewards")
   inAppNotifications InAppNotification[]
-  subscriptionStatuses UserSubscriptionStatus[]
+  subscriptionStatuses  UserSubscriptionStatus[]
   appStoreNotifications AppStoreNotification[]
 
   @@index([email])
@@ -488,19 +490,48 @@ model GoogleConnection {
 }
 
 // =============================================================================
+// APPLE CALENDAR INTEGRATION (CalDAV/iCloud)
+// =============================================================================
+
+/// Stores Apple iCloud credentials for CalDAV calendar integration
+/// Credentials are encrypted at rest using AES-256
+model AppleCalendarConnection {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @unique @db.Uuid @map("user_id")
+
+  // CalDAV credentials (encrypted with AES-256)
+  appleEmail      String    @map("apple_email")
+  appPassword     String    @map("app_password")
+
+  // CalDAV server info (discovered during connection)
+  caldavUrl       String?   @map("caldav_url")
+  principalUrl    String?   @map("principal_url")
+
+  // Sync state
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  syncEnabled     Boolean   @default(true) @map("sync_enabled")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("apple_calendar_connections")
+}
+
+// =============================================================================
 // PUSH NOTIFICATIONS
 // =============================================================================
 
-/// Stores device tokens for push notifications (APNs)
+/// Stores device tokens for push notifications (APNs + Web Push)
 model UserDevice {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId          String    @db.Uuid @map("user_id")
-  
+
   // Device info
   deviceToken     String    @unique @map("device_token")
-  platform        String    @default("ios") // ios, android
+  platform        String    @default("ios") // ios, android, web
   deviceName      String?   @map("device_name")
-  
+  pushSubscription Json?    @map("push_subscription") // Web Push subscription object
+
   // Notification preferences
   notificationsEnabled Boolean @default(true) @map("notifications_enabled")
   
@@ -644,7 +675,20 @@ model ReferralProgress {
   @@map("referral_progress")
 }
 
-/// Stores the latest subscription status per user (App Store / Apple IAP)
+/// Idempotent Stripe webhook event tracking
+model StripeEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId   String   @unique @map("event_id") // Stripe event ID (evt_...)
+  eventType String   @map("event_type")
+  processed Boolean  @default(false)
+  payload   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([eventType])
+  @@map("stripe_events")
+}
+
+/// Stores the latest subscription status per user per platform
 model UserSubscriptionStatus {
   id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId               String   @db.Uuid @map("user_id")

@@ -66,35 +66,11 @@ export function LifeProvider({ children }: LifeProviderProps) {
     if (dataLoaded) return;
     
     const loadData = async () => {
-      // Check authentication status (allow time for iOS to inject token)
-      // Try multiple times with increasing delays
-      let isAuthenticated = false;
-      let attempts = 0;
-      const maxAttempts = 5;
-      
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, attempts === 0 ? 50 : 100));
-        
-        const hasCookie = typeof document !== 'undefined' && document.cookie.includes("session_token");
-        const hasNativeToken = typeof window !== 'undefined' && !!(window as any).__nativeSessionToken;
-        isAuthenticated = hasCookie || hasNativeToken;
-        
-        console.log(`🔐 Authentication check (attempt ${attempts + 1}/${maxAttempts}):`, { 
-          isAuthenticated,
-          hasCookie,
-          hasNativeToken,
-          cookies: typeof document !== 'undefined' ? document.cookie : 'N/A',
-          nativeToken: typeof window !== 'undefined' ? (window as any).__nativeSessionToken?.substring(0, 20) + '...' : 'N/A'
-        });
-        
-        if (isAuthenticated) {
-          console.log('✅ Authenticated user detected!');
-          break;
-        }
-        
-        attempts++;
-      }
-      
+      // Check authentication status
+      const hasCookie = typeof document !== 'undefined' && document.cookie.includes("session_token");
+      const hasLocalToken = typeof window !== 'undefined' && !!window.localStorage?.getItem("helpem_session");
+      const isAuthenticated = hasCookie || hasLocalToken;
+
       if (!isAuthenticated) {
         // No authentication - start with empty state (no demo data in UAT/production)
         console.log('📋 No authentication found - starting with empty state');
@@ -229,14 +205,6 @@ export function LifeProvider({ children }: LifeProviderProps) {
     // Optimistic update
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completedAt } : t));
 
-    // Cancel notification when todo is completed (iOS only)
-    if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
-      window.webkit.messageHandlers.native.postMessage({
-        action: "cancelNotification",
-        id: id,
-      });
-    }
-
     // Persist to database
     try {
       const response = await fetch("/api/todos", {
@@ -280,14 +248,6 @@ export function LifeProvider({ children }: LifeProviderProps) {
   const deleteTodo = useCallback(async (id: string) => {
     // Optimistic update - remove from UI immediately
     setTodos(prev => prev.filter(t => t.id !== id));
-    
-    // Cancel notification when todo is deleted (iOS only)
-    if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
-      window.webkit.messageHandlers.native.postMessage({
-        action: "cancelNotification",
-        id: id,
-      });
-    }
     
     // Persist to database
     try {
@@ -585,14 +545,6 @@ export function LifeProvider({ children }: LifeProviderProps) {
       console.log(`📍 Appointment in local state:`, appointmentToDelete);
       return prev.filter(a => a.id !== id);
     });
-    
-    // Cancel notification when appointment is deleted (iOS only)
-    if (typeof window !== 'undefined' && window.webkit?.messageHandlers?.native) {
-      window.webkit.messageHandlers.native.postMessage({
-        action: "cancelNotification",
-        id: `${id}-reminder`,
-      });
-    }
     
     // Persist to database
     try {

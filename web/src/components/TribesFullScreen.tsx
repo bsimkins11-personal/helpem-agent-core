@@ -227,24 +227,49 @@ export function TribesFullScreen({ isOpen, onClose }: TribesFullScreenProps) {
     }
   };
 
-  const startTribeTalk = () => {
+  const tribeMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const tribeAudioChunksRef = useRef<Blob[]>([]);
+
+  const startTribeTalk = async () => {
     if (!expandedTribeId) return;
     (window as any).__tribeVoiceModeActive = true;
     (window as any).__tribeVoiceTargetId = expandedTribeId;
-    if (window.webkit?.messageHandlers?.native) {
-      window.webkit.messageHandlers.native.postMessage({ action: "startRecording" });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      tribeAudioChunksRef.current = [];
+      recorder.ondataavailable = (e) => tribeAudioChunksRef.current.push(e.data);
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(tribeAudioChunksRef.current, { type: "audio/webm" });
+        if (blob.size === 0) return;
+        const formData = new FormData();
+        formData.append("file", blob, "audio.webm");
+        try {
+          const res = await fetch("/api/transcribe", { method: "POST", body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.text && typeof (window as any).__sendTribeMessage === "function") {
+              (window as any).__sendTribeMessage(data.text);
+            }
+          }
+        } catch (err) {
+          console.error("Tribe voice transcription error:", err);
+        }
+        (window as any).__tribeVoiceModeActive = false;
+      };
+      tribeMediaRecorderRef.current = recorder;
+      recorder.start();
+    } catch (err) {
+      console.error("Microphone access denied:", err);
+      (window as any).__tribeVoiceModeActive = false;
     }
   };
 
   const stopTribeTalk = () => {
-    if (window.webkit?.messageHandlers?.native) {
-      window.webkit.messageHandlers.native.postMessage({ action: "stopRecording" });
+    if (tribeMediaRecorderRef.current && tribeMediaRecorderRef.current.state !== "inactive") {
+      tribeMediaRecorderRef.current.stop();
     }
-    window.setTimeout(() => {
-      if ((window as any).__tribeVoiceModeActive) {
-        (window as any).__tribeVoiceModeActive = false;
-      }
-    }, 5000);
   };
 
 

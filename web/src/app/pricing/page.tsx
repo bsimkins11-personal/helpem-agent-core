@@ -3,20 +3,29 @@
 import Link from "next/link";
 import { useState } from "react";
 
+// Stripe price IDs from environment variables
+const PRICE_IDS = {
+  basic_monthly: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY_PRICE_ID,
+  basic_annual: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL_PRICE_ID,
+  premium_monthly: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID,
+  premium_annual: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_ANNUAL_PRICE_ID,
+};
+
 export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const plans = [
     {
       name: "Free",
       tagline: "Perfect for getting started",
       price: { monthly: 0, annual: 0 },
+      priceId: { monthly: null, annual: null },
       features: [
         "Up to 100 AI interactions/month",
         "3 todos, 3 appointments, 3 habits",
         "Unlimited grocery items",
         "Voice + text input",
-        "Premium voice (Zoe/Neural)",
         "Smart categorization",
         "AI support"
       ],
@@ -25,7 +34,6 @@ export default function PricingPage() {
         "Limited storage"
       ],
       cta: "Start Free",
-      href: "https://apps.apple.com/app/helpem/id6738968880",
       popular: false,
       color: "gray"
     },
@@ -33,11 +41,11 @@ export default function PricingPage() {
       name: "Basic",
       tagline: "For busy individuals",
       price: { monthly: 4.99, annual: 50 },
+      priceId: { monthly: PRICE_IDS.basic_monthly, annual: PRICE_IDS.basic_annual },
       features: [
         "Up to 3,000 AI interactions/month",
         "20 todos, 20 appointments, 20 habits",
         "Unlimited grocery items",
-        "Premium voice (Zoe/Neural)",
         "Voice + text input",
         "Smart notifications",
         "Priority categorization",
@@ -46,7 +54,6 @@ export default function PricingPage() {
       ],
       limitations: [],
       cta: "Start 30-Day Free Trial",
-      href: "https://apps.apple.com/app/helpem/id6738968880",
       popular: true,
       color: "blue"
     },
@@ -54,11 +61,11 @@ export default function PricingPage() {
       name: "Premium",
       tagline: "For power users",
       price: { monthly: 9.99, annual: 100 },
+      priceId: { monthly: PRICE_IDS.premium_monthly, annual: PRICE_IDS.premium_annual },
       features: [
         "Up to 7,500 AI interactions/month",
         "Unlimited todos, appointments, habits",
         "Unlimited grocery items",
-        "Premium voice (Zoe/Neural)",
         "Voice + text input",
         "Smart notifications",
         "Advanced analytics",
@@ -69,7 +76,6 @@ export default function PricingPage() {
       ],
       limitations: [],
       cta: "Start 30-Day Free Trial",
-      href: "https://apps.apple.com/app/helpem/id6738968880",
       popular: false,
       color: "green"
     }
@@ -91,6 +97,39 @@ export default function PricingPage() {
     }
     return null;
   };
+
+  async function handleSubscribe(plan: typeof plans[0]) {
+    const priceId = billingPeriod === "monthly" ? plan.priceId.monthly : plan.priceId.annual;
+
+    if (!priceId) {
+      // Free plan or no price ID configured - go to signup
+      window.location.href = "/app/signin";
+      return;
+    }
+
+    setLoadingPlan(plan.name);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId }),
+      });
+
+      const data = await res.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else if (res.status === 401) {
+        // Not signed in - redirect to sign in first
+        window.location.href = "/app/signin";
+      } else {
+        console.error("Checkout error:", data.error);
+      }
+    } catch (err) {
+      console.error("Checkout failed:", err);
+    }
+    setLoadingPlan(null);
+  }
 
   return (
     <>
@@ -165,21 +204,22 @@ export default function PricingPage() {
                   )}
                 </div>
 
-                <Link
-                  href={plan.href}
-                  className={`block w-full text-center py-3 rounded-xl font-semibold text-base mb-6 transition-all ${
+                <button
+                  onClick={() => handleSubscribe(plan)}
+                  disabled={loadingPlan === plan.name}
+                  className={`block w-full text-center py-3 rounded-xl font-semibold text-base mb-6 transition-all disabled:opacity-60 ${
                     plan.popular
                       ? "bg-gradient-to-r from-brandBlue to-brandGreen text-white hover:shadow-xl"
                       : "border-2 border-brandBlue text-brandBlue hover:bg-brandBlue hover:text-white"
                   }`}
                 >
-                  {plan.cta}
-                </Link>
+                  {loadingPlan === plan.name ? "Loading..." : plan.cta}
+                </button>
 
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-brandTextLight font-semibold mb-3">
-                      What's Included
+                      What&apos;s Included
                     </p>
                     <ul className="space-y-3">
                       {plan.features.map((feature, featureIndex) => (
@@ -231,11 +271,11 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-          
+
           {/* Fair Use Note */}
           <div className="mt-8 text-center">
             <p className="text-sm text-brandTextLight max-w-3xl mx-auto">
-              AI interactions include chat messages, voice commands, and smart categorization. 
+              AI interactions include chat messages, voice commands, and smart categorization.
               Most users find Basic (3,000/month) more than enough for daily use.
             </p>
           </div>
@@ -254,7 +294,7 @@ export default function PricingPage() {
                 Can I switch plans anytime?
               </h3>
               <p className="text-brandTextLight">
-                Yes! Upgrade or downgrade at any time through your iPhone Settings {'->'} Subscriptions. Changes take effect immediately. Start with Free, try Basic or Premium with a 7-day trial when you're ready.
+                Yes! Upgrade or downgrade at any time through your billing settings. Changes take effect at the start of your next billing cycle.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -262,7 +302,7 @@ export default function PricingPage() {
                 What happens if I reach my monthly limits?
               </h3>
               <p className="text-brandTextLight">
-                We'll notify you when you're approaching your limits with a clear usage indicator. You can upgrade anytime or wait until next month when limits automatically reset.
+                We&apos;ll notify you when you&apos;re approaching your limits with a clear usage indicator. You can upgrade anytime or wait until next month when limits automatically reset.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -270,7 +310,7 @@ export default function PricingPage() {
                 What counts as an AI interaction?
               </h3>
               <p className="text-brandTextLight">
-                An AI interaction includes sending a message, using voice commands, smart categorization, and any AI-powered feature. Basic gives you 3,000/month (about 100/day), Premium gives you 7,500/month (about 250/day). Most users find Basic more than enough.
+                An AI interaction includes sending a message, using voice commands, smart categorization, and any AI-powered feature. Basic gives you 3,000/month (about 100/day), Premium gives you 7,500/month (about 250/day).
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -278,15 +318,7 @@ export default function PricingPage() {
                 How does the 30-day free trial work?
               </h3>
               <p className="text-brandTextLight">
-                New users get 30 days free with up to 3,000 AI interactions (same as Basic). No credit card required to start. At the end of your trial, choose to continue with Basic, upgrade to Premium, or downgrade to Free. You decide, no pressure.
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-brandText mb-2">
-                What's premium voice?
-              </h3>
-              <p className="text-brandTextLight">
-                All users get premium voice! We use Apple's Neural voices (like "Zoe") with natural prosody, better pacing, and a more human-like sound. It's one of our most loved features, and it's included free because we use native iOS technology.
+                New users get 30 days free with up to 3,000 AI interactions (same as Basic). No credit card required to start. At the end of your trial, choose to continue with Basic, upgrade to Premium, or downgrade to Free.
               </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-6">
@@ -294,7 +326,8 @@ export default function PricingPage() {
                 What payment methods do you accept?
               </h3>
               <p className="text-brandTextLight">
-                All payments are processed securely through Apple's App Store. We accept any payment method linked to your Apple ID (credit cards, debit cards, Apple Pay, Apple Cash). Manage your subscription in iPhone Settings {'->'} [Your Name] {'->'} Subscriptions.
+                We accept all major credit cards, debit cards, Apple Pay, and Google Pay through Stripe. All payments are processed securely. Manage your subscription anytime from your{" "}
+                <Link href="/app/billing" className="text-brandBlue hover:underline">billing settings</Link>.
               </p>
             </div>
           </div>
@@ -308,10 +341,10 @@ export default function PricingPage() {
             Still not sure? Try it free!
           </h2>
           <p className="text-lg sm:text-xl mb-10 text-white/90">
-            Start with our Free plan. No credit card required. Upgrade when you're ready.
+            Start with our Free plan. No credit card required. Upgrade when you&apos;re ready.
           </p>
           <Link
-            href="https://apps.apple.com/app/helpem/id6738968880"
+            href="/app/signin"
             className="inline-block px-8 py-4 rounded-xl bg-white text-brandBlue font-semibold text-lg hover:shadow-2xl transition-all"
           >
             Get Started Free

@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { AppStoreQRCode } from "@/components/AppStoreQRCode";
 
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -70,7 +70,7 @@ export default function LandingPage() {
     },
     {
       q: "What platforms does helpem support?",
-      a: "helpem is iOS-only. The app provides a seamless native experience with on-device voice features and offline capabilities. Android and desktop apps may be considered in the future based on demand."
+      a: "helpem works on mobile web and desktop web. You can use it on iOS and Android browsers, and add it to your home screen for an app-like experience."
     },
     {
       q: "How much does it cost?",
@@ -78,7 +78,7 @@ export default function LandingPage() {
     },
     {
       q: "What's premium voice?",
-      a: "All users get premium voice! We use Apple's Neural voices (like 'Zoe') with natural prosody and a more human-like sound. It's included free on all plans because we use native iOS technology instead of expensive cloud APIs."
+      a: "All users get voice support. You can talk naturally and helpem will transcribe and organize your input. Voice quality varies slightly by browser and device."
     }
   ];
 
@@ -186,7 +186,7 @@ export default function LandingPage() {
       <section className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl sm:text-6xl font-bold text-brandText leading-tight mb-6">
-            Life's busy enough.<br />Let helpem remember everything.
+            Life&apos;s busy enough.<br />Let helpem remember everything.
           </h1>
           <p className="text-lg sm:text-2xl text-brandTextLight leading-relaxed max-w-3xl mx-auto">
             Just say it. helpem captures todos, appointments, routines, and groceries instantly. 
@@ -194,10 +194,10 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
             <a
-              href="https://apps.apple.com/app/helpem/id6738968880"
+              href="/app/onboarding"
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-brandBlue to-brandGreen text-white font-semibold text-lg hover:shadow-2xl transition-all"
             >
-              Download for iOS
+              Get Started Free
             </a>
             <a
               href="#how-it-works"
@@ -223,7 +223,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-brandText mb-3">Speak or Type</h3>
               <p className="text-brandTextLight leading-relaxed">
-                Hold to talk or tap to type. Say "Milk on grocery list" or "Meeting tomorrow at 2pm."
+                Hold to talk or tap to type. Say &quot;Milk on grocery list&quot; or &quot;Meeting tomorrow at 2pm.&quot;
               </p>
             </div>
             <div className="text-center">
@@ -276,11 +276,11 @@ export default function LandingPage() {
           <h2 className="text-3xl sm:text-5xl font-bold mb-6">Built by People Who Get It</h2>
           <p className="text-lg sm:text-xl leading-relaxed mb-8 text-white/90">
             We built helpem because we were tired of productivity apps that felt like another job. 
-            You shouldn't need a manual to capture a todo. You shouldn't need three taps to add milk to your grocery list.
-            Life's busy—you need an assistant that just works.
+            You shouldn&apos;t need a manual to capture a todo. You shouldn&apos;t need three taps to add milk to your grocery list.
+            Life&apos;s busy-you need an assistant that just works.
           </p>
           <p className="text-lg sm:text-xl leading-relaxed text-white/90">
-            Our mission: Make organization so effortless, you forget you're even doing it.
+            Our mission: Make organization so effortless, you forget you&apos;re even doing it.
           </p>
         </div>
       </section>
@@ -338,21 +338,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Download CTA */}
+      {/* CTA */}
       <section className="py-16 sm:py-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-gradient-to-br from-brandBlue to-brandGreen rounded-3xl p-8 sm:p-16 text-center text-white">
             <h2 className="text-3xl sm:text-5xl font-bold mb-6">Ready to Get Organized?</h2>
             <p className="text-lg sm:text-xl mb-10 text-white/90 max-w-2xl mx-auto">
-              Start with a 30-day free trial. No credit card required.
+              Start with a 30-day free trial on web. No credit card required.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
               <div className="flex flex-col items-center gap-4">
                 <a
-                  href="https://apps.apple.com/app/helpem/id6738968880"
+                  href="/app/onboarding"
                   className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white text-brandBlue font-semibold text-lg hover:shadow-2xl transition-all"
                 >
-                  Download for iOS
+                  Start Free on Web
                 </a>
                 <Link
                   href="/pricing"
@@ -360,12 +360,6 @@ export default function LandingPage() {
                 >
                   View Pricing
                 </Link>
-              </div>
-
-              {/* QR Code - Desktop only */}
-              <div className="hidden md:flex items-center gap-4">
-                <div className="text-white/50">or scan</div>
-                <AppStoreQRCode size={120} />
               </div>
             </div>
           </div>
@@ -375,9 +369,9 @@ export default function LandingPage() {
       {/* Contact */}
       <section id="contact" className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-5xl font-bold text-brandText mb-6">Let's Talk</h2>
+          <h2 className="text-3xl sm:text-5xl font-bold text-brandText mb-6">Let&apos;s Talk</h2>
           <p className="text-lg sm:text-xl text-brandTextLight mb-10">
-            Have questions, feedback, or partnership ideas? We'd love to hear from you.
+            Have questions, feedback, or partnership ideas? We&apos;d love to hear from you.
           </p>
           <a
             href="mailto:hello@helpem.ai"
@@ -398,7 +392,7 @@ export default function LandingPage() {
                 <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
                 <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
                 <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><a href="https://apps.apple.com/app/helpem/id6738968880" className="hover:text-white transition-colors">Download iOS App</a></li>
+                <li><Link href="/app/onboarding" className="hover:text-white transition-colors">Get Started</Link></li>
               </ul>
             </div>
             <div>
@@ -426,7 +420,13 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img src="/helpem-logo.png" alt="helpem" className="h-10 w-auto" />
+              <Image
+                src="/helpem-logo.png"
+                alt="helpem"
+                width={160}
+                height={60}
+                className="h-10 w-auto"
+              />
               <div>
                 <p className="font-semibold">helpem</p>
                 <p className="text-xs text-white/60">Built for you.</p>

@@ -7,7 +7,7 @@ import { Priority, Todo } from "@/types/todo";
 import { Appointment } from "@/types/appointment";
 import { Habit } from "@/types/habit";
 import { Grocery } from "@/types/grocery";
-import { useNativeAudio } from "@/hooks/useNativeAudio";
+import { useWebSpeech } from "@/hooks/useWebSpeech";
 
 type Message = {
   id: string;
@@ -73,16 +73,6 @@ function parseAiDatetime(value: string): Date {
     }
   }
   return new Date(raw);
-}
-
-// Detect iOS native environment - single source of truth
-function isIOSNativeEnvironment(): boolean {
-  if (typeof window === "undefined") return false;
-  return !!(
-    window.webkit?.messageHandlers?.native ||
-    window.__IS_HELPEM_APP__ ||
-    window.nativeBridge?.isNative
-  );
 }
 
 // Strip markdown formatting from AI responses
@@ -441,54 +431,22 @@ export default function ChatInput({
 
   const { todos, habits, appointments, groceries, addTodo, addHabit, addAppointment, addGrocery, updateTodo, updateHabit, updateAppointment, updateGrocery, updateTodoPriority, deleteTodo, deleteHabit, deleteAppointment, deleteRoutine, deleteGrocery, completeGrocery } = useLife();
   
-  // Native audio hook for iOS app
-  const nativeAudio = useNativeAudio();
-  const isNativeApp = nativeAudio.isNative;
+  // Web speech hook (TTS + STT for browsers)
+  const webSpeech = useWebSpeech();
 
-  const speakQueueRef = useRef<string[]>([]);
-  const isSpeakingRef = useRef(false);
-  const speakReleaseTimerRef = useRef<number | null>(null);
-
-  const estimateSpeechMs = (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return 800;
-    const perCharMs = 45;
-    const baseMs = 600;
-    return Math.min(12000, baseMs + trimmed.length * perCharMs);
-  };
-
-  const flushSpeakQueue = useCallback(() => {
-    if (!isNativeApp) return;
-    if (isSpeakingRef.current) return;
-    const nextText = speakQueueRef.current.shift();
-    if (!nextText) return;
-    isSpeakingRef.current = true;
-    window.webkit?.messageHandlers?.native?.postMessage({
-      action: "speak",
-      text: nextText,
-    });
-    if (speakReleaseTimerRef.current) {
-      window.clearTimeout(speakReleaseTimerRef.current);
-    }
-    const estimatedMs = estimateSpeechMs(nextText);
-    speakReleaseTimerRef.current = window.setTimeout(() => {
-      isSpeakingRef.current = false;
-      flushSpeakQueue();
-    }, estimatedMs + 250);
-  }, [isNativeApp, estimateSpeechMs]);
-
+  // Speak text via Web SpeechSynthesis (only in talk mode)
   const speakNative = useCallback((text: string, delayMs = 0) => {
-    if (!isNativeApp) return;
-    const enqueue = () => {
-      speakQueueRef.current.push(text);
-      flushSpeakQueue();
-    };
+    const stripped = stripMarkdown(text);
+    if (!stripped.trim()) return;
+    if (inputMode !== "talk") return;
+
+    const doSpeak = () => webSpeech.speakText(stripped);
     if (delayMs > 0) {
-      window.setTimeout(enqueue, delayMs);
+      window.setTimeout(doSpeak, delayMs);
       return;
     }
-    enqueue();
-  }, [isNativeApp, flushSpeakQueue]);
+    doSpeak();
+  }, [inputMode, webSpeech]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -497,16 +455,6 @@ export default function ChatInput({
     }
     saveSessionMessages(messages);
   }, [messages]);
-
-  useEffect(() => {
-    if (!isNativeApp) return;
-    if (!nativeAudio.isPlaying && isSpeakingRef.current) {
-      isSpeakingRef.current = false;
-    }
-    if (!nativeAudio.isPlaying) {
-      flushSpeakQueue();
-    }
-  }, [isNativeApp, nativeAudio.isPlaying, flushSpeakQueue]);
 
   const addMessage = useCallback((message: Message) => {
     setMessages(prev => {
@@ -822,30 +770,20 @@ export default function ChatInput({
           role: "assistant",
           content: responseText,
         });
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
+        speakNative(responseText);
         return;
       }
 
       if (isNo) {
         pendingPriorityTodoIdRef.current = null;
         pendingPriorityTodoTitleRef.current = null;
-        const responseText = "Okay, I’ll keep it at medium priority.";
+        const responseText = "Okay, I'll keep it at medium priority.";
         addMessage({
           id: uuidv4(),
           role: "assistant",
           content: responseText,
         });
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
+        speakNative(responseText);
         return;
       }
 
@@ -856,12 +794,7 @@ export default function ChatInput({
           role: "assistant",
           content: responseText,
         });
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
+        speakNative(responseText);
         return;
       }
     }
@@ -910,17 +843,12 @@ export default function ChatInput({
           feedbackId,
           userMessage: text,
         });
-        
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
-        
+
+        speakNative(responseText);
+
         setPendingDeletion(null);
         return;
-        
+
       } else if (isNo) {
         // User cancelled deletion
         const responseText = `Okay, I won't delete "${pendingDeletion.itemTitle}".`;
@@ -929,14 +857,9 @@ export default function ChatInput({
           role: "assistant",
           content: responseText,
         });
-        
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
-        
+
+        speakNative(responseText);
+
         setPendingDeletion(null);
         return;
       }
@@ -1179,58 +1102,23 @@ export default function ChatInput({
               role: "assistant",
               content: followup,
             });
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: followup,
-              });
-            }
+            speakNative(followup);
           }
 
-          if (isNativeApp) {
-            // Also speak the confirmation for native app
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-            
-            // Schedule notification ONLY for reminders (todos with specific time/date)
-            // Regular todos/tasks without time do NOT get notifications
-            if (reminderDate && hasExplicitTime) {
-              console.log(`🔔 REMINDER: Scheduling notification for "${data.title}" at`, reminderDate);
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "scheduleNotification",
-                id: id,
-                title: "Reminder",
-                body: data.title,
-                date: reminderDate.toISOString(),
+          speakNative(responseText);
+
+          // Only show follow-ups if agent didn't provide custom message
+          if (!data.message) {
+            // Visual follow-up for time and priority in type mode
+            if (!hasExplicitTime) {
+              const timePrompt = `Add a specific date or time for "${data.title}"?`;
+              addMessage({
+                id: uuidv4(),
+                role: "assistant",
+                content: timePrompt,
               });
-            } else {
-              console.log(`📝 TODO: No notification (no specific time) for "${data.title}"`);
             }
-          } else {
-            // Only show follow-ups if agent didn't provide custom message (web only)
-            if (!data.message) {
-              // Visual follow-up for time and priority in type mode
-              if (!hasExplicitTime) {
-                const timePrompt = `Add a specific date or time for "${data.title}"?`;
-                addMessage({
-                  id: uuidv4(),
-                  role: "assistant",
-                  content: timePrompt,
-                });
-              }
-              if (!userMentionedPriority) {
-                pendingPriorityTodoIdRef.current = id;
-                pendingPriorityTodoTitleRef.current = data.title;
-                addMessage({
-                  id: uuidv4(),
-                  role: "assistant",
-                  content: "Would you like to set a priority level for this?",
-                });
-              }
-            }
-            if (!userMentionedPriority && data.message) {
+            if (!userMentionedPriority) {
               pendingPriorityTodoIdRef.current = id;
               pendingPriorityTodoTitleRef.current = data.title;
               addMessage({
@@ -1239,6 +1127,15 @@ export default function ChatInput({
                 content: "Would you like to set a priority level for this?",
               });
             }
+          }
+          if (!userMentionedPriority && data.message) {
+            pendingPriorityTodoIdRef.current = id;
+            pendingPriorityTodoTitleRef.current = data.title;
+            addMessage({
+              id: uuidv4(),
+              role: "assistant",
+              content: "Would you like to set a priority level for this?",
+            });
           }
         } else if (internalType === "habit") {
           addHabit({
@@ -1263,12 +1160,7 @@ export default function ChatInput({
             userMessage: userMessageForFeedback,
           });
 
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-          }
+          speakNative(responseText);
         } else if (internalType === "appointment") {
           // Initialize appointment builder with data from AI
           const datetime = data.datetime ? parseAiDatetime(data.datetime) : getDefaultTomorrowReminder();
@@ -1459,12 +1351,7 @@ export default function ChatInput({
             userMessage: userMessageForFeedback,
           });
 
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-          }
+          speakNative(responseText);
         }
 
         // No confirmation flows; we add immediately.
@@ -1488,12 +1375,7 @@ export default function ChatInput({
             role: "assistant",
             content: `✓ ${responseText}`,
           });
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-          }
+          speakNative(responseText);
         } else {
           console.warn(`❌ Could not find todo matching: "${data.todoTitle}"`);
           console.log(`Available todos: ${todos.map(t => t.title).join(', ')}`);
@@ -1503,12 +1385,7 @@ export default function ChatInput({
             role: "assistant",
             content: responseText,
           });
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-          }
+          speakNative(responseText);
         }
         
       } else if (data.action === "navigate_calendar" && data.date) {
@@ -1524,14 +1401,8 @@ export default function ChatInput({
           role: "assistant",
           content: responseText,
         });
-        
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
-        
+        speakNative(responseText);
+
       } else if (data.action === "update") {
         // Handle UPDATE requests for todos, appointments, habits, and groceries
         const itemType = data.type; // "todo", "appointment", "routine", "habit", "grocery"
@@ -1602,12 +1473,7 @@ export default function ChatInput({
               role: "assistant",
               content: responseText,
             });
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: responseText,
-              });
-            }
+            speakNative(responseText);
             return;
           }
 
@@ -1623,18 +1489,13 @@ export default function ChatInput({
           }
 
           pendingAppointmentContextRef.current = null;
-          const responseText = data.message || "Got it. I’ve updated that appointment.";
+          const responseText = data.message || "Got it. I've updated that appointment.";
           addMessage({
             id: uuidv4(),
             role: "assistant",
             content: responseText,
           });
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-          }
+          speakNative(responseText);
 
           const appointmentSnapshot = appointments.find(a => a.id === fallbackId);
           const effectiveTitle = fallbackUpdates.title || appointmentSnapshot?.title || lastAppointmentTitleRef.current;
@@ -1647,12 +1508,7 @@ export default function ChatInput({
               role: "assistant",
               content: askText,
             });
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: askText,
-              });
-            }
+            speakNative(askText);
           }
           return;
         }
@@ -1665,12 +1521,7 @@ export default function ChatInput({
               role: "assistant",
               content: responseText,
             });
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: responseText,
-              });
-            }
+            speakNative(responseText);
             return;
           }
 
@@ -1680,12 +1531,7 @@ export default function ChatInput({
             role: "assistant",
             content: responseText,
           });
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-          }
+          speakNative(responseText);
         } else {
           // Perform the update
           try {
@@ -1811,12 +1657,7 @@ export default function ChatInput({
               content: responseText,
             });
             
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: responseText,
-              });
-            }
+            speakNative(responseText);
           } catch (error) {
             console.error('❌ Error updating item:', error);
             const errorText = `Sorry, I couldn't update "${searchTitle}".`;
@@ -1825,12 +1666,7 @@ export default function ChatInput({
               role: "assistant",
               content: errorText,
             });
-            if (isNativeApp) {
-              window.webkit?.messageHandlers?.native?.postMessage({
-                action: "speak",
-                text: errorText,
-              });
-            }
+            speakNative(errorText);
           }
         }
         
@@ -1874,12 +1710,7 @@ export default function ChatInput({
             role: "assistant",
             content: responseText,
           });
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: responseText,
-            });
-          }
+          speakNative(responseText);
         } else {
           // Store pending deletion and show inline confirmation
           setPendingDeletion({
@@ -1895,33 +1726,21 @@ export default function ChatInput({
             role: "assistant",
             content: confirmText,
           });
-          
-          if (isNativeApp) {
-            window.webkit?.messageHandlers?.native?.postMessage({
-              action: "speak",
-              text: confirmText,
-            });
-          }
+          speakNative(confirmText);
         }
         
       } else if (data.action === "clear_chat") {
         // Clear chat history
         clearChat();
-        
+
         const responseText = data.message || "Chat cleared.";
         addMessage({
           id: uuidv4(),
           role: "assistant",
           content: responseText,
         });
-        
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
-        
+        speakNative(responseText);
+
       } else {
         const rawResponse = data.message || data.error || "I'm not sure how to help with that.";
         let responseText = stripMarkdown(rawResponse);
@@ -1954,13 +1773,7 @@ export default function ChatInput({
             pendingAppointmentTopicRef.current = parsed.topic;
           }
         }
-        // ALWAYS send to native for TTS when in native app
-        if (isNativeApp) {
-          window.webkit?.messageHandlers?.native?.postMessage({
-            action: "speak",
-            text: responseText,
-          });
-        }
+        speakNative(responseText);
       }
     } catch {
       const errorText = "Sorry, something went wrong. Please try again.";
@@ -1969,183 +1782,12 @@ export default function ChatInput({
         role: "assistant",
         content: errorText,
       });
-      // ALWAYS send to native for TTS when in native app
-      if (isNativeApp) {
-        window.webkit?.messageHandlers?.native?.postMessage({
-          action: "speak",
-          text: errorText,
-        });
-      }
+      speakNative(errorText);
     } finally {
       setLoading(false);
       setIsProcessing(false);
     }
-  }, [loading, messages, todos, habits, appointments, addMessage, clearChat, updateTodoPriority, isNativeApp, speakNative, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit, addTodo, addAppointment, addHabit, updateTodo, updateAppointment, updateHabit]);
-
-  // Handle native transcription results (iOS native only)
-  useEffect(() => {
-    if (!isNativeApp) return;
-    
-    const handleTranscription = (payload: unknown) => {
-      const text = (payload as { text?: string })?.text;
-      if (text && text.length > 0) {
-        if (externalInputMode === "talk") {
-          queueTranscript(text);
-          return;
-        }
-        setInput(text);
-        setIsProcessing(false);
-        setIsListening(false);
-        // Note: isListening state is controlled by Talk button only
-        setTimeout(() => sendMessageWithText(text, true), 300);
-      }
-    };
-    
-    const handleUserTranscript = (payload: unknown) => {
-      const data = payload as { text?: string };
-      if (data.text && data.text.length > 0) {
-        if (externalInputMode === "talk") {
-          queueTranscript(data.text);
-          return;
-        }
-        setInput(data.text);
-        setIsProcessing(false);
-        setIsListening(false);
-        sendMessageWithText(data.text, true);
-      }
-    };
-    
-    // Listen for TRANSCRIPTION_RESULT CustomEvent from native
-    const handleTranscriptionResult = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      const text = detail?.text;
-      if (text && text.length > 0) {
-        if ((window as any).__tribeVoiceModeActive && typeof (window as any).__sendTribeMessage === "function") {
-          (window as any).__sendTribeMessage(text);
-          return;
-        }
-        if (externalInputMode === "talk") {
-          queueTranscript(text);
-          return;
-        }
-        setInput(text);
-        setIsProcessing(false);
-        setIsListening(false);
-        sendMessageWithText(text, true);
-      }
-    };
-    
-    window.nativeBridge?.on("TRANSCRIPTION_READY", handleTranscription);
-    window.nativeBridge?.on("USER_TRANSCRIPT", handleUserTranscript);
-    window.addEventListener("TRANSCRIPTION_RESULT", handleTranscriptionResult);
-    
-    return () => {
-      window.nativeBridge?.off("TRANSCRIPTION_READY", handleTranscription);
-      window.nativeBridge?.off("USER_TRANSCRIPT", handleUserTranscript);
-      window.removeEventListener("TRANSCRIPTION_RESULT", handleTranscriptionResult);
-    };
-  }, [isNativeApp, sendMessageWithText, externalInputMode, queueTranscript]);
-
-  // Global function for Swift to inject transcription directly
-  useEffect(() => {
-    // Define the global function that Swift calls via evaluateJavaScript
-    (window as unknown as Record<string, unknown>).onNativeTranscription = (text: string) => {
-      console.log("Received from Swift:", text);
-      
-      if ((window as any).__tribeVoiceModeActive && typeof (window as any).__sendTribeMessage === "function") {
-        (window as any).__sendTribeMessage(text);
-        return;
-      }
-      if (externalInputMode === "talk") {
-        queueTranscript(text);
-        return;
-      }
-      
-      // Update the input field with the transcribed text
-      setInput(text);
-      
-      // Clear processing state and send the message
-      setIsProcessing(false);
-      setIsListening(false);
-      
-      // Immediately trigger send logic - bypasses browser mediaRecorder
-      if (text.trim()) {
-        sendMessageWithText(text, true);
-      }
-    };
-
-    // Alternative global function for native speech handling
-    (window as unknown as Record<string, unknown>).handleNativeSpeech = (text: string) => {
-      console.log("🎙️ Native speech:", text);
-      
-      if ((window as any).__tribeVoiceModeActive && typeof (window as any).__sendTribeMessage === "function") {
-        (window as any).__sendTribeMessage(text);
-        return;
-      }
-      if (externalInputMode === "talk") {
-        queueTranscript(text);
-        return;
-      }
-      
-      // Update input and clear states
-      setInput(text);
-      setIsProcessing(false);
-      setIsListening(false);
-      
-      // Auto-submit the transcribed text
-      if (text.trim()) {
-        sendMessageWithText(text, true);
-      }
-    };
-
-    return () => {
-      delete (window as unknown as Record<string, unknown>).onNativeTranscription;
-      delete (window as unknown as Record<string, unknown>).handleNativeSpeech;
-    };
-  }, [sendMessageWithText, externalInputMode, queueTranscript]);
-
-  // Native iOS listening controls
-  const startListening = useCallback(async () => {
-    if (!isNativeApp || isListening || loading) return;
-    
-    // Enable native audio ONCE per session
-    if (!window.__audioEnabled) {
-      window.__audioEnabled = true;
-      window.webkit?.messageHandlers?.native?.postMessage({
-        type: "ENABLE_AUDIO"
-      });
-    }
-    
-    // Force-send START_CONVERSATION directly (guarded to prevent duplicates)
-    if (!window.__conversationStarted) {
-      window.__conversationStarted = true;
-      window.webkit?.messageHandlers?.native?.postMessage({
-        type: "START_CONVERSATION"
-      });
-    }
-    
-    // Request mic access
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Make the stream available to the voice pipeline
-      window.dispatchEvent(
-        new CustomEvent("VOICE_STREAM_READY", { detail: stream })
-      );
-    } catch {
-      // Mic access failed - continue anyway, native will handle
-    }
-    
-    setIsListening(true);
-    nativeAudio.startConversation();
-  }, [isNativeApp, isListening, loading, nativeAudio]);
-
-  const stopListening = useCallback(() => {
-    if (!isNativeApp) return;
-    window.__conversationStarted = false;
-    nativeAudio.endConversation();
-    setIsListening(false);
-  }, [isNativeApp, nativeAudio]);
+  }, [loading, messages, todos, habits, appointments, groceries, addMessage, clearChat, updateTodoPriority, speakNative, pendingDeletion, deleteTodo, deleteAppointment, deleteHabit, deleteGrocery, addTodo, addAppointment, addHabit, addGrocery, updateTodo, updateAppointment, updateHabit, updateGrocery, completeGrocery]);
 
   // Web Audio: Handle transcription from recorded blob
   const handleWebTranscription = useCallback(async (blob: Blob) => {
@@ -2218,22 +1860,16 @@ export default function ChatInput({
     }
   }, []);
 
-  // Unified handlers for Talk button (native + web)
+  // Unified handler for Talk button (web PWA)
   const handleTalkStart = useCallback(() => {
     if (isPressingToTalk) return;
     isPressingToTalk = true;
     setLocalInputMode("talk");
     setIsListening(true);
     setIsProcessing(false);
-    
-    if (window.webkit?.messageHandlers?.native) {
-      // Native iOS path - trigger Swift userContentController
-      window.webkit.messageHandlers.native.postMessage({ action: "startRecording" });
-    } else {
-      // Web browser fallback
-      startWebRecording();
-    }
-    
+
+    startWebRecording();
+
     // Notify parent component
     onRecordingStart?.();
   }, [startWebRecording, onRecordingStart]);
@@ -2243,20 +1879,9 @@ export default function ChatInput({
     isPressingToTalk = false;
     setIsListening(false);
     setIsProcessing(true);
-    
-    if (window.webkit?.messageHandlers?.native) {
-      // Native iOS path - trigger Swift userContentController
-      if (stopTimerRef.current) {
-        window.clearTimeout(stopTimerRef.current);
-      }
-      stopTimerRef.current = window.setTimeout(() => {
-        window.webkit?.messageHandlers?.native?.postMessage({ action: "stopRecording" });
-      }, 800);
-    } else {
-      // Web browser fallback
-      stopWebRecording();
-    }
-    
+
+    stopWebRecording();
+
     // Notify parent component
     onRecordingStop?.();
   }, [stopWebRecording, onRecordingStop]);
@@ -2292,26 +1917,16 @@ export default function ChatInput({
     const confirmText = `Done! Added to your ${displayType}s.`;
     
     addMessage({ id: uuidv4(), role: "assistant", content: `✓ ${confirmText}` });
-    if (isNativeApp) {
-      window.webkit?.messageHandlers?.native?.postMessage({
-        action: "speak",
-        text: confirmText,
-      });
-    }
+    speakNative(confirmText);
     setPendingAction(null);
-  }, [pendingAction, selectedPriority, addTodo, addHabit, addAppointment, addMessage, isNativeApp]);
+  }, [pendingAction, selectedPriority, addTodo, addHabit, addAppointment, addMessage, speakNative]);
 
   const cancelAction = useCallback(() => {
     setPendingAction(null);
     const cancelText = "No problem, cancelled.";
     addMessage({ id: uuidv4(), role: "assistant", content: cancelText });
-    if (isNativeApp) {
-      window.webkit?.messageHandlers?.native?.postMessage({
-        action: "speak",
-        text: cancelText,
-      });
-    }
-  }, [addMessage, isNativeApp]);
+    speakNative(cancelText);
+  }, [addMessage, speakNative]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -2370,13 +1985,13 @@ export default function ChatInput({
         {messages.length === 0 && (
           <div className="text-center text-brandTextLight py-6 md:py-8">
             <div className="text-3xl md:text-4xl mb-2 md:mb-3">
-              {inputMode === "talk" && isNativeApp ? "🎙️" : "💬"}
+              {"💬"}
             </div>
             <p className="text-base md:text-lg font-medium">
-              {inputMode === "talk" && isNativeApp ? "I'm listening..." : "Chat with helpem"}
+              {"Chat with helpem"}
             </p>
             <p className="text-xs md:text-sm mt-1 md:mt-2">
-              {inputMode === "talk" && isNativeApp ? "Speak now" : "Type your message below"}
+              {"Type your message below"}
             </p>
           </div>
         )}
@@ -2461,7 +2076,7 @@ export default function ChatInput({
         )}
 
         {/* Priority selector for todos */}
-        {!isNativeApp && pendingAction?.type === "todo" && (
+        {pendingAction?.type === "todo" && (
           <div className="bg-gray-50 p-3 md:p-4 rounded-xl border border-gray-200">
             <p className="text-xs md:text-sm text-brandTextLight mb-2">Set priority:</p>
             <div className="flex gap-1.5 md:gap-2 mb-2 md:mb-3">

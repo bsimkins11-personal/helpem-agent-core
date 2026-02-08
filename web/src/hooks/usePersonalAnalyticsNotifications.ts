@@ -74,11 +74,6 @@ export function usePersonalAnalyticsNotifications(settings: NotificationSettings
   const { todos, habits } = useLife();
   const lastSentRef = useRef<LastSentMap>({});
 
-  const isNativeApp = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return Boolean((window as any).webkit?.messageHandlers?.native);
-  }, []);
-
   useEffect(() => {
     lastSentRef.current = loadLastSent();
   }, []);
@@ -96,34 +91,6 @@ export function usePersonalAnalyticsNotifications(settings: NotificationSettings
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    const sendNative = (
-      id: string,
-      title: string,
-      body: string,
-      date: Date,
-      silent = false,
-      badge?: number
-    ) => {
-      if (!isNativeApp) return;
-      (window as any).webkit?.messageHandlers?.native?.postMessage({
-        action: "scheduleNotification",
-        id,
-        title,
-        body,
-        date: date.toISOString(),
-        silent,
-        badge,
-      });
-    };
-
-    const cancelNative = (id: string) => {
-      if (!isNativeApp) return;
-      (window as any).webkit?.messageHandlers?.native?.postMessage({
-        action: "cancelNotification",
-        id,
-      });
-    };
 
     const hasRoutinesForDate = (date: Date) =>
       habits.some((habit) => isHabitScheduledOnDate(habit, date));
@@ -197,7 +164,6 @@ export function usePersonalAnalyticsNotifications(settings: NotificationSettings
     };
 
     const checkAndSendWeb = () => {
-      if (isNativeApp) return;
       const now = new Date();
 
       if (settings.morningEncouragementEnabled) {
@@ -248,51 +214,9 @@ export function usePersonalAnalyticsNotifications(settings: NotificationSettings
       saveLastSent(lastSentRef.current);
     };
 
-    const scheduleNativeNotifications = () => {
-      const now = new Date();
-
-      if (settings.morningEncouragementEnabled) {
-        const target = getMorningDate(now);
-        if (target) {
-          sendNative("daily-routine-prime", "Good morning", "You have routines today.", target, true, 0);
-        } else {
-          cancelNative("daily-routine-prime");
-        }
-      } else {
-        cancelNative("daily-routine-prime");
-      }
-
-      if (settings.highPriorityEnabled) {
-        const target = getHighPriorityDate(now);
-        const highPriorityTask = todos.find((t) => t.priority === "high" && !t.completedAt);
-        if (target && highPriorityTask) {
-          sendNative("high-priority-nudge", "One important task remains", highPriorityTask.title, target);
-        } else {
-          cancelNative("high-priority-nudge");
-        }
-      } else {
-        cancelNative("high-priority-nudge");
-      }
-
-      if (settings.weeklySummaryEnabled) {
-        const target = getWeeklyDate(now);
-        sendNative("weekly-summary", "Weekly summary", "Here’s a look at how your week went.", target);
-      } else {
-        cancelNative("weekly-summary");
-      }
-
-      if (settings.monthlySummaryEnabled) {
-        const target = getMonthlyDate(now);
-        sendNative("monthly-summary", "Monthly summary", "A look back at this month.", target);
-      } else {
-        cancelNative("monthly-summary");
-      }
-    };
-
     checkAndSendWeb();
-    scheduleNativeNotifications();
 
     const interval = setInterval(checkAndSendWeb, CHECK_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [settings, todos, habits, isNativeApp]);
+  }, [settings, todos, habits]);
 }

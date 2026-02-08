@@ -4,6 +4,7 @@ import { LifeProvider } from '@/state/LifeStore';
 import { ReminderProvider } from '@/components/ReminderProvider';
 import { CryptoUUIDShim } from '@/components/CryptoUUIDShim';
 import { LayoutHeader } from '@/components/LayoutHeader';
+import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
 import './globals.css';
 
 const outfit = Outfit({
@@ -14,6 +15,15 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: 'helpem - Life Management',
   description: 'Capture, classify, and conquer your day',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'helpem',
+  },
+  icons: {
+    apple: '/helpem-logo.png',
+  },
 };
 
 export const viewport: Viewport = {
@@ -32,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={outfit.variable}>
       <body className="min-h-screen bg-gray-50 text-brandText antialiased">
+        <ServiceWorkerRegistration />
         <CryptoUUIDShim />
         <LifeProvider>
           <ReminderProvider>

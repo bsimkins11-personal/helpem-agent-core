@@ -4,7 +4,8 @@ import { auditLog } from './auditLog';
 
 export interface AuthUser {
   userId: string;
-  appleUserId: string;
+  appleUserId?: string;
+  googleUserId?: string;
 }
 
 function getJwtSecrets(): string[] {
@@ -89,8 +90,8 @@ export async function getAuthUser(req?: Request): Promise<AuthUser | null> {
       exp: decoded.exp,
     });
     
-    if (!decoded.userId || !decoded.appleUserId) {
-      console.error('❌ Invalid token payload - missing userId or appleUserId');
+    if (!decoded.userId) {
+      console.error('❌ Invalid token payload - missing userId');
       console.error('❌ Payload:', decoded);
       auditLog("AUTH_FAILED", { reason: "Invalid token payload" }, req);
       return null;
@@ -103,7 +104,8 @@ export async function getAuthUser(req?: Request): Promise<AuthUser | null> {
     
     return {
       userId: decoded.userId,
-      appleUserId: decoded.appleUserId,
+      appleUserId: decoded.appleUserId || undefined,
+      googleUserId: decoded.googleUserId || undefined,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

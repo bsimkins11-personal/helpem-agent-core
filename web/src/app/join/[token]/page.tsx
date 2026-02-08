@@ -61,7 +61,7 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
     const sessionToken = getClientSessionToken();
     
     if (!sessionToken) {
-      openInApp();
+      continueOnWeb();
       return;
     }
 
@@ -87,21 +87,9 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
     }
   };
 
-  const openInApp = () => {
-    const appUrl = `helpem://join/${token}`;
-    const appStoreUrl = "https://apps.apple.com/app/helpem/id6738968880";
-    
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = appUrl;
-    document.body.appendChild(iframe);
-    
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      if (!document.hidden) {
-        window.location.href = appStoreUrl;
-      }
-    }, 2000);
+  const continueOnWeb = () => {
+    // Keep invite token and route to web auth funnel.
+    window.location.href = `/app?invite=${token}`;
   };
 
   // Loading state
@@ -125,10 +113,10 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Invalid Invite</h1>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
-            onClick={openInApp}
+            onClick={continueOnWeb}
             className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
-            Open in App
+            Continue on Web
           </button>
         </div>
       </div>
@@ -144,10 +132,10 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Welcome to {tribe?.name}!</h1>
           <p className="text-gray-600 mb-6">You&apos;ve successfully joined the tribe. Your 30-day trial has started!</p>
           <button
-            onClick={openInApp}
+            onClick={() => (window.location.href = "/app/dashboard")}
             className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
-            Open helpem
+            Go to Dashboard
           </button>
         </div>
       </div>
@@ -160,7 +148,7 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
       {/* Sticky CTA for mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg md:hidden z-50">
         <button
-          onClick={isAuthenticated ? handleJoin : openInApp}
+          onClick={isAuthenticated ? handleJoin : continueOnWeb}
           disabled={joining}
           className="w-full py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold text-lg shadow-lg disabled:opacity-70"
         >
@@ -193,7 +181,7 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
         {/* Section 2: Trial Offer (PROMINENT) */}
         <section className="mb-10">
           <TrialOfferCard
-            onGetStarted={isAuthenticated ? handleJoin : openInApp}
+            onGetStarted={isAuthenticated ? handleJoin : continueOnWeb}
             buttonText={joining ? "Joining..." : "Get Started Free"}
             isLoading={joining}
           />
@@ -237,7 +225,7 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
               </div>
               <div className="flex flex-col gap-2">
                 <button
-                  onClick={isAuthenticated ? handleJoin : openInApp}
+                  onClick={isAuthenticated ? handleJoin : continueOnWeb}
                   disabled={joining}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-70"
                 >
@@ -245,10 +233,10 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
                 </button>
                 {!isAuthenticated && (
                   <button
-                    onClick={openInApp}
+                    onClick={continueOnWeb}
                     className="px-6 py-2 text-blue-500 text-sm font-medium hover:underline"
                   >
-                    Already have helpem? Open the app
+                    Already have an account? Sign in on web
                   </button>
                 )}
               </div>
@@ -264,15 +252,7 @@ export default function JoinTribePage({ params }: { params: Promise<{ token: str
 
         {/* Footer */}
         <footer className="mt-10 text-center text-gray-400 text-sm">
-          <p className="mb-2">
-            Don&apos;t have the app?{" "}
-            <a 
-              href="https://apps.apple.com/app/helpem/id6738968880"
-              className="text-blue-500 hover:underline"
-            >
-              Download helpem
-            </a>
-          </p>
+          <p className="mb-2">No install required. Join directly in your browser.</p>
           <p>
             <Link href="/pricing" className="hover:underline">View full pricing</Link>
             {" · "}

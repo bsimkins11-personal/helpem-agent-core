@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -27,7 +28,7 @@ const FEATURES = [
   {
     emoji: "🗓️",
     title: "Calendar Integration",
-    description: "Sync with Google Calendar and Apple Calendar"
+    description: "Sync with Google Calendar across your devices"
   },
   {
     emoji: "🔔",
@@ -44,12 +45,9 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
 
   useEffect(() => {
-    const isNativeApp =
-      navigator.userAgent.includes("helpem") ||
-      (window as any).webkit?.messageHandlers?.native ||
-      (window as any).__IS_HELPEM_APP__;
-
-    if (!isNativeApp) {
+    // If already signed in, go to dashboard
+    const hasSession = document.cookie.includes("session_token");
+    if (hasSession) {
       router.replace("/app/dashboard");
     }
   }, [router]);
@@ -69,7 +67,14 @@ export default function OnboardingPage() {
       <header className="px-6 py-4 border-b border-gray-100">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-8 w-auto" />
+            <Image
+              src="/helpem-logo.png"
+              alt="helpem"
+              width={128}
+              height={48}
+              className="h-8 w-auto"
+              priority
+            />
             <span className="text-lg font-bold text-gray-900">helpem</span>
           </Link>
           <div className="flex items-center gap-4">
@@ -105,7 +110,14 @@ export default function OnboardingPage() {
           <div className="space-y-8 animate-fade-in">
             <section className="text-center">
               <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-green-500 rounded-3xl flex items-center justify-center shadow-xl mb-6">
-                <img src="/helpem-logo.png?v=1" alt="helpem" className="h-12 w-auto" />
+                <Image
+                  src="/helpem-logo.png"
+                  alt="helpem"
+                  width={192}
+                  height={72}
+                  className="h-12 w-auto"
+                  priority
+                />
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                 Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-500">helpem</span>

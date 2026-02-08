@@ -11,8 +11,9 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const SESSION_EXPIRY = "30d"; // 30 days - Aligned with backend for consistency
 
 export interface SessionPayload {
-  userId: string;      // Our internal UUID
-  appleUserId: string; // Apple's stable sub identifier
+  userId: string;       // Our internal UUID
+  appleUserId?: string; // Apple's stable sub identifier
+  googleUserId?: string; // Google's stable sub identifier
   iat?: number;
   exp?: number;
 }
@@ -45,21 +46,23 @@ function getJwtSecrets(): string[] {
 }
 
 /**
- * Creates an app-owned session token after successful Apple auth.
- * 
+ * Creates an app-owned session token after successful auth.
+ *
  * @param userId - Our internal user UUID from the database
- * @param appleUserId - Apple's stable sub identifier
+ * @param options - Optional provider-specific user IDs
  * @returns Signed JWT session token
  */
-export function createSessionToken(userId: string, appleUserId: string): string {
+export function createSessionToken(
+  userId: string,
+  { appleUserId, googleUserId }: { appleUserId?: string; googleUserId?: string } = {}
+): string {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET environment variable not set");
   }
 
-  const payload: Omit<SessionPayload, "iat" | "exp"> = {
-    userId,
-    appleUserId,
-  };
+  const payload: Omit<SessionPayload, "iat" | "exp"> = { userId };
+  if (appleUserId) payload.appleUserId = appleUserId;
+  if (googleUserId) payload.googleUserId = googleUserId;
 
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: SESSION_EXPIRY,
@@ -123,7 +126,7 @@ export async function verifySessionToken(
       throw lastError ?? new Error("JWT verification failed");
     }
 
-    if (!decoded.userId || !decoded.appleUserId) {
+    if (!decoded.userId) {
       return {
         success: false,
         error: "Invalid session token payload",

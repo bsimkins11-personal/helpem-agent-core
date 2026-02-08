@@ -11,16 +11,21 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const SESSION_EXPIRY = "30d"; // 30 days - Long-lived session, users should not need to re-authenticate
 
 /**
- * Creates an app-owned session token after successful Apple auth.
+ * Creates an app-owned session token after successful auth.
  * Token is valid for 30 days - users stay signed in unless they explicitly logout.
+ * Supports Apple Sign In, Google Sign In, or other providers.
  */
-export function createSessionToken(userId, appleUserId) {
+export function createSessionToken(userId, { appleUserId, googleUserId } = {}) {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET environment variable not set");
   }
 
+  const payload = { userId };
+  if (appleUserId) payload.appleUserId = appleUserId;
+  if (googleUserId) payload.googleUserId = googleUserId;
+
   return jwt.sign(
-    { userId, appleUserId },
+    payload,
     JWT_SECRET,
     { expiresIn: SESSION_EXPIRY, algorithm: "HS256" }
   );
@@ -55,7 +60,7 @@ export async function verifySessionToken(req) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
 
-    if (!decoded.userId || !decoded.appleUserId) {
+    if (!decoded.userId) {
       return {
         success: false,
         error: "Invalid session token payload",

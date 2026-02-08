@@ -11,6 +11,8 @@ import { TribesFullScreen } from "@/components/TribesFullScreen";
 import { useLife } from "@/state/LifeStore";
 import { useNotificationSettings } from "@/hooks/useNotificationSettings";
 import { usePersonalAnalyticsNotifications } from "@/hooks/usePersonalAnalyticsNotifications";
+import { useWebPush } from "@/hooks/useWebPush";
+import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 
 const priorityOrder = { high: 0, medium: 1, low: 2 };
@@ -33,8 +35,15 @@ export default function AppPage() {
   const [calendarView, setCalendarView] = useState<CalendarView>("day");
   const [isTribesOpen, setIsTribesOpen] = useState(false);
   const [showInviteNotification, setShowInviteNotification] = useState(false);
+  const webPush = useWebPush();
 
   usePersonalAnalyticsNotifications(settings);
+  const showWebPushBanner =
+    webPush.isSupported && !webPush.isSubscribed && webPush.permission !== "denied";
+
+  const enableWebPush = () => {
+    void webPush.subscribe();
+  };
 
   // Check for pending tribe invite
   useEffect(() => {
@@ -43,12 +52,17 @@ export default function AppPage() {
     const showInvite = urlParams.get("showInvite");
     
     if (pendingInvite && showInvite) {
-      setShowInviteNotification(true);
-      // Auto-open tribes after 2 seconds
-      setTimeout(() => {
+      const showTimer = window.setTimeout(() => {
+        setShowInviteNotification(true);
+      }, 0);
+      const openTimer = window.setTimeout(() => {
         setIsTribesOpen(true);
         setShowInviteNotification(false);
       }, 2000);
+      return () => {
+        window.clearTimeout(showTimer);
+        window.clearTimeout(openTimer);
+      };
     }
   }, []);
   
@@ -132,38 +146,16 @@ export default function AppPage() {
   const { start: rangeStart, end: rangeEnd } = getDateRange();
   const isViewingToday = viewDate.getTime() === today.getTime();
 
-  console.log('🔍 ========================================');
-  console.log('🔍 DATE FILTERING');
-  console.log('🔍 ========================================');
-  console.log('📅 selectedDate (raw):', selectedDate);
-  console.log('📅 selectedDate ISO:', selectedDate.toISOString());
-  console.log('📅 selectedDate local:', selectedDate.toLocaleString());
-  console.log('📅 viewDate ISO:', viewDate.toISOString());
-  console.log('📅 viewDate local:', viewDate.toLocaleString());
-  console.log('📅 Date range for filtering:');
-  console.log('   Start:', rangeStart.toISOString());
-  console.log('   End:', rangeEnd.toISOString());
-  console.log('   View:', calendarView);
-  console.log('   Is viewing today?', isViewingToday);
+  // Merge helpem appointments with Google/Apple Calendar events
+  const { events: allCalendarEvents, googleConnected, appleConnected, loading: calendarLoading } =
+    useCalendarEvents(appointments, { timeMin: rangeStart, timeMax: rangeEnd });
 
-  const viewDateAppointments = appointments
+  const viewDateAppointments = allCalendarEvents
     .filter((apt) => {
       const aptDate = new Date(apt.datetime);
-      // Use < for end comparison since end is start of next day (exclusive)
-      const inRange = aptDate >= rangeStart && aptDate < rangeEnd;
-      
-      console.log(`   Checking "${apt.title}":`, {
-        datetime: aptDate.toISOString(),
-        dateOnly: aptDate.toLocaleDateString(),
-        inRange: inRange,
-        reason: !inRange ? `${aptDate.toISOString()} is ${aptDate < rangeStart ? 'before' : 'after'} range` : 'IN RANGE ✅'
-      });
-      
-      return inRange;
+      return aptDate >= rangeStart && aptDate < rangeEnd;
     })
     .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
-  
-  console.log('🔍 Filtered appointments count:', viewDateAppointments.length);
   console.log('🔍 ========================================');
 
   // Navigation functions
@@ -235,26 +227,7 @@ export default function AppPage() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(true);
   const [welcomeHeight, setWelcomeHeight] = useState(0);
   const welcomeRef = useRef<HTMLDivElement>(null);
-  const [isNativeApp, setIsNativeApp] = useState(false);
-
-  useEffect(() => {
-    const checkNative = () => {
-      if (typeof window === "undefined") return;
-      const native =
-        navigator.userAgent.includes("helpem") ||
-        (window as any).webkit?.messageHandlers?.native ||
-        (window as any).__IS_HELPEM_APP__ ||
-        (window as any).nativeBridge?.isNative;
-      setIsNativeApp(Boolean(native));
-    };
-    checkNative();
-    window.addEventListener("nativeBridgeInjected", checkNative);
-    return () => {
-      window.removeEventListener("nativeBridgeInjected", checkNative);
-    };
-  }, []);
-
-  const headerOffsetPx = isNativeApp ? 0 : 60;
+  const headerOffsetPx = 60;
   const fixedStackRef = useRef<HTMLDivElement>(null);
   const [fixedStackHeight, setFixedStackHeight] = useState(0);
   const pendingHeightRef = useRef<number | null>(null);
@@ -537,6 +510,24 @@ export default function AppPage() {
         }}
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 pb-4">
+        {showWebPushBanner && (
+          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-3 md:p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-blue-900">Enable push notifications</p>
+                <p className="text-xs text-blue-700">Get tribe updates and reminders even when this tab is closed.</p>
+                {webPush.error && <p className="text-xs text-red-600 mt-1">{webPush.error}</p>}
+              </div>
+              <button
+                onClick={enableWebPush}
+                disabled={webPush.loading}
+                className="shrink-0 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs md:text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
+              >
+                {webPush.loading ? "Enabling..." : "Enable"}
+              </button>
+            </div>
+          </div>
+        )}
         <div className="space-y-2 md:space-y-4">
           <div ref={chatRef} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div className="order-1">
@@ -654,7 +645,19 @@ export default function AppPage() {
             {expandedModules.today && (
               <div className="space-y-2 max-h-[150px] md:max-h-[200px] overflow-y-auto">
                 {viewDateAppointments.length > 0 ? (
-                  viewDateAppointments.map((apt) => <AppointmentCard key={apt.id} appointment={apt} />)
+                  viewDateAppointments.map((apt) => (
+                    <AppointmentCard
+                      key={`${apt.source || 'helpem'}-${apt.id}`}
+                      appointment={apt}
+                      onExternalDelete={() => {
+                        // Trigger refetch after external delete
+                        if (apt.source === 'google_calendar' || apt.source === 'apple_calendar') {
+                          // Force re-render by updating selectedDate (hack to trigger hook refetch)
+                          setSelectedDate(new Date(selectedDate));
+                        }
+                      }}
+                    />
+                  ))
                 ) : (
                   <p className="text-sm text-brandTextLight text-center py-3 md:py-4">
                     No appointments {calendarView === "day" ? (isViewingToday ? "today" : "on this day") : `this ${calendarView}`}

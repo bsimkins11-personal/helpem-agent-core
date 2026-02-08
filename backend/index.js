@@ -4,16 +4,19 @@ import bodyParser from "body-parser";
 import rateLimit from "express-rate-limit";
 import { execSync } from "child_process";
 import { verifyAppleIdentityToken } from "./src/lib/appleAuth.js";
+import { verifyGoogleIdToken } from "./src/lib/googleAuth.js";
 import { createSessionToken, verifySessionToken } from "./src/lib/sessionAuth.js";
 import { prisma } from "./src/lib/prisma.js";
 import { migrateFeedbackTable } from "./src/migrate-feedback.js";
 import tribeRoutes from "./src/routes/tribe.js";
 import tribeInviteLinksRoutes from "./src/routes/tribe-invite-links.js";
 import googleCalendarRoutes from "./src/routes/google-calendar.js";
+import appleCalendarRoutes from "./src/routes/apple-calendar.js";
 import notificationsRoutes from "./src/routes/notifications.js";
 import referralRoutes from "./src/routes/referral.js";
 import { evaluateReferralProgressForReferee } from "./src/services/referralService.js";
 import subscriptionsRoutes from "./src/routes/subscriptions.js";
+import stripeRoutes, { handleStripeWebhook } from "./src/routes/stripe.js";
 import debugTribesHandler from './routes/debug-tribes.js';
 import demoTribesRoutes from './routes/demo-tribes.js';
 import demoTribesCleanupRoutes from './routes/demo-tribes-cleanup.js';
@@ -94,6 +97,9 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+// Stripe webhook needs raw body BEFORE json parser
+app.post("/stripe/webhooks", express.raw({ type: "application/json" }), handleStripeWebhook);
 
 app.use(bodyParser.json({ limit: "10mb" })); // Limit payload size
 
@@ -288,7 +294,7 @@ app.post("/auth/apple", authLimiter, async (req, res) => {
     }
 
     // Issue app-owned session token
-    const sessionToken = createSessionToken(userId, apple_user_id);
+    const sessionToken = createSessionToken(userId, { appleUserId: apple_user_id });
 
     // Check if user needs to set their display name
     const needsDisplayName = !user.displayName;
@@ -322,6 +328,141 @@ app.get("/auth/apple", (_req, res) => {
     service: "auth/apple",
     version: "1.0.0",
   });
+});
+
+/**
+ * POST /auth/google
+ *
+ * Authenticates a user via Google Sign-In.
+ * Accepts a Google ID token, verifies it, and issues a session token.
+ */
+app.post("/auth/google", authLimiter, async (req, res) => {
+  console.log("ROUTE HIT: POST /auth/google");
+
+  try {
+    const { id_token, display_name } = req.body;
+
+    if (!id_token || typeof id_token !== "string") {
+      return res.status(400).json({ error: "Missing or invalid id_token" });
+    }
+
+    // Verify Google ID token
+    const googleAuth = await verifyGoogleIdToken(id_token);
+
+    if (!googleAuth.success) {
+      console.error("Google auth failed:", googleAuth.error);
+      return res.status(googleAuth.status).json({ error: googleAuth.error });
+    }
+
+    const googleUserId = googleAuth.user.id;
+    const googleEmail = googleAuth.user.email;
+    const googleName = display_name?.trim()?.slice(0, 100) || googleAuth.user.name || null;
+
+    const user = await prisma.user.upsert({
+      where: { googleUserId },
+      update: {
+        lastActiveAt: new Date(),
+        ...(googleEmail ? { email: googleEmail.toLowerCase() } : {}),
+      },
+      create: {
+        googleUserId,
+        lastActiveAt: new Date(),
+        email: googleEmail ? googleEmail.toLowerCase() : null,
+        displayName: googleName,
+      },
+      select: { id: true, createdAt: true, email: true, displayName: true, avatarUrl: true },
+    });
+
+    const userId = user.id;
+    logApiCall('auth', userId, { provider: 'google', email: user.email });
+
+    const createdAt = new Date(user.createdAt);
+    const now = new Date();
+    const isNewUser = now.getTime() - createdAt.getTime() < 5000;
+
+    // For new users, check for pending tribe invitations matching their email
+    if (isNewUser && user.email) {
+      try {
+        const pendingInvitations = await prisma.pendingTribeInvitation.findMany({
+          where: {
+            contactIdentifier: user.email.toLowerCase(),
+            state: "pending",
+          },
+        });
+
+        for (const invitation of pendingInvitations) {
+          try {
+            const existingMember = await prisma.tribeMember.findFirst({
+              where: { tribeId: invitation.tribeId, userId },
+            });
+
+            if (!existingMember) {
+              await prisma.tribeMember.create({
+                data: {
+                  tribeId: invitation.tribeId,
+                  userId,
+                  isAdmin: false,
+                  permissions: invitation.permissions || {},
+                  invitedBy: invitation.invitedBy,
+                  acceptedAt: null,
+                },
+              });
+            }
+
+            await prisma.pendingTribeInvitation.update({
+              where: { id: invitation.id },
+              data: { state: "accepted", acceptedAt: new Date(), acceptedBy: userId },
+            });
+          } catch (inviteErr) {
+            console.error(`Error converting invitation ${invitation.id}:`, inviteErr);
+          }
+        }
+      } catch (err) {
+        console.error("Error processing pending tribe invitations:", err);
+      }
+    }
+
+    // Track activity day for referral program
+    try {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      await prisma.userActivityDay.upsert({
+        where: { userId_date: { userId, date: today } },
+        update: {},
+        create: { userId, date: today },
+      });
+
+      try {
+        await evaluateReferralProgressForReferee(userId);
+      } catch (evalErr) {
+        console.error("Error evaluating referral progress:", evalErr);
+      }
+    } catch (activityErr) {
+      console.error("Error tracking activity day:", activityErr);
+    }
+
+    // Issue app-owned session token
+    const sessionToken = createSessionToken(userId, { googleUserId });
+
+    const needsDisplayName = !user.displayName;
+
+    console.log(
+      `✅ Google auth success: user=${userId}, google_user=${googleUserId.substring(0, 10)}..., new=${isNewUser}`
+    );
+
+    return res.json({
+      session_token: sessionToken,
+      user_id: userId,
+      is_new_user: isNewUser,
+      needs_display_name: needsDisplayName,
+      display_name: user.displayName,
+      avatar_url: user.avatarUrl,
+    });
+
+  } catch (err) {
+    console.error("Google auth error:", err);
+    return res.status(500).json({ error: "Authentication failed" });
+  }
 });
 
 /**
@@ -708,6 +849,12 @@ app.get("/migrate-feedback", async (req, res) => {
 app.use("/google", apiLimiter, googleCalendarRoutes);
 
 // =============================================================================
+// APPLE CALENDAR ROUTES
+// =============================================================================
+
+app.use("/apple", apiLimiter, appleCalendarRoutes);
+
+// =============================================================================
 // NOTIFICATIONS ROUTES
 // =============================================================================
 
@@ -718,6 +865,7 @@ app.use("/notifications", apiLimiter, notificationsRoutes);
 // =============================================================================
 
 app.use("/subscriptions", apiLimiter, subscriptionsRoutes);
+app.use("/stripe", apiLimiter, stripeRoutes);
 
 // =============================================================================
 // TRIBE ROUTES

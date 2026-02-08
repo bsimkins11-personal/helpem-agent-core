@@ -33,7 +33,7 @@ function ConnectionsContent() {
     {
       id: "apple-calendar",
       name: "Apple Calendar",
-      description: "Import events from Apple Calendar (iOS app only)",
+      description: "Sync your Apple Calendar events via iCloud (read & write)",
       icon: "📆",
       status: "available",
       category: "calendar",
@@ -111,6 +111,10 @@ function ConnectionsContent() {
   ]);
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showAppleModal, setShowAppleModal] = useState(false);
+  const [appleEmail, setAppleEmail] = useState("");
+  const [applePassword, setApplePassword] = useState("");
+  const [appleConnecting, setAppleConnecting] = useState(false);
 
   // Load Google Calendar connection status from backend
   const loadGoogleConnectionStatus = useCallback(async () => {
@@ -162,10 +166,38 @@ function ConnectionsContent() {
     }
   }, [searchParams, loadGoogleConnectionStatus]);
 
+  // Load Apple Calendar connection status from backend
+  const loadAppleConnectionStatus = useCallback(async () => {
+    try {
+      const token = getClientSessionToken();
+      if (!token) return;
+
+      const res = await fetch("/api/apple/connection", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.connected) {
+          setConnections(prev =>
+            prev.map(conn =>
+              conn.id === "apple-calendar"
+                ? { ...conn, status: "connected", email: data.email, connectedAt: data.connectedAt }
+                : conn
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load Apple connection:", error);
+    }
+  }, []);
+
   // Load connection status on mount
   useEffect(() => {
     loadGoogleConnectionStatus();
-  }, [loadGoogleConnectionStatus]);
+    loadAppleConnectionStatus();
+  }, [loadGoogleConnectionStatus, loadAppleConnectionStatus]);
 
   // Auto-dismiss notification
   useEffect(() => {
@@ -237,17 +269,88 @@ function ConnectionsContent() {
     }
   };
 
+  const handleConnectApple = () => {
+    setAppleEmail("");
+    setApplePassword("");
+    setShowAppleModal(true);
+  };
+
+  const handleAppleModalSubmit = async () => {
+    if (!appleEmail || !applePassword) {
+      setNotification({ type: "error", message: "Please enter both your Apple ID and app-specific password." });
+      return;
+    }
+
+    setAppleConnecting(true);
+
+    try {
+      const token = getClientSessionToken();
+      if (!token) {
+        setNotification({ type: "error", message: "Please sign in first." });
+        return;
+      }
+
+      const res = await fetch("/api/apple/connect", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ appleEmail, appPassword: applePassword }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setShowAppleModal(false);
+        setNotification({ type: "success", message: "Apple Calendar connected successfully!" });
+        loadAppleConnectionStatus();
+      } else {
+        setNotification({ type: "error", message: data.error || "Failed to connect Apple Calendar." });
+      }
+    } catch (error) {
+      console.error("Failed to connect Apple:", error);
+      setNotification({ type: "error", message: "Failed to connect. Please try again." });
+    } finally {
+      setAppleConnecting(false);
+    }
+  };
+
+  const handleDisconnectApple = async () => {
+    try {
+      const token = getClientSessionToken();
+      if (!token) return;
+
+      const res = await fetch("/api/apple/disconnect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        setConnections(prev =>
+          prev.map(conn =>
+            conn.id === "apple-calendar"
+              ? { ...conn, status: "available", email: undefined, connectedAt: undefined }
+              : conn
+          )
+        );
+        setNotification({ type: "success", message: "Apple Calendar disconnected." });
+      } else {
+        const data = await res.json();
+        setNotification({ type: "error", message: data.error || "Failed to disconnect." });
+      }
+    } catch (error) {
+      console.error("Failed to disconnect Apple:", error);
+      setNotification({ type: "error", message: "Failed to disconnect. Please try again." });
+    }
+  };
+
   const handleConnect = async (connectionId: string) => {
     if (connectionId === "google-calendar") {
       return handleConnectGoogle();
     }
-
     if (connectionId === "apple-calendar") {
-      setNotification({ 
-        type: "success", 
-        message: "Apple Calendar is connected via the iOS app. Open the app to sync your calendar." 
-      });
-      return;
+      return handleConnectApple();
     }
 
     // Placeholder for other integrations
@@ -262,7 +365,10 @@ function ConnectionsContent() {
     if (connectionId === "google-calendar") {
       return handleDisconnectGoogle();
     }
-    
+    if (connectionId === "apple-calendar") {
+      return handleDisconnectApple();
+    }
+
     // Placeholder for other integrations
     setNotification({ type: "error", message: "Disconnect not implemented for this integration." });
   };
@@ -508,6 +614,102 @@ function ConnectionsContent() {
           ))}
         </div>
       </div>
+
+      {/* Apple Calendar Credentials Modal */}
+      {showAppleModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px',
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '16px', padding: '32px',
+            maxWidth: '440px', width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>
+              Connect Apple Calendar
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+              Enter your Apple ID and an app-specific password to sync your iCloud Calendar.
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Apple ID (email)
+              </label>
+              <input
+                type="email"
+                value={appleEmail}
+                onChange={e => setAppleEmail(e.target.value)}
+                placeholder="you@icloud.com"
+                style={{
+                  width: '100%', padding: '10px 14px',
+                  border: '2px solid #e5e7eb', borderRadius: '10px',
+                  fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                App-Specific Password
+              </label>
+              <input
+                type="password"
+                value={applePassword}
+                onChange={e => setApplePassword(e.target.value)}
+                placeholder="xxxx-xxxx-xxxx-xxxx"
+                style={{
+                  width: '100%', padding: '10px 14px',
+                  border: '2px solid #e5e7eb', borderRadius: '10px',
+                  fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '24px' }}>
+              Generate an app-specific password at{' '}
+              <a
+                href="https://appleid.apple.com/account/manage"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#0077CC', textDecoration: 'underline' }}
+              >
+                appleid.apple.com
+              </a>
+              {' '}under Sign-In and Security {'>'} App-Specific Passwords.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowAppleModal(false)}
+                style={{
+                  flex: 1, padding: '10px', border: '2px solid #e5e7eb',
+                  background: 'white', borderRadius: '10px', fontSize: '14px',
+                  fontWeight: '500', cursor: 'pointer', color: '#6b7280',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAppleModalSubmit}
+                disabled={appleConnecting}
+                style={{
+                  flex: 1, padding: '10px', border: 'none',
+                  background: 'linear-gradient(to right, #0077CC, #7AC943)',
+                  color: 'white', borderRadius: '10px', fontSize: '14px',
+                  fontWeight: '500', cursor: 'pointer',
+                  opacity: appleConnecting ? 0.5 : 1,
+                }}
+              >
+                {appleConnecting ? 'Connecting...' : 'Test & Connect'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer CTA */}
       <div style={{ background: 'linear-gradient(to bottom right, #0077CC, #7AC943)', padding: '48px 20px', textAlign: 'center', color: 'white' }}>

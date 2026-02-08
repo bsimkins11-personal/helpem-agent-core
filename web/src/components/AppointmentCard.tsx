@@ -4,13 +4,16 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Appointment } from '@/types/appointment';
 import { useLife } from '@/state/LifeStore';
+import { getClientSessionToken } from '@/lib/clientSession';
 
 interface AppointmentCardProps {
   appointment: Appointment;
+  onExternalDelete?: (appointment: Appointment) => void;
 }
 
-export function AppointmentCard({ appointment }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onExternalDelete }: AppointmentCardProps) {
   const { deleteAppointment, updateAppointment } = useLife();
+  const isExternal = appointment.source === 'google_calendar' || appointment.source === 'apple_calendar';
   const [showConfirm, setShowConfirm] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -72,8 +75,29 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
     return new Date(appointment.datetime) < new Date();
   };
 
-  const handleDelete = () => {
-    deleteAppointment(appointment.id);
+  const handleDelete = async () => {
+    if (isExternal) {
+      try {
+        const token = getClientSessionToken();
+        if (!token) return;
+        const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+
+        if (appointment.source === 'google_calendar') {
+          await fetch(`/api/google/calendar/events/${appointment.externalEventId}`, {
+            method: 'DELETE', headers,
+          });
+        } else if (appointment.source === 'apple_calendar') {
+          await fetch(`/api/apple/calendar/events/${appointment.externalEventId}`, {
+            method: 'DELETE', headers,
+          });
+        }
+        onExternalDelete?.(appointment);
+      } catch (err) {
+        console.error('Failed to delete external event:', err);
+      }
+    } else {
+      deleteAppointment(appointment.id);
+    }
     setShowConfirm(false);
   };
 
@@ -87,52 +111,82 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
       topic: editForm.topic || null,
       location: editForm.location || null,
     };
-    const apiPayload = {
-      id: appointment.id,
-      title: updates.title,
-      datetime: updates.datetime?.toISOString(),
-      durationMinutes: updates.durationMinutes,
-      withWhom: updates.withWhom,
-      topic: updates.topic,
-      location: updates.location,
-    };
-    
-    // Update local state
-    updateAppointment(appointment.id, updates);
-    
-    // Sync to backend
-    try {
-      const response = await fetch('/api/appointments', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiPayload),
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Failed to update appointment:', response.status, errorText);
-        if (response.status === 404) {
-          const createResponse = await fetch('/api/appointments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: updates.title,
-              datetime: updates.datetime?.toISOString(),
-              durationMinutes: updates.durationMinutes,
-              withWhom: updates.withWhom,
-              topic: updates.topic,
-              location: updates.location,
-            }),
+
+    if (isExternal) {
+      // Update external calendar event
+      try {
+        const token = getClientSessionToken();
+        if (!token) return;
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        };
+        const body = JSON.stringify({
+          title: updates.title,
+          datetime: updates.datetime?.toISOString(),
+          durationMinutes: updates.durationMinutes,
+          location: updates.location,
+          description: editForm.topic || undefined,
+        });
+
+        if (appointment.source === 'google_calendar') {
+          await fetch(`/api/google/calendar/events/${appointment.externalEventId}`, {
+            method: 'PATCH', headers, body,
           });
-          if (!createResponse.ok) {
-            const createErrorText = await createResponse.text();
-            console.error('❌ Failed to create appointment after 404:', createResponse.status, createErrorText);
+        } else if (appointment.source === 'apple_calendar') {
+          await fetch(`/api/apple/calendar/events/${appointment.externalEventId}`, {
+            method: 'PATCH', headers, body,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to update external event:', err);
+      }
+    } else {
+      const apiPayload = {
+        id: appointment.id,
+        title: updates.title,
+        datetime: updates.datetime?.toISOString(),
+        durationMinutes: updates.durationMinutes,
+        withWhom: updates.withWhom,
+        topic: updates.topic,
+        location: updates.location,
+      };
+
+      updateAppointment(appointment.id, updates);
+
+      try {
+        const response = await fetch('/api/appointments', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiPayload),
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to update appointment:', response.status, errorText);
+          if (response.status === 404) {
+            const createResponse = await fetch('/api/appointments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: updates.title,
+                datetime: updates.datetime?.toISOString(),
+                durationMinutes: updates.durationMinutes,
+                withWhom: updates.withWhom,
+                topic: updates.topic,
+                location: updates.location,
+              }),
+            });
+            if (!createResponse.ok) {
+              const createErrorText = await createResponse.text();
+              console.error('Failed to create appointment after 404:', createResponse.status, createErrorText);
+            }
           }
         }
+      } catch (error) {
+        console.error('Error updating appointment:', error);
       }
-    } catch (error) {
-      console.error('Error updating appointment:', error);
     }
-    
+
     setShowEdit(false);
   };
 
@@ -144,15 +198,27 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
                     border-l-4 border-l-violet-500 hover:bg-violet-100 transition-all duration-200
                     cursor-pointer ${isPast() ? 'opacity-50' : ''}`}
       >
-        {/* Tribe indicator badge */}
-        {appointment.addedByTribeName && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            {appointment.addedByTribeName}
-          </div>
-        )}
+        {/* Source / Tribe indicator badges */}
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          {appointment.source === 'google_calendar' && (
+            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-semibold">
+              G Cal
+            </span>
+          )}
+          {appointment.source === 'apple_calendar' && (
+            <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-[10px] font-semibold">
+              iCal
+            </span>
+          )}
+          {appointment.addedByTribeName && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              {appointment.addedByTribeName}
+            </span>
+          )}
+        </div>
         
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-center justify-center w-12 h-12 bg-violet-100 rounded-lg">
@@ -188,7 +254,23 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
                   ⏱️ {formatDuration(appointment.durationMinutes)}
                 </span>
               )}
+              {appointment.description && !appointment.topic && (
+                <span className="flex items-center gap-1">
+                  💬 {appointment.description.length > 40 ? appointment.description.slice(0, 40) + '...' : appointment.description}
+                </span>
+              )}
             </div>
+            {appointment.htmlLink && (
+              <a
+                href={appointment.htmlLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                className="text-[10px] text-blue-500 hover:underline mt-1 inline-block"
+              >
+                Open in Google Calendar
+              </a>
+            )}
           </div>
 
           {/* Delete button - always visible on mobile, shows on hover on desktop */}

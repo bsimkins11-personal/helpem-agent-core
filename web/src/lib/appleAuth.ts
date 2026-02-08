@@ -57,15 +57,19 @@ export async function verifyAppleIdentityToken(
     };
   }
 
-  const audience = process.env.APPLE_CLIENT_ID;
-  if (!audience) {
-    console.error("APPLE_CLIENT_ID environment variable not set");
+  const nativeAudience = process.env.APPLE_CLIENT_ID;
+  const webAudience = process.env.APPLE_WEB_CLIENT_ID;
+  if (!nativeAudience && !webAudience) {
+    console.error("Neither APPLE_CLIENT_ID nor APPLE_WEB_CLIENT_ID environment variable set");
     return {
       success: false,
       error: "Server configuration error",
       status: 500,
     };
   }
+
+  // Accept tokens from both native app and web Sign in with Apple
+  const audience = [nativeAudience, webAudience].filter(Boolean) as [string, ...string[]];
 
   return new Promise((resolve) => {
     jwt.verify(

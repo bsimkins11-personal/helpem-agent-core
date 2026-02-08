@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { TrialOfferCard } from "@/components/TrialOfferCard";
 import { PricingPreview } from "@/components/PricingPreview";
 
@@ -13,9 +14,7 @@ const VALUE_PROPS = [
 ];
 
 export default function SignUpPage() {
-  useEffect(() => {
-    window.location.href = "https://apps.apple.com/app/helpem/id6738968880";
-  }, []);
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -23,23 +22,30 @@ export default function SignUpPage() {
       <header className="px-6 py-4 border-b border-gray-100">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/helpem-logo.png" alt="helpem" className="h-8 w-auto" />
+            <Image
+              src="/helpem-logo.png"
+              alt="helpem"
+              width={128}
+              height={48}
+              className="h-8 w-auto"
+              priority
+            />
             <span className="text-lg font-bold text-gray-900">helpem</span>
           </Link>
-          <a href="https://apps.apple.com/app/helpem/id6738968880" className="text-blue-600 font-medium hover:underline">
-            Download iOS App
-          </a>
+          <Link href="/app/signin" className="text-blue-600 font-medium hover:underline">
+            Sign In
+          </Link>
         </div>
       </header>
 
       {/* Sticky CTA for mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg md:hidden z-50">
-        <a
-          href="https://apps.apple.com/app/helpem/id6738968880"
+        <button
+          onClick={() => router.push("/app/onboarding")}
           className="block w-full py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white text-center rounded-xl font-bold text-lg shadow-lg"
         >
-          Download for iOS
-        </a>
+          Start Free on Web
+        </button>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-8 pb-32 md:pb-8">
@@ -56,8 +62,8 @@ export default function SignUpPage() {
         {/* Trial Offer */}
         <section className="mb-10">
           <TrialOfferCard
-            onGetStarted={() => window.location.href = "https://apps.apple.com/app/helpem/id6738968880"}
-            buttonText="Download for iOS"
+            onGetStarted={() => router.push("/app/onboarding")}
+            buttonText="Start Free on Web"
           />
         </section>
 
@@ -86,15 +92,15 @@ export default function SignUpPage() {
         <section className="hidden md:block">
           <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 text-center">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Ready to get organized?</h3>
-            <p className="text-gray-600 mb-6">Start your 30-day free trial with Sign In with Apple.</p>
-            <a
-              href="https://apps.apple.com/app/helpem/id6738968880"
+            <p className="text-gray-600 mb-6">Start your 30-day free trial right in your browser.</p>
+            <button
+              onClick={() => router.push("/app/onboarding")}
               className="inline-block px-10 py-4 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
             >
-              Download for iOS
-            </a>
+              Start Free on Web
+            </button>
             <p className="mt-4 text-sm text-gray-500">
-              Already have an account? Open the app to sign in.
+              Already have an account? Sign in on web.
             </p>
           </div>
         </section>

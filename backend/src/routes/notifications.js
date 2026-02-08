@@ -7,7 +7,14 @@
 import express from 'express';
 import { verifySessionToken } from '../lib/sessionAuth.js';
 import { prisma } from '../lib/prisma.js';
-import { registerDeviceToken, unregisterDeviceToken, isPushEnabled } from '../services/pushNotificationService.js';
+import {
+  registerDeviceToken,
+  unregisterDeviceToken,
+  isPushEnabled,
+  registerWebPushSubscription,
+  isWebPushEnabled,
+  getVapidPublicKey,
+} from '../services/pushNotificationService.js';
 import {
   listInAppNotifications,
   markAllInAppNotificationsRead,
@@ -46,6 +53,52 @@ router.post('/register-device', async (req, res) => {
   } catch (err) {
     console.error('Error registering device:', err);
     return res.status(500).json({ error: 'Failed to register device' });
+  }
+});
+
+/**
+ * GET /notifications/vapid-public-key
+ *
+ * Returns the VAPID public key needed by the browser to subscribe to push.
+ */
+router.get('/vapid-public-key', (req, res) => {
+  const key = getVapidPublicKey();
+  if (!key) {
+    return res.status(503).json({ error: 'Web Push not configured' });
+  }
+  return res.json({ publicKey: key });
+});
+
+/**
+ * POST /notifications/register-web-push
+ *
+ * Register a Web Push subscription for the current user.
+ * Body: { subscription: PushSubscription, deviceName?: string }
+ */
+router.post('/register-web-push', async (req, res) => {
+  try {
+    const session = await verifySessionToken(req);
+    if (!session.success) {
+      return res.status(session.status).json({ error: session.error });
+    }
+
+    const userId = session.session.userId;
+    const { subscription, deviceName } = req.body;
+
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: 'Valid push subscription is required' });
+    }
+
+    await registerWebPushSubscription(userId, subscription, deviceName);
+
+    return res.json({
+      success: true,
+      message: 'Web push subscription registered',
+      webPushEnabled: isWebPushEnabled(),
+    });
+  } catch (err) {
+    console.error('Error registering web push:', err);
+    return res.status(500).json({ error: 'Failed to register web push' });
   }
 });
 

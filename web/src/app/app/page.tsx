@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -12,32 +13,20 @@ import Link from "next/link";
 function AppLandingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tribeInvite, setTribeInvite] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const tribeInvite = searchParams.get("invite") || searchParams.get("token");
 
   useEffect(() => {
-    const fromiOSApp = navigator.userAgent.includes("helpem");
-    if (!fromiOSApp) {
-      router.replace("/app/dashboard");
-      return;
-    }
-
     // Show splash briefly unless we can immediately route to dashboard
     const minimumSplashTime = 800;
     const startTime = Date.now();
-    
-    console.log("🔵 App Landing - Starting auth check");
-    console.log("Current URL:", window.location.href);
-    console.log("Cookies:", document.cookie);
-    console.log("UserAgent:", navigator.userAgent);
-    
+
     // Check for force_auth parameter to show auth gate even when logged in
     const forceAuth = searchParams.get("force_auth");
     const logout = searchParams.get("logout");
-    
+
     // Handle logout
     if (logout === "true") {
-      console.log("🚪 Logout requested - clearing all auth data");
       // Clear all cookies
       document.cookie.split(";").forEach(c => {
         const name = c.trim().split("=")[0];
@@ -46,56 +35,39 @@ function AppLandingContent() {
       });
       localStorage.clear();
       sessionStorage.clear();
-      delete (window as any).__nativeSessionToken;
-      
+
       // Remove logout param and show auth gate after minimum splash time
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(0, minimumSplashTime - elapsed);
       setTimeout(() => {
         window.history.replaceState({}, '', '/app');
         setIsChecking(false);
-        console.log("✅ Logout complete - showing auth gate");
       }, remaining);
       return;
     }
-    
+
     // Check if there's a tribe invite token in URL
-    const inviteToken = searchParams.get("invite") || searchParams.get("token");
-    if (inviteToken) {
-      localStorage.setItem("pendingTribeInvite", inviteToken);
-      setTribeInvite(inviteToken);
-      console.log("📨 Stored tribe invite token:", inviteToken);
+    if (tribeInvite) {
+      localStorage.setItem("pendingTribeInvite", tribeInvite);
     }
 
     // Check if user is already authenticated (unless force_auth is set)
     if (!forceAuth) {
       const hasSession = document.cookie.includes("session_token");
-      const hasNativeToken = (window as any).__nativeSessionToken;
-      
-      console.log("Session check:", { hasSession, hasNativeToken: !!hasNativeToken });
-      
-      if (hasSession || hasNativeToken) {
-        console.log("✅ User is authenticated");
-        // Skip splash for authenticated users to avoid flashing UI in native app
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, 0 - elapsed);
-        setTimeout(() => {
-          console.log("→ Redirecting to dashboard");
-          router.push("/app/dashboard");
-        }, remaining);
+
+      if (hasSession) {
+        router.push("/app/dashboard");
         return;
       }
     }
-    
+
     // No session - show auth gate after minimum splash time
-    console.log("❌ No session found");
     const elapsed = Date.now() - startTime;
     const remaining = Math.max(0, minimumSplashTime - elapsed);
     setTimeout(() => {
-      console.log("→ Showing auth gate");
       setIsChecking(false);
     }, remaining);
-  }, [searchParams, router]);
+  }, [searchParams, router, tribeInvite]);
 
   // Show beautiful splash screen while checking auth
   if (isChecking) {
@@ -110,7 +82,14 @@ function AppLandingContent() {
         {/* Logo and brand */}
         <div className="text-center relative z-10">
           <div className="w-32 h-32 mx-auto bg-white rounded-3xl flex items-center justify-center shadow-2xl mb-6 animate-bounce">
-            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-20 w-auto" />
+            <Image
+              src="/helpem-logo.png"
+              alt="helpem"
+              width={320}
+              height={120}
+              className="h-20 w-auto"
+              priority
+            />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">helpem</h1>
           <p className="text-white/90 text-lg">Built for you.</p>
@@ -120,8 +99,7 @@ function AppLandingContent() {
   }
 
   const handleSignIn = () => {
-    // For iOS: This will trigger native Apple Sign In
-    // For web: Will show Apple Sign In web flow
+    // Opens the unified web sign-in flow (Apple/Google/email options)
     router.push("/app/signin");
   };
 
@@ -136,7 +114,14 @@ function AppLandingContent() {
       <header className="px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/helpem-logo.png?v=1" alt="helpem" className="h-10 w-auto" />
+            <Image
+              src="/helpem-logo.png"
+              alt="helpem"
+              width={160}
+              height={60}
+              className="h-10 w-auto"
+              priority
+            />
             <span className="text-xl font-bold text-gray-900">helpem</span>
           </Link>
         </div>
@@ -148,7 +133,14 @@ function AppLandingContent() {
           {/* Logo */}
           <div className="text-center mb-8">
             <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-500 to-green-500 rounded-3xl flex items-center justify-center shadow-2xl mb-6">
-              <img src="/helpem-logo.png?v=1" alt="helpem" className="h-16 w-auto" />
+              <Image
+                src="/helpem-logo.png"
+                alt="helpem"
+                width={256}
+                height={96}
+                className="h-16 w-auto"
+                priority
+              />
             </div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
               Welcome to helpem
@@ -167,7 +159,7 @@ function AppLandingContent() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-purple-900 mb-1">
-                    You've been invited to a tribe!
+                    You&apos;ve been invited to a tribe!
                   </h3>
                   <p className="text-sm text-purple-700">
                     Sign up to join your tribe and start collaborating.

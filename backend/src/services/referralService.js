@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { extendSubscriptionRenewalDate } from "./appStoreService.js";
+import { applyCustomerCredit } from "./stripeService.js";
 import { createInAppNotification } from "./inAppNotificationService.js";
 
 export const REFERRAL_QUALIFY_WINDOW_DAYS = 60;
@@ -9,6 +10,8 @@ export const REFERRAL_MAX_FREE_MONTHS_PER_YEAR = 3;
 export const PAID_PRODUCT_IDS = new Set([
   "helpem.basic.monthly",
   "helpem.premium.monthly",
+  "helpem.basic.annual",
+  "helpem.premium.annual",
 ]);
 
 function getAwardMonth(date) {
@@ -74,14 +77,16 @@ export async function evaluateReferralProgressForReferee(refereeId, { now = new 
   const usageQualified = isWithinWindow(referee?.firstMeaningfulUseAt, progress.eligibilityEndsAt);
   const openDaysQualified = openDaysCount >= progress.openDaysRequired;
 
-  const subscription = await prisma.userSubscriptionStatus.findUnique({
-    where: {
-      userId_platform: {
-        userId: refereeId,
-        platform: "apple",
-      },
-    },
-  });
+  // Check both Apple and Stripe subscriptions
+  const [appleSubscription, stripeSubscription] = await Promise.all([
+    prisma.userSubscriptionStatus.findUnique({
+      where: { userId_platform: { userId: refereeId, platform: "apple" } },
+    }),
+    prisma.userSubscriptionStatus.findUnique({
+      where: { userId_platform: { userId: refereeId, platform: "stripe" } },
+    }),
+  ]);
+  const subscription = stripeSubscription || appleSubscription;
 
   const paidQualified = hasCompletedPaidPeriod(subscription, now);
 
@@ -206,23 +211,48 @@ export async function applyEarnedReferralRewards(inviterId, now = new Date()) {
     return { status: "none" };
   }
 
-  const subscription = await prisma.userSubscriptionStatus.findUnique({
-    where: {
-      userId_platform: {
-        userId: inviterId,
-        platform: "apple",
-      },
-    },
+  // Try Stripe first, then Apple
+  const stripeSubscription = await prisma.userSubscriptionStatus.findUnique({
+    where: { userId_platform: { userId: inviterId, platform: "stripe" } },
   });
 
-  if (!subscription || !subscription.verified || !subscription.originalTransactionId || !subscription.currentPeriodEnd) {
+  const appleSubscription = await prisma.userSubscriptionStatus.findUnique({
+    where: { userId_platform: { userId: inviterId, platform: "apple" } },
+  });
+
+  const subscription = stripeSubscription || appleSubscription;
+
+  if (!subscription || !subscription.verified || !subscription.currentPeriodEnd) {
     return { status: "missing_subscription" };
   }
 
   const startsAt = subscription.currentPeriodEnd;
   const endsAt = new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+  let rewardMetadata = {};
 
-  const result = await extendSubscriptionRenewalDate(subscription.originalTransactionId, 30);
+  if (subscription.platform === "stripe") {
+    // Stripe: apply credit (~$4.99 for basic monthly)
+    const user = await prisma.user.findUnique({
+      where: { id: inviterId },
+      select: { stripeCustomerId: true },
+    });
+    if (!user?.stripeCustomerId) {
+      return { status: "missing_stripe_customer" };
+    }
+    const credit = await applyCustomerCredit(
+      user.stripeCustomerId,
+      499, // $4.99 credit
+      "Referral reward: 1 free month"
+    );
+    rewardMetadata = { stripeBalanceTransactionId: credit.id };
+  } else {
+    // Apple: extend subscription renewal date
+    if (!subscription.originalTransactionId) {
+      return { status: "missing_transaction_id" };
+    }
+    const result = await extendSubscriptionRenewalDate(subscription.originalTransactionId, 30);
+    rewardMetadata = { requestIdentifier: result.requestIdentifier };
+  }
 
   await prisma.referralReward.update({
     where: { id: reward.id },
@@ -230,9 +260,7 @@ export async function applyEarnedReferralRewards(inviterId, now = new Date()) {
       status: "active",
       startsAt,
       endsAt,
-      metadata: {
-        requestIdentifier: result.requestIdentifier,
-      },
+      metadata: rewardMetadata,
     },
   });
 
@@ -321,8 +349,30 @@ export async function grantInviteeBonusOnFirstSubscription(refereeId, subscripti
   }
 
   try {
-    // Extend subscription by 30 days (1 free month bonus for invitee)
-    const result = await extendSubscriptionRenewalDate(subscription.originalTransactionId, 30);
+    let bonusResult = {};
+
+    if (subscription.platform === "stripe") {
+      // Stripe: apply credit for 1 free month
+      const user = await prisma.user.findUnique({
+        where: { id: refereeId },
+        select: { stripeCustomerId: true },
+      });
+      if (user?.stripeCustomerId) {
+        const credit = await applyCustomerCredit(
+          user.stripeCustomerId,
+          499,
+          "Welcome bonus: 1 free month for referral signup"
+        );
+        bonusResult = { stripeBalanceTransactionId: credit.id };
+      }
+    } else {
+      // Apple: extend subscription by 30 days
+      if (!subscription.originalTransactionId) {
+        return { status: "missing_transaction_id" };
+      }
+      const result = await extendSubscriptionRenewalDate(subscription.originalTransactionId, 30);
+      bonusResult = { requestIdentifier: result.requestIdentifier };
+    }
 
     // Mark bonus as granted
     await prisma.referralProgress.update({
@@ -340,7 +390,7 @@ export async function grantInviteeBonusOnFirstSubscription(refereeId, subscripti
       body: "You got +1 free month for signing up with a referral code.",
     });
 
-    return { status: "granted", requestIdentifier: result.requestIdentifier };
+    return { status: "granted", ...bonusResult };
   } catch (err) {
     console.error("Failed to grant invitee bonus:", err);
     return { status: "error", error: err.message };

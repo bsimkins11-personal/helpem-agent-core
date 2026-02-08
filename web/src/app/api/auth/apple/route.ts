@@ -89,17 +89,28 @@ export async function POST(request: Request) {
     const isNewUser = now.getTime() - createdAt.getTime() < 5000; // Created within last 5 seconds
 
     // Issue app-owned session token
-    const sessionToken = createSessionToken(userId, apple_user_id);
+    const sessionToken = createSessionToken(userId, { appleUserId: apple_user_id });
 
     console.log(
       `✅ Auth success: user=${userId}, apple_user=${apple_user_id.substring(0, 10)}..., new=${isNewUser}`
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       session_token: sessionToken,
       user_id: userId,
       is_new_user: isNewUser,
     });
+
+    // Set HttpOnly cookie for web sessions
+    response.cookies.set("session_token", sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    return response;
 
   } catch (error) {
     console.error("Auth error:", error);

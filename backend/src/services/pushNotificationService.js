@@ -1,13 +1,23 @@
 /**
- * Push Notification Service using APNs
- * 
- * Sends push notifications to iOS devices for tribe updates.
+ * Push Notification Service — APNs (iOS) + Web Push (browsers)
+ *
+ * Sends push notifications to iOS devices via APNs and to web browsers via Web Push.
  */
 
 import https from 'https';
 import http2 from 'http2';
 import jwt from 'jsonwebtoken';
+import webpush from 'web-push';
 import { prisma } from '../lib/prisma.js';
+
+// Web Push VAPID configuration
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:support@helpem.ai';
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
 
 // APNs configuration
 const APNS_HOST_PRODUCTION = 'api.push.apple.com';
@@ -194,9 +204,94 @@ export async function unregisterDeviceToken(deviceToken) {
   });
 }
 
+// =============================================================================
+// Web Push (browsers)
+// =============================================================================
+
+/**
+ * Send a Web Push notification
+ *
+ * @param {Object} subscription - PushSubscription from the browser
+ * @param {Object} payload - { title, body, url? }
+ * @returns {Promise<Object>} Result
+ */
+export async function sendWebPush(subscription, payload) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    return { success: false, reason: 'VAPID keys not configured' };
+  }
+
+  try {
+    await webpush.sendNotification(
+      subscription,
+      JSON.stringify({
+        title: payload.title,
+        body: payload.body,
+        url: payload.url || '/app/dashboard',
+      })
+    );
+    return { success: true };
+  } catch (err) {
+    const gone = err.statusCode === 410 || err.statusCode === 404;
+    if (gone) {
+      return { success: false, invalidToken: true, reason: 'Subscription expired' };
+    }
+    console.error('Web Push error:', err.message);
+    return { success: false, reason: err.message };
+  }
+}
+
+/**
+ * Register a Web Push subscription for a user.
+ * Uses the subscription endpoint as the unique device token.
+ *
+ * @param {string} userId
+ * @param {Object} subscription - PushSubscription object from the browser
+ * @param {string} [deviceName]
+ */
+export async function registerWebPushSubscription(userId, subscription, deviceName) {
+  const endpoint = subscription.endpoint;
+
+  await prisma.userDevice.upsert({
+    where: { deviceToken: endpoint },
+    update: {
+      userId,
+      pushSubscription: subscription,
+      lastActiveAt: new Date(),
+      notificationsEnabled: true,
+    },
+    create: {
+      userId,
+      deviceToken: endpoint,
+      platform: 'web',
+      deviceName: deviceName || 'Web Browser',
+      pushSubscription: subscription,
+    },
+  });
+
+  console.log(`🌐 Web push registered for user ${userId}`);
+}
+
+/**
+ * Check if Web Push is configured
+ */
+export function isWebPushEnabled() {
+  return !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
+}
+
+/**
+ * Get the VAPID public key (needed by frontend to subscribe)
+ */
+export function getVapidPublicKey() {
+  return VAPID_PUBLIC_KEY || null;
+}
+
+// =============================================================================
+// Send to User (unified — APNs + Web Push)
+// =============================================================================
+
 /**
  * Send notification to all devices for a user
- * 
+ *
  * @param {string} userId - User ID
  * @param {Object} payload - Notification payload
  */
@@ -207,25 +302,33 @@ export async function sendToUser(userId, payload) {
       notificationsEnabled: true,
     },
   });
-  
+
   if (devices.length === 0) {
     console.log(`No devices registered for user ${userId}`);
     return [];
   }
-  
+
   const results = await Promise.all(
     devices.map(async (device) => {
-      const result = await sendPushNotification(device.deviceToken, payload);
-      
+      let result;
+
+      if (device.platform === 'web' && device.pushSubscription) {
+        // Web Push path
+        result = await sendWebPush(device.pushSubscription, payload);
+      } else {
+        // APNs path (iOS)
+        result = await sendPushNotification(device.deviceToken, payload);
+      }
+
       // Remove invalid tokens
       if (result.invalidToken) {
         await unregisterDeviceToken(device.deviceToken);
       }
-      
+
       return { deviceId: device.id, ...result };
     })
   );
-  
+
   return results;
 }
 
@@ -269,4 +372,8 @@ export default {
   sendToUser,
   sendTribeDigestNotification,
   isPushEnabled,
+  sendWebPush,
+  registerWebPushSubscription,
+  isWebPushEnabled,
+  getVapidPublicKey,
 };
